@@ -1,0 +1,71 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+PROJECT_DIR="$(git rev-parse --show-toplevel)"
+
+if [ "${TIMETABLE_PC_FRONT_AUTO_DEPLOY:-1}" = "0" ]; then
+  exit 0
+fi
+
+REMOTE_NAME="${1:-}"
+REMOTE_URL="${2:-}"
+REMOTE_TARGET="${REMOTE_NAME:-$REMOTE_URL}"
+ZERO_OID="0000000000000000000000000000000000000000"
+HEAD_OID="$(git -C "$PROJECT_DIR" rev-parse HEAD)"
+targets=()
+saw_master=0
+
+while read -r local_ref local_oid remote_ref remote_oid; do
+  if [ -z "${local_ref:-}" ]; then
+    continue
+  fi
+
+  if [ "$local_oid" = "$ZERO_OID" ]; then
+    continue
+  fi
+
+  # 只在 push 远端 master 时自动部署，其他分支直接跳过。
+  case "$remote_ref" in
+    refs/heads/master)
+      saw_master=1
+      ;;
+    *)
+      continue
+      ;;
+  esac
+
+  # 部署脚本按当前工作区打包，必须保证 HEAD 就是这次推上去的 master 提交。
+  if [ "$local_oid" != "$HEAD_OID" ]; then
+    continue
+  fi
+
+  targets+=("${remote_ref}:${local_oid}")
+done
+
+if [ -z "$REMOTE_TARGET" ]; then
+  exit 0
+fi
+
+if [ "${#targets[@]}" -eq 0 ]; then
+  if [ "$saw_master" = "1" ]; then
+    echo "pre-push: skip auto-deploy (current HEAD is not the master commit being pushed)."
+  else
+    echo "pre-push: skip auto-deploy (only master is deployed)."
+  fi
+  exit 0
+fi
+
+LOG_DIR="$PROJECT_DIR/.git/deploy-logs"
+mkdir -p "$LOG_DIR"
+LOG_FILE="$LOG_DIR/deploy-after-push-$(date +%Y%m%d%H%M%S).log"
+
+echo "pre-push: will deploy timetable pc front after push is confirmed."
+echo "pre-push: deployment log: $LOG_FILE"
+
+(
+  echo "Scheduled at $(date '+%Y-%m-%d %H:%M:%S')"
+  echo "Remote: $REMOTE_TARGET"
+  "$PROJECT_DIR/scripts/deploy-after-push.sh" "$REMOTE_TARGET" "${targets[@]}"
+) >>"$LOG_FILE" 2>&1 </dev/null &
+
+exit 0
