@@ -2,8 +2,22 @@ import axios from 'axios'
 import { clearSession, getOrgId, getToken } from '../session'
 import type { ApiResult } from './types'
 
+const LOCAL_API_BASE_URL = 'http://127.0.0.1:8081/api'
+const ONLINE_API_BASE_URL = 'https://timetable.devtesting.top/api'
+
+function resolveApiBaseUrl(): string {
+  const hostname = window.location.hostname
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    return LOCAL_API_BASE_URL
+  }
+  if (hostname === 'worktable.devtesting.top') {
+    return ONLINE_API_BASE_URL
+  }
+  return import.meta.env.VITE_API_BASE_URL || LOCAL_API_BASE_URL
+}
+
 const http = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8081/api',
+  baseURL: resolveApiBaseUrl(),
   timeout: 20000,
 })
 
