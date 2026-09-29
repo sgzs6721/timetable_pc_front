@@ -1,0 +1,44 @@
+:root {
+  --page: #f4f7f8;
+  --sider: #e8eff2;
+  --card: #ffffff;
+  --ink: #1a2c33;
+  --muted: #5e727a;
+  --line: #d7e2e6;
+  --accent: #2c6e7a;
+  --accent-soft: #e5f2f4;
+  --accent-hover: #245c66;
+  --shadow: 0 18px 40px rgba(26, 44, 51, 0.06);
+  font-family: "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", "Microsoft YaHei", sans-serif;
+  color: var(--ink);
+  background: var(--page);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  background: var(--page);
+}
+
+button,
+input {
+  font-family: inherit;
+}
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+a:hover {
+  color: var(--accent-hover);
+}

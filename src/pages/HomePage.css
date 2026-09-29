@@ -1,0 +1,100 @@
+.home-hero h1 {
+  margin: 0;
+  font-size: 40px;
+  letter-spacing: -0.03em;
+}
+
+.home-hero p {
+  margin: 10px 0 0;
+  color: var(--muted);
+}
+
+.metric-grid {
+  margin-top: 28px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.metric-card,
+.schedule-card,
+.empty-card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  box-shadow: var(--shadow);
+}
+
+.metric-card {
+  padding: 22px 22px 18px;
+}
+
+.metric-card span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.metric-card strong {
+  display: block;
+  margin-top: 12px;
+  font-size: 32px;
+  letter-spacing: -0.04em;
+}
+
+.metric-card em {
+  font-style: normal;
+  margin-left: 4px;
+  font-size: 14px;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.schedule-card {
+  margin-top: 18px;
+  padding: 8px 8px 12px;
+}
+
+.schedule-card h2,
+.empty-card h2 {
+  margin: 16px 18px 8px;
+  font-size: 18px;
+}
+
+.schedule-row {
+  display: grid;
+  grid-template-columns: 120px 1fr auto;
+  gap: 16px;
+  align-items: center;
+  margin: 0 10px;
+  padding: 14px 12px;
+  border-radius: 12px;
+}
+
+.schedule-row:hover {
+  background: var(--accent-soft);
+}
+
+.schedule-time {
+  color: var(--accent);
+  font-weight: 650;
+}
+
+.schedule-title {
+  font-weight: 600;
+}
+
+.schedule-meta,
+.empty-card p {
+  color: var(--muted);
+}
+
+.empty-card {
+  margin-top: 28px;
+  padding: 36px;
+}
+
+@media (max-width: 1100px) {
+  .metric-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

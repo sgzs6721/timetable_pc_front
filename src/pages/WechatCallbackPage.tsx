@@ -1,0 +1,46 @@
+import { Button, Result, Spin } from 'antd'
+import { useEffect, useState } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import { loginByWechatQr } from '../api/auth'
+import { setToken } from '../session'
+
+export function WechatCallbackPage() {
+  const [params] = useSearchParams()
+  const navigate = useNavigate()
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    const code = params.get('code') || ''
+    if (!code) {
+      setError('没有收到微信扫码凭证')
+      return
+    }
+    loginByWechatQr(code)
+      .then((login) => {
+        setToken(login.token)
+        navigate('/home', { replace: true })
+      })
+      .catch((reason: unknown) => {
+        setError(reason instanceof Error ? reason.message : '微信扫码登录失败')
+      })
+  }, [navigate, params])
+
+  if (!error) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center' }}>
+        <Spin size="large" />
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center' }}>
+      <Result
+        status="warning"
+        title="扫码登录没有完成"
+        subTitle={error}
+        extra={<Button type="primary" onClick={() => navigate('/login')}>返回登录</Button>}
+      />
+    </div>
+  )
+}
