@@ -25,7 +25,7 @@ export function LoginPage() {
 
   async function onFinish(values: { phone: string; password: string }) {
     if (!agreed) {
-      message.warning('请先阅读并同意用户协议和隐私政策')
+      message.warning('请先同意用户协议和隐私政策')
       return
     }
     setSubmitting(true)
@@ -42,7 +42,7 @@ export function LoginPage() {
 
   function startWechatLogin() {
     if (!agreed) {
-      message.warning('请先阅读并同意用户协议和隐私政策')
+      message.warning('请先同意用户协议和隐私政策')
       return
     }
     const redirectUri = encodeURIComponent(`${window.location.origin}/login/wechat`)

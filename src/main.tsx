@@ -4,8 +4,10 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import { App } from './App'
-import './styles/global.css'
 import 'antd/dist/reset.css'
+import './styles/global.css'
+import './styles/work.css'
+import './styles/design.css'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
@@ -13,21 +15,43 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
       locale={zhCN}
       theme={{
         token: {
-          colorPrimary: '#2C6E7A',
-          colorInfo: '#2C6E7A',
-          colorText: '#1A2C33',
-          colorTextSecondary: '#5E727A',
-          colorBorder: '#D7E2E6',
-          colorBgLayout: '#F4F7F8',
+          colorPrimary: '#5269e8',
+          colorInfo: '#5269e8',
+          colorSuccess: '#13a976',
+          colorWarning: '#f09243',
+          colorError: '#df5b64',
+          colorText: '#172033',
+          colorTextSecondary: '#7c8699',
+          colorTextTertiary: '#a8afbd',
+          colorBorder: '#e8eaf0',
+          colorBorderSecondary: '#eceef3',
+          colorBgLayout: '#f5f6f8',
+          colorBgContainer: '#ffffff',
           borderRadius: 10,
-          fontFamily: '"PingFang SC", "Hiragino Sans GB", "Noto Sans SC", "Microsoft YaHei", sans-serif',
+          borderRadiusLG: 14,
+          controlHeight: 36,
+          fontFamily: 'Inter, "SF Pro Display", "PingFang SC", "Microsoft YaHei", sans-serif',
+          boxShadow: '0 1px 2px rgba(20, 29, 47, 0.03), 0 6px 20px rgba(20, 29, 47, 0.035)',
+          boxShadowSecondary: '0 16px 40px rgba(20, 29, 47, 0.08)',
         },
         components: {
           Button: {
             primaryShadow: 'none',
-            defaultHoverBorderColor: '#2C6E7A',
-            defaultHoverColor: '#2C6E7A',
+            defaultHoverBorderColor: '#cfd3de',
+            defaultHoverColor: '#172033',
           },
+          Table: {
+            headerBg: '#f7f8fa',
+            headerColor: '#687286',
+            headerSplitColor: 'transparent',
+            borderColor: '#f0f1f5',
+            rowHoverBg: '#f7f8fb',
+            cellPaddingBlock: 12,
+            cellPaddingInline: 14,
+          },
+          Modal: { titleFontSize: 16 },
+          Tabs: { inkBarColor: '#5269e8', itemSelectedColor: '#5269e8', itemHoverColor: '#4055d0' },
+          Segmented: { itemSelectedBg: '#172033', itemSelectedColor: '#ffffff', trackBg: '#ffffff' },
         },
       }}
     >

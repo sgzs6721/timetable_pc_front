@@ -1,17 +1,35 @@
 :root {
-  --page: #f4f7f8;
-  --sider: #e8eff2;
+  --ink: #172033;
+  --ink-2: #354056;
+  --muted: #7c8699;
+  --muted-2: #a8afbd;
+  --page: #f5f6f8;
   --card: #ffffff;
-  --ink: #1a2c33;
-  --muted: #5e727a;
-  --line: #d7e2e6;
-  --accent: #2c6e7a;
-  --accent-soft: #e5f2f4;
-  --accent-hover: #245c66;
-  --shadow: 0 18px 40px rgba(26, 44, 51, 0.06);
-  font-family: "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", "Microsoft YaHei", sans-serif;
+  --line: #e8eaf0;
+  --line-strong: #dcdee6;
+  --nav: #131c2f;
+  --nav-soft: #1c2840;
+  --primary: #5269e8;
+  --primary-dark: #4055d0;
+  --primary-soft: #eef0ff;
+  --green: #13a976;
+  --green-soft: #eaf8f3;
+  --orange: #f09243;
+  --orange-soft: #fff4e9;
+  --red: #df5b64;
+  --red-soft: #fff0f1;
+  --shadow-sm: 0 1px 2px rgba(20, 29, 47, 0.03), 0 6px 20px rgba(20, 29, 47, 0.035);
+  --shadow-md: 0 16px 40px rgba(20, 29, 47, 0.08);
+  --accent: var(--primary);
+  --accent-soft: var(--primary-soft);
+  --accent-hover: var(--primary-dark);
+  --sider: var(--nav);
+  --shadow: var(--shadow-sm);
+  --title: var(--ink);
+  font-family: Inter, "SF Pro Display", "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", "Microsoft YaHei", sans-serif;
   color: var(--ink);
   background: var(--page);
+  font-synthesis: none;
 }
 
 * {
@@ -26,19 +44,23 @@ body,
 }
 
 body {
+  min-width: 1100px;
   background: var(--page);
+  color: var(--ink);
 }
 
 button,
-input {
+input,
+textarea,
+select {
   font-family: inherit;
 }
 
 a {
-  color: var(--accent);
+  color: var(--primary);
   text-decoration: none;
 }
 
 a:hover {
-  color: var(--accent-hover);
+  color: var(--primary-dark);
 }

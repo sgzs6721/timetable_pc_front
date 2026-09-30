@@ -1,0 +1,408 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>云效课时 · 首页设计提案</title>
+  <style>
+    :root {
+      --ink: #172033;
+      --ink-2: #354056;
+      --muted: #7c8699;
+      --muted-2: #a8afbd;
+      --page: #f5f6f8;
+      --card: #ffffff;
+      --line: #e8eaf0;
+      --line-strong: #dcdee6;
+      --nav: #131c2f;
+      --nav-soft: #1c2840;
+      --primary: #5269e8;
+      --primary-dark: #4055d0;
+      --primary-soft: #eef0ff;
+      --blue-soft: #edf7ff;
+      --green: #13a976;
+      --green-soft: #eaf8f3;
+      --orange: #f09243;
+      --orange-soft: #fff4e9;
+      --red: #df5b64;
+      --red-soft: #fff0f1;
+      --shadow-sm: 0 1px 2px rgba(20, 29, 47, .03), 0 6px 20px rgba(20, 29, 47, .035);
+      --shadow-md: 0 16px 40px rgba(20, 29, 47, .08);
+      font-family: Inter, "SF Pro Display", "PingFang SC", "Microsoft YaHei", sans-serif;
+      color: var(--ink);
+      background: var(--page);
+      font-synthesis: none;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; }
+    body { min-width: 1100px; background: var(--page); }
+    button, input { font: inherit; }
+    button { color: inherit; }
+    svg { display: block; }
+
+    .app {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 236px minmax(0, 1fr);
+    }
+
+    .sidebar {
+      position: fixed;
+      inset: 0 auto 0 0;
+      width: 236px;
+      display: flex;
+      flex-direction: column;
+      color: #dce3f3;
+      background:
+        radial-gradient(circle at 10% -4%, rgba(103, 126, 255, .18), transparent 28%),
+        var(--nav);
+      overflow: hidden;
+      z-index: 20;
+    }
+
+    .brand {
+      height: 78px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 0 22px;
+      border-bottom: 1px solid rgba(255,255,255,.065);
+    }
+
+    .brand-mark {
+      width: 34px;
+      height: 34px;
+      display: grid;
+      place-items: center;
+      border-radius: 11px;
+      color: white;
+      background: linear-gradient(145deg, #7184ff, #4e62dc);
+      box-shadow: 0 8px 20px rgba(79, 99, 222, .35), inset 0 1px rgba(255,255,255,.32);
+    }
+
+    .brand-copy strong { display: block; color: white; font-size: 16px; letter-spacing: .06em; }
+    .brand-copy span { display: block; margin-top: 3px; color: #7f8ca8; font-size: 10px; letter-spacing: .12em; }
+
+    .nav-scroll { flex: 1; padding: 18px 14px; overflow: auto; scrollbar-width: none; }
+    .nav-scroll::-webkit-scrollbar { display: none; }
+    .nav-group + .nav-group { margin-top: 22px; }
+    .nav-caption { padding: 0 12px 8px; color: #66738e; font-size: 10px; font-weight: 700; letter-spacing: .13em; }
+
+    .nav-item {
+      width: 100%;
+      height: 42px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 0 12px;
+      border: 0;
+      border-radius: 10px;
+      color: #9ba7bf;
+      background: transparent;
+      cursor: pointer;
+      transition: .18s ease;
+      text-align: left;
+    }
+
+    .nav-item + .nav-item { margin-top: 3px; }
+    .nav-item:hover { color: #edf1fa; background: rgba(255,255,255,.05); }
+    .nav-item.active { color: white; background: linear-gradient(90deg, rgba(99, 119, 240, .26), rgba(99, 119, 240, .09)); }
+    .nav-item.active::before { content: ""; position: absolute; left: 0; width: 3px; height: 22px; border-radius: 0 4px 4px 0; background: #7b8cff; }
+    .nav-item span { font-size: 13px; font-weight: 500; }
+    .nav-icon { width: 17px; height: 17px; stroke-width: 1.8; }
+    .nav-badge { margin-left: auto; min-width: 18px; height: 18px; display: grid; place-items: center; padding: 0 5px; border-radius: 9px; color: #ffe8c9; background: rgba(240,146,67,.18); font-size: 10px; }
+
+    .sidebar-footer { padding: 14px; border-top: 1px solid rgba(255,255,255,.065); }
+    .help-card { display: flex; align-items: center; gap: 10px; padding: 11px 12px; border-radius: 12px; color: #8e9ab2; background: rgba(255,255,255,.035); font-size: 12px; }
+    .help-card b { display: block; margin-bottom: 2px; color: #dfe5f1; font-weight: 600; }
+
+    .main { grid-column: 2; min-width: 0; }
+    .topbar {
+      height: 78px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 34px;
+      background: rgba(255,255,255,.92);
+      border-bottom: 1px solid var(--line);
+      backdrop-filter: blur(18px);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .selectors, .top-actions, .select-control, .icon-button, .profile { display: flex; align-items: center; }
+    .selectors { gap: 10px; }
+    .select-control { height: 36px; gap: 8px; padding: 0 11px; border: 1px solid var(--line); border-radius: 9px; color: var(--ink-2); background: white; box-shadow: 0 1px 2px rgba(20,29,47,.02); font-size: 12px; cursor: pointer; }
+    .select-control .building { color: var(--primary); }
+    .select-control .chevron { margin-left: 14px; color: var(--muted-2); }
+    .top-actions { gap: 9px; }
+    .icon-button { width: 36px; height: 36px; justify-content: center; position: relative; border: 1px solid var(--line); border-radius: 10px; color: #687286; background: white; cursor: pointer; }
+    .icon-button:hover, .select-control:hover { border-color: #cfd3de; }
+    .notice-dot { position: absolute; right: 7px; top: 7px; width: 6px; height: 6px; border: 2px solid white; border-radius: 99px; background: #f35f68; }
+    .top-divider { width: 1px; height: 26px; margin: 0 4px; background: var(--line); }
+    .profile { gap: 10px; padding: 4px 4px 4px 6px; border: 0; background: transparent; cursor: pointer; }
+    .avatar { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 10px; color: white; background: linear-gradient(145deg, #384765, #1c2941); font-size: 12px; font-weight: 700; }
+    .profile-copy { text-align: left; }
+    .profile-copy strong { display: block; color: var(--ink); font-size: 12px; font-weight: 650; }
+    .profile-copy span { display: block; margin-top: 2px; color: var(--muted); font-size: 10px; }
+
+    .content { max-width: 1540px; margin: 0 auto; padding: 28px 34px 42px; }
+    .page-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; }
+    .greeting h1 { margin: 0; color: var(--ink); font-size: 25px; line-height: 1.25; letter-spacing: -.025em; }
+    .greeting p { margin: 7px 0 0; color: var(--muted); font-size: 12px; }
+    .date-switch { display: flex; align-items: center; gap: 3px; padding: 4px; border: 1px solid var(--line); border-radius: 10px; background: #fff; box-shadow: var(--shadow-sm); }
+    .date-switch button { height: 29px; padding: 0 13px; border: 0; border-radius: 7px; color: var(--muted); background: transparent; font-size: 11px; cursor: pointer; }
+    .date-switch button.active { color: #fff; background: var(--ink); box-shadow: 0 3px 9px rgba(23,32,51,.16); }
+
+    .metric-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-top: 22px; }
+    .metric-card { min-height: 129px; position: relative; padding: 19px 20px; border: 1px solid var(--line); border-radius: 14px; background: var(--card); box-shadow: var(--shadow-sm); overflow: hidden; }
+    .metric-card::after { content: ""; position: absolute; right: -25px; bottom: -34px; width: 105px; height: 105px; border-radius: 50%; background: var(--tint); opacity: .55; }
+    .metric-top { display: flex; justify-content: space-between; align-items: center; }
+    .metric-label { color: #687286; font-size: 12px; font-weight: 500; }
+    .metric-icon { width: 30px; height: 30px; display: grid; place-items: center; border-radius: 9px; color: var(--tone); background: var(--tint); }
+    .metric-icon svg { width: 15px; height: 15px; }
+    .metric-value { margin-top: 11px; color: #1b2436; font-size: 27px; font-weight: 700; line-height: 1; letter-spacing: -.035em; }
+    .metric-value small { margin-left: 3px; color: var(--muted); font-size: 11px; font-weight: 500; letter-spacing: 0; }
+    .metric-foot { margin-top: 10px; color: var(--muted); font-size: 10px; }
+    .trend { color: var(--green); font-weight: 650; }
+    .metric-card.purple { --tone: #6577e8; --tint: #eef0ff; }
+    .metric-card.blue { --tone: #348bd0; --tint: #edf7ff; }
+    .metric-card.green { --tone: #13a976; --tint: #eaf8f3; }
+    .metric-card.orange { --tone: #e68b3f; --tint: #fff4e9; }
+
+    .workspace { display: grid; grid-template-columns: minmax(0, 1.68fr) minmax(300px, .72fr); gap: 14px; margin-top: 14px; }
+    .panel { border: 1px solid var(--line); border-radius: 14px; background: var(--card); box-shadow: var(--shadow-sm); }
+    .panel-head { min-height: 59px; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 0 20px; border-bottom: 1px solid #eceef3; }
+    .panel-title { display: flex; align-items: baseline; gap: 9px; }
+    .panel-title h2 { margin: 0; font-size: 14px; font-weight: 680; }
+    .panel-title span { color: var(--muted); font-size: 10px; }
+    .link-button { display: flex; align-items: center; gap: 5px; border: 0; color: var(--primary); background: transparent; font-size: 10px; cursor: pointer; }
+
+    .timeline { padding: 3px 20px 12px; }
+    .lesson-row { display: grid; grid-template-columns: 84px 14px minmax(0, 1fr) 94px; align-items: center; min-height: 68px; border-bottom: 1px solid #f0f1f5; }
+    .lesson-row:last-child { border-bottom: 0; }
+    .time { color: var(--ink); font-size: 12px; font-weight: 650; }
+    .time small { display: block; margin-top: 3px; color: var(--muted-2); font-size: 9px; font-weight: 500; }
+    .timeline-marker { align-self: stretch; position: relative; }
+    .timeline-marker::before { content: ""; position: absolute; left: 6px; top: 0; bottom: 0; width: 1px; background: #eaecf2; }
+    .lesson-row:first-child .timeline-marker::before { top: 50%; }
+    .lesson-row:last-child .timeline-marker::before { bottom: 50%; }
+    .timeline-marker i { position: absolute; left: 2px; top: calc(50% - 4px); width: 9px; height: 9px; border: 2px solid white; border-radius: 99px; background: var(--dot); box-shadow: 0 0 0 1px var(--dot); }
+    .lesson-main { padding: 10px 16px; min-width: 0; }
+    .lesson-name { display: flex; align-items: center; gap: 7px; color: #263147; font-size: 12px; font-weight: 620; }
+    .tag { padding: 2px 6px; border-radius: 5px; color: var(--tag-color); background: var(--tag-bg); font-size: 9px; font-weight: 600; }
+    .lesson-meta { display: flex; align-items: center; gap: 12px; margin-top: 6px; color: var(--muted); font-size: 10px; white-space: nowrap; overflow: hidden; }
+    .lesson-meta span { display: flex; align-items: center; gap: 4px; }
+    .lesson-meta svg { width: 11px; height: 11px; }
+    .student-count { justify-self: end; padding: 5px 9px; border-radius: 7px; color: #586277; background: #f6f7f9; font-size: 10px; }
+    .empty-more { height: 48px; display: flex; align-items: center; justify-content: center; border-top: 1px solid #f0f1f5; color: var(--muted); font-size: 10px; }
+
+    .todo-list { padding: 5px 18px 12px; }
+    .todo-item { display: grid; grid-template-columns: 32px minmax(0,1fr) auto; align-items: center; gap: 10px; min-height: 58px; border-bottom: 1px solid #f0f1f5; }
+    .todo-item:last-child { border-bottom: 0; }
+    .todo-icon { width: 30px; height: 30px; display: grid; place-items: center; border-radius: 9px; color: var(--todo-color); background: var(--todo-bg); }
+    .todo-icon svg { width: 14px; height: 14px; }
+    .todo-copy strong { display: block; color: #344056; font-size: 11px; font-weight: 600; }
+    .todo-copy span { display: block; margin-top: 4px; color: var(--muted); font-size: 9px; }
+    .todo-num { min-width: 23px; height: 20px; display: grid; place-items: center; padding: 0 6px; border-radius: 10px; color: var(--todo-color); background: var(--todo-bg); font-size: 10px; font-weight: 700; }
+    .todo-tip { margin: 0 18px 17px; padding: 11px 12px; border-radius: 9px; color: #8a6b36; background: #fff9ed; font-size: 9px; line-height: 1.65; }
+
+    .bottom-grid { display: grid; grid-template-columns: minmax(0, 1.12fr) minmax(0, .88fr); gap: 14px; margin-top: 14px; }
+    .record-list { padding: 3px 20px 12px; }
+    .record-row { display: grid; grid-template-columns: 86px minmax(0,1fr) 92px 70px; align-items: center; min-height: 56px; border-bottom: 1px solid #f0f1f5; font-size: 10px; }
+    .record-row:last-child { border-bottom: 0; }
+    .record-date { color: var(--muted); }
+    .student { display: flex; align-items: center; gap: 9px; min-width: 0; }
+    .student-avatar { width: 27px; height: 27px; display: grid; place-items: center; border-radius: 8px; color: #51606f; background: #eef1f5; font-size: 9px; font-weight: 650; }
+    .student strong { display: block; color: #354056; font-size: 11px; font-weight: 600; }
+    .student span { display: block; margin-top: 3px; color: var(--muted); font-size: 9px; }
+    .hours { color: var(--ink-2); font-weight: 600; }
+    .record-status { justify-self: end; padding: 4px 7px; border-radius: 6px; color: var(--green); background: var(--green-soft); }
+
+    .shortcut-wrap { padding: 17px 18px 18px; }
+    .shortcut-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 9px; }
+    .shortcut { min-height: 72px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; border: 1px solid #eceef3; border-radius: 11px; color: #586277; background: #fbfbfc; cursor: pointer; transition: .18s ease; }
+    .shortcut:hover { color: var(--primary); border-color: #d9defd; background: var(--primary-soft); transform: translateY(-2px); box-shadow: 0 8px 18px rgba(82,105,232,.08); }
+    .shortcut svg { width: 17px; height: 17px; }
+    .shortcut span { font-size: 10px; font-weight: 550; }
+    .operation-note { display: flex; align-items: center; justify-content: space-between; margin-top: 12px; padding: 11px 12px; border-radius: 9px; color: var(--muted); background: #f7f8fa; font-size: 9px; }
+    .operation-note b { color: var(--ink-2); font-weight: 600; }
+
+    .toast { position: fixed; right: 30px; bottom: 28px; padding: 11px 15px; border-radius: 10px; color: #fff; background: rgba(23,32,51,.94); box-shadow: var(--shadow-md); font-size: 11px; opacity: 0; transform: translateY(10px); pointer-events: none; transition: .24s ease; z-index: 50; }
+    .toast.show { opacity: 1; transform: translateY(0); }
+
+    @media (max-width: 1260px) {
+      .content { padding-left: 24px; padding-right: 24px; }
+      .topbar { padding-left: 24px; padding-right: 24px; }
+      .metric-grid { gap: 10px; }
+      .workspace { grid-template-columns: minmax(0, 1.5fr) 310px; }
+    }
+  </style>
+</head>
+<body>
+  <svg width="0" height="0" style="position:absolute">
+    <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></symbol>
+    <symbol id="i-users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+    <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/></symbol>
+    <symbol id="i-book" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+    <symbol id="i-building" viewBox="0 0 24 24"><path d="M3 21h18M6 21V5l6-3 6 3v16M9 9h1M14 9h1M9 13h1M14 13h1M10 21v-4h4v4"/></symbol>
+    <symbol id="i-briefcase" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V4h8v3M3 12h18M10 12v2h4v-2"/></symbol>
+    <symbol id="i-card" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="3"/><path d="M2 10h20M6 15h4"/></symbol>
+    <symbol id="i-wallet" viewBox="0 0 24 24"><path d="M4 6h15a2 2 0 0 1 2 2v11H5a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3h13"/><path d="M16 12h5v4h-5a2 2 0 0 1 0-4z"/></symbol>
+    <symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></symbol>
+    <symbol id="i-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.83 2.83-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6 1.7 1.7 0 0 0-.4 1.12V21h-4v-.09A1.7 1.7 0 0 0 8.55 19.4a1.7 1.7 0 0 0-1.88.34l-.06.06-2.83-2.83.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-.6-1 1.7 1.7 0 0 0-1.12-.4H3v-4h.09A1.7 1.7 0 0 0 4.6 8.55a1.7 1.7 0 0 0-.34-1.88l-.06-.06 2.83-2.83.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-.6 1.7 1.7 0 0 0 .4-1.12V3h4v.09A1.7 1.7 0 0 0 15.45 4.6a1.7 1.7 0 0 0 1.88-.34l.06-.06 2.83 2.83-.06.06A1.7 1.7 0 0 0 19.4 9c.18.38.39.72.6 1 .3.4.7.6 1.12.6H21v4h-.09A1.7 1.7 0 0 0 19.4 15z"/></symbol>
+    <symbol id="i-bell" viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M14 21h-4"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></symbol>
+    <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m8 10 4 4 4-4"/></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+    <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></symbol>
+    <symbol id="i-pin" viewBox="0 0 24 24"><path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 1 1 16 0z"/><circle cx="12" cy="10" r="2.5"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24"><path d="M10.3 3.7 2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.7 3.7a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></symbol>
+    <symbol id="i-coins" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v5c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 10v5c0 1.7 3.6 3 8 3s8-1.3 8-3v-5"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m8 12 2.5 2.5L16 9"/></symbol>
+    <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.6 2.6 0 1 1 4.4 1.9c-1 .8-1.9 1.2-1.9 3.1M12 18h.01"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 16V4M7 9l5-5 5 5M4 20h16"/></symbol>
+  </svg>
+
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark"><svg width="19" height="19" fill="none" stroke="currentColor"><use href="#i-calendar"/></svg></div>
+        <div class="brand-copy"><strong>云效课时</strong><span>EDUCATION CLOUD</span></div>
+      </div>
+
+      <nav class="nav-scroll">
+        <div class="nav-group">
+          <div class="nav-caption">工作台</div>
+          <button class="nav-item active"><svg class="nav-icon" fill="none" stroke="currentColor"><use href="#i-grid"/></svg><span>首页</span></button>
+          <button class="nav-item"><svg class="nav-icon" fill="none" stroke="currentColor"><use href="#i-users"/></svg><span>学员管理</span></button>
+          <button class="nav-item"><svg class="nav-icon" fill="none" stroke="currentColor"><use href="#i-calendar"/></svg><span>课程表</span></button>
+          <button class="nav-item"><svg class="nav-icon" fill="none" stroke="currentColor"><use href="#i-book"/></svg><span>课程管理</span></button>
+          <button class="nav-item"><svg class="nav-icon" fill="none" stroke="currentColor"><use href="#i-clock"/></svg><span>课时管理</span><em class="nav-badge">3</em></button>
+        </div>
+
+        <div class="nav-group">
+          <div class="nav-caption">校务管理</div>
+          <button class="nav-item"><svg class="nav-icon" fill="none" stroke="currentColor"><use href="#i-building"/></svg><span>机构与校区</span></button>
+          <button class="nav-item"><svg class="nav-icon" fill="none" stroke="currentColor"><use href="#i-briefcase"/></svg><span>教职工管理</span></button>
+          <button class="nav-item"><svg class="nav-icon" fill="none" stroke="currentColor"><use href="#i-card"/></svg><span>缴费管理</span></button>
+          <button class="nav-item"><svg class="nav-icon" fill="none" stroke="currentColor"><use href="#i-wallet"/></svg><span>工资与收支</span></button>
+          <button class="nav-item"><svg class="nav-icon" fill="none" stroke="currentColor"><use href="#i-chart"/></svg><span>经营分析</span></button>
+        </div>
+
+        <div class="nav-group">
+          <div class="nav-caption">系统</div>
+          <button class="nav-item"><svg class="nav-icon" fill="none" stroke="currentColor"><use href="#i-settings"/></svg><span>机构设置</span></button>
+        </div>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="help-card"><svg width="18" height="18" fill="none" stroke="currentColor"><use href="#i-help"/></svg><div><b>需要帮助？</b>查看使用手册与客服</div></div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div class="selectors">
+          <button class="select-control"><svg class="building" width="15" height="15" fill="none" stroke="currentColor"><use href="#i-building"/></svg><span>星河艺术教育</span><svg class="chevron" width="12" height="12" fill="none" stroke="currentColor"><use href="#i-chevron"/></svg></button>
+          <button class="select-control"><span>滨江校区</span><svg class="chevron" width="12" height="12" fill="none" stroke="currentColor"><use href="#i-chevron"/></svg></button>
+        </div>
+        <div class="top-actions">
+          <button class="icon-button" title="搜索"><svg width="16" height="16" fill="none" stroke="currentColor"><use href="#i-search"/></svg></button>
+          <button class="icon-button" title="通知"><svg width="16" height="16" fill="none" stroke="currentColor"><use href="#i-bell"/></svg><i class="notice-dot"></i></button>
+          <div class="top-divider"></div>
+          <button class="profile"><span class="avatar">林</span><span class="profile-copy"><strong>林老师</strong><span>机构管理员</span></span><svg width="12" height="12" fill="none" stroke="currentColor"><use href="#i-chevron"/></svg></button>
+        </div>
+      </header>
+
+      <div class="content">
+        <div class="page-head">
+          <div class="greeting"><h1>早上好，林老师</h1><p>9月29日 · 星期二，今天共有 12 节课程等待进行</p></div>
+          <div class="date-switch" role="tablist"><button class="active" data-date="今日">今日</button><button data-date="明日">明日</button><button data-date="本周">本周</button><button data-date="2026-09-29"><svg width="13" height="13" fill="none" stroke="currentColor"><use href="#i-calendar"/></svg></button></div>
+        </div>
+
+        <section class="metric-grid">
+          <article class="metric-card purple"><div class="metric-top"><span class="metric-label">今日课程</span><span class="metric-icon"><svg fill="none" stroke="currentColor"><use href="#i-calendar"/></svg></span></div><div class="metric-value">12<small>节</small></div><div class="metric-foot"><span class="trend">↑ 2 节</span> 较昨日</div></article>
+          <article class="metric-card blue"><div class="metric-top"><span class="metric-label">上课学员</span><span class="metric-icon"><svg fill="none" stroke="currentColor"><use href="#i-users"/></svg></span></div><div class="metric-value">86<small>人</small></div><div class="metric-foot">其中试听学员 <b style="color:#348bd0">4 人</b></div></article>
+          <article class="metric-card green"><div class="metric-top"><span class="metric-label">预计销课</span><span class="metric-icon"><svg fill="none" stroke="currentColor"><use href="#i-coins"/></svg></span></div><div class="metric-value">¥ 8,640</div><div class="metric-foot"><span class="trend">↑ 12.6%</span> 较上周同期</div></article>
+          <article class="metric-card orange"><div class="metric-top"><span class="metric-label">今日出勤老师</span><span class="metric-icon"><svg fill="none" stroke="currentColor"><use href="#i-briefcase"/></svg></span></div><div class="metric-value">9<small>位</small></div><div class="metric-foot">2 位老师今日无课</div></article>
+        </section>
+
+        <section class="workspace">
+          <article class="panel">
+            <div class="panel-head"><div class="panel-title"><h2>今日课程</h2><span>按时间顺序</span></div><button class="link-button">查看完整课表 <svg width="12" height="12" fill="none" stroke="currentColor"><use href="#i-arrow"/></svg></button></div>
+            <div class="timeline">
+              <div class="lesson-row" style="--dot:#6679e9"><div class="time">09:00<small>10:30 结束</small></div><div class="timeline-marker"><i></i></div><div class="lesson-main"><div class="lesson-name">儿童创意美术 A 班 <span class="tag" style="--tag-color:#5c6fdc;--tag-bg:#eef0ff">进行中</span></div><div class="lesson-meta"><span><svg fill="none" stroke="currentColor"><use href="#i-user"/></svg>周芮老师</span><span><svg fill="none" stroke="currentColor"><use href="#i-pin"/></svg>美术教室 02</span></div></div><span class="student-count">8 / 10 人</span></div>
+              <div class="lesson-row" style="--dot:#3aa5d9"><div class="time">10:40<small>12:10 结束</small></div><div class="timeline-marker"><i></i></div><div class="lesson-main"><div class="lesson-name">少儿硬笔书法 · 进阶 <span class="tag" style="--tag-color:#2783b0;--tag-bg:#edf7ff">待上课</span></div><div class="lesson-meta"><span><svg fill="none" stroke="currentColor"><use href="#i-user"/></svg>陈宇老师</span><span><svg fill="none" stroke="currentColor"><use href="#i-pin"/></svg>书法教室 01</span></div></div><span class="student-count">12 / 12 人</span></div>
+              <div class="lesson-row" style="--dot:#13a976"><div class="time">14:00<small>15:30 结束</small></div><div class="timeline-marker"><i></i></div><div class="lesson-main"><div class="lesson-name">钢琴一对一 · 林一诺 <span class="tag" style="--tag-color:#168d66;--tag-bg:#eaf8f3">已确认</span></div><div class="lesson-meta"><span><svg fill="none" stroke="currentColor"><use href="#i-user"/></svg>王诗老师</span><span><svg fill="none" stroke="currentColor"><use href="#i-pin"/></svg>钢琴房 06</span></div></div><span class="student-count">1 / 1 人</span></div>
+              <div class="lesson-row" style="--dot:#f09243"><div class="time">16:20<small>17:50 结束</small></div><div class="timeline-marker"><i></i></div><div class="lesson-main"><div class="lesson-name">青少年街舞 B 班 <span class="tag" style="--tag-color:#d67a30;--tag-bg:#fff4e9">待上课</span></div><div class="lesson-meta"><span><svg fill="none" stroke="currentColor"><use href="#i-user"/></svg>陆阳老师</span><span><svg fill="none" stroke="currentColor"><use href="#i-pin"/></svg>舞蹈教室 03</span></div></div><span class="student-count">16 / 18 人</span></div>
+            </div>
+            <div class="empty-more">之后还有 8 节课程 · 最近一节 18:30 开始</div>
+          </article>
+
+          <aside class="panel">
+            <div class="panel-head"><div class="panel-title"><h2>待办与提醒</h2><span>4 项需关注</span></div><button class="link-button">全部处理</button></div>
+            <div class="todo-list">
+              <div class="todo-item" style="--todo-color:#df5b64;--todo-bg:#fff0f1"><span class="todo-icon"><svg fill="none" stroke="currentColor"><use href="#i-alert"/></svg></span><span class="todo-copy"><strong>课时不足学员</strong><span>剩余课时低于 5 节</span></span><span class="todo-num">7</span></div>
+              <div class="todo-item" style="--todo-color:#e68b3f;--todo-bg:#fff4e9"><span class="todo-icon"><svg fill="none" stroke="currentColor"><use href="#i-clock"/></svg></span><span class="todo-copy"><strong>待确认上课记录</strong><span>请及时核对课消信息</span></span><span class="todo-num">3</span></div>
+              <div class="todo-item" style="--todo-color:#6577e8;--todo-bg:#eef0ff"><span class="todo-icon"><svg fill="none" stroke="currentColor"><use href="#i-card"/></svg></span><span class="todo-copy"><strong>本月待收款</strong><span>涉及 12 名学员</span></span><span class="todo-num">12</span></div>
+              <div class="todo-item" style="--todo-color:#13a976;--todo-bg:#eaf8f3"><span class="todo-icon"><svg fill="none" stroke="currentColor"><use href="#i-check"/></svg></span><span class="todo-copy"><strong>教师考勤异常</strong><span>昨日 1 条记录需复核</span></span><span class="todo-num">1</span></div>
+            </div>
+            <div class="todo-tip">建议优先联系课时不足学员，及时完成续费跟进，避免影响后续排课。</div>
+          </aside>
+        </section>
+
+        <section class="bottom-grid">
+          <article class="panel">
+            <div class="panel-head"><div class="panel-title"><h2>最近上课记录</h2><span>近 7 天</span></div><button class="link-button">查看全部 <svg width="12" height="12" fill="none" stroke="currentColor"><use href="#i-arrow"/></svg></button></div>
+            <div class="record-list">
+              <div class="record-row"><span class="record-date">09-29  09:00</span><span class="student"><i class="student-avatar">安</i><span><strong>赵安然</strong><span>儿童创意美术</span></span></span><span class="hours">- 2.0 课时</span><span class="record-status">已确认</span></div>
+              <div class="record-row"><span class="record-date">09-28  16:20</span><span class="student"><i class="student-avatar" style="background:#fff0f1;color:#c75b65">可</i><span><strong>许可欣</strong><span>青少年街舞</span></span></span><span class="hours">- 1.5 课时</span><span class="record-status">已确认</span></div>
+              <div class="record-row"><span class="record-date">09-28  14:00</span><span class="student"><i class="student-avatar" style="background:#eef0ff;color:#5c6fdc">诺</i><span><strong>林一诺</strong><span>钢琴一对一</span></span></span><span class="hours">- 1.0 课时</span><span class="record-status">已确认</span></div>
+            </div>
+          </article>
+
+          <article class="panel">
+            <div class="panel-head"><div class="panel-title"><h2>快捷操作</h2><span>常用功能</span></div><button class="link-button">自定义</button></div>
+            <div class="shortcut-wrap">
+              <div class="shortcut-grid">
+                <button class="shortcut"><svg fill="none" stroke="currentColor"><use href="#i-plus"/></svg><span>新增学员</span></button>
+                <button class="shortcut"><svg fill="none" stroke="currentColor"><use href="#i-calendar"/></svg><span>快速排课</span></button>
+                <button class="shortcut"><svg fill="none" stroke="currentColor"><use href="#i-card"/></svg><span>登记缴费</span></button>
+                <button class="shortcut"><svg fill="none" stroke="currentColor"><use href="#i-upload"/></svg><span>导入数据</span></button>
+              </div>
+              <div class="operation-note"><span>本月已完成 <b>326</b> 节课程</span><span>校区运营平稳</span></div>
+            </div>
+          </article>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <div class="toast" id="toast">这是静态设计预览，交互将在正式页面中接入</div>
+  <script>
+    const toast = document.querySelector('#toast');
+    let timer;
+    function notify(message) {
+      toast.textContent = message;
+      toast.classList.add('show');
+      clearTimeout(timer);
+      timer = setTimeout(() => toast.classList.remove('show'), 1800);
+    }
+    document.querySelectorAll('.date-switch button').forEach((button) => {
+      button.addEventListener('click', () => {
+        document.querySelectorAll('.date-switch button').forEach((item) => item.classList.remove('active'));
+        button.classList.add('active');
+        notify(`已切换到${button.dataset.date || '指定日期'}视图`);
+      });
+    });
+    document.querySelectorAll('button:not(.date-switch button)').forEach((button) => {
+      button.addEventListener('click', () => notify('这是静态设计预览，功能将在正式页面中接入'));
+    });
+  </script>
+</body>
+</html>

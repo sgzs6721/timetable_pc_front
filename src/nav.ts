@@ -1,4 +1,4 @@
-import type { UserInfo } from './api/types'
+import type { Organization, UserInfo } from './api/types'
 
 export interface NavItem {
   key: string
@@ -43,12 +43,13 @@ const MEMBER_NAV: NavItem[] = [
   { key: 'feedback', label: '问题反馈', path: '/feedback' },
 ]
 
-export function navForUser(user: UserInfo | null): NavItem[] {
+export function navForUser(user: UserInfo | null, org?: Organization | null): NavItem[] {
   if (!user) {
     return [{ key: 'home', label: '首页', path: '/home' }]
   }
   const role = (user.role || '').toLowerCase()
-  if (role === 'owner' || role === 'admin') {
+  const owner = role === 'owner' || (Number(user.id || 0) > 0 && Number(org?.ownerId || 0) === Number(user.id))
+  if (owner || role === 'admin') {
     return MANAGER_NAV
   }
   if (user.campusAdmin) {
@@ -61,21 +62,4 @@ export function navForUser(user: UserInfo | null): NavItem[] {
     return MEMBER_NAV
   }
   return [{ key: 'home', label: '首页', path: '/home' }, { key: 'guide', label: '使用文档', path: '/guide' }, { key: 'feedback', label: '问题反馈', path: '/feedback' }]
-}
-
-export const MODULE_COPY: Record<string, string> = {
-  '/students': '学员列表、详情、打卡、缴费、转校区和批量更换老师',
-  '/schedule': '课表列表、周视图、排课、请假、试听和扣费卡',
-  '/courses': '课程维护、一对一和学员课时',
-  '/hours': '校区课时总览和上课记录',
-  '/org': '机构资料、权限和工资设置',
-  '/campus': '校区、老师、职位和权限',
-  '/daily': '规章制度和奖惩记录',
-  '/payments': '缴费汇总和明细',
-  '/salary': '工资管理和我的工资',
-  '/finance': '收支、财务设置和明细',
-  '/profit': '校区利润、每日趋势和销课收入',
-  '/membership': '会员续费与升级',
-  '/guide': '使用文档',
-  '/feedback': '问题反馈',
 }

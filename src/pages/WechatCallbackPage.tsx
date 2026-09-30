@@ -27,14 +27,14 @@ export function WechatCallbackPage() {
 
   if (!error) {
     return (
-      <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center' }}>
+      <div className="auth-wait">
         <Spin size="large" />
       </div>
     )
   }
 
   return (
-    <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center' }}>
+    <div className="auth-wait">
       <Result
         status="warning"
         title="扫码登录没有完成"

@@ -29,15 +29,22 @@ export interface UserInfo {
   role?: string
   positionName?: string
   positionCampusName?: string
+  positionCampusId?: number
   campusAdmin?: boolean
+  campusAdminCampusIds?: number[]
   isSubstituteTeacher?: boolean
   webPasswordSet?: boolean
+  orgMemberId?: number
   subscriptionActive?: boolean
+  subscriptionStatus?: string
+  accessExpireDate?: string
 }
 
 export interface Organization {
   id: number
   name: string
+  ownerId?: number
+  campusAdminManageSalary?: number
 }
 
 export interface Campus {
@@ -50,11 +57,23 @@ export interface ScheduleItem {
   timetableId?: number
   courseName?: string
   displayName?: string
+  coachId?: number
   coachName?: string
+  coachGender?: string
   startTime?: string
   endTime?: string
   location?: string
   currentStudents?: number
+  campusId?: number
+  scheduleDate?: string
+  displayDateStr?: string
+  uiChangeStatus?: number
+  targetType?: string
+  targetId?: number
+  primaryStudentId?: number
+  studentGroupId?: number
+  studentIds?: number[]
+  studentInstances?: Array<{ studentId?: number; studentName?: string }>
 }
 
 export interface HomeDashboard {
@@ -63,6 +82,8 @@ export interface HomeDashboard {
   todayConsumptionAmount?: number | string
   todayCoachCount?: number
   todaySchedules?: ScheduleItem[]
+  tomorrowConsumptionAmount?: number | string
+  tomorrowSchedules?: ScheduleItem[]
 }
 
 export interface HomeBootstrap {
@@ -72,6 +93,8 @@ export interface HomeBootstrap {
   campuses?: Campus[]
   resolvedCampusId?: number | null
   dashboard?: HomeDashboard | null
+  memberTimetables?: Array<{ id: number; isDefault?: number; status?: number }>
+  memberWeekSchedules?: ScheduleItem[]
 }
 
 export interface WechatWebConfig {

@@ -1,0 +1,224 @@
+input[type='date'],
+input[type='time'],
+input[type='datetime-local'] {
+  height: 36px;
+  padding: 0 11px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  color: var(--ink-2);
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(20, 29, 47, 0.02);
+  font-size: 12px;
+}
+
+input[type='date']:hover,
+input[type='time']:hover,
+input[type='datetime-local']:hover {
+  border-color: #cfd3de;
+}
+
+input[type='date']:focus,
+input[type='time']:focus,
+input[type='datetime-local']:focus {
+  outline: none;
+  border-color: #b7c0f4;
+  box-shadow: 0 0 0 3px rgba(82, 105, 232, 0.12);
+}
+
+.auth-wait {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 40px 24px;
+  background:
+    radial-gradient(circle at 12% 0%, rgba(103, 126, 255, 0.16), transparent 28%),
+    var(--page);
+}
+
+.auth-wait .ant-result {
+  width: min(480px, 100%);
+  padding: 36px 32px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: var(--shadow-sm);
+}
+
+.ant-btn {
+  box-shadow: none;
+}
+
+.ant-btn-primary {
+  background: var(--primary);
+}
+
+.ant-btn-primary:not(:disabled):hover {
+  background: var(--primary-dark) !important;
+}
+
+.ant-input,
+.ant-input-affix-wrapper,
+.ant-input-number,
+.ant-select-selector,
+.ant-picker {
+  border-color: var(--line) !important;
+  box-shadow: 0 1px 2px rgba(20, 29, 47, 0.02);
+}
+
+.ant-input:hover,
+.ant-input-affix-wrapper:hover,
+.ant-input-number:hover,
+.ant-select:hover .ant-select-selector,
+.ant-picker:hover {
+  border-color: #cfd3de !important;
+}
+
+.ant-input:focus,
+.ant-input-affix-wrapper-focused,
+.ant-input-number-focused,
+.ant-select-focused .ant-select-selector,
+.ant-picker-focused {
+  border-color: #b7c0f4 !important;
+  box-shadow: 0 0 0 3px rgba(82, 105, 232, 0.12) !important;
+}
+
+.ant-form-item-label > label {
+  color: var(--ink-2);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.ant-table-wrapper .ant-table {
+  color: var(--ink-2);
+  font-size: 12px;
+}
+
+.ant-table-wrapper .ant-table-thead > tr > th {
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.ant-table-wrapper .ant-table-tbody > tr > td {
+  border-bottom-color: #f0f1f5;
+}
+
+.ant-pagination .ant-pagination-item-active {
+  border-color: var(--primary);
+}
+
+.ant-pagination .ant-pagination-item-active a {
+  color: var(--primary);
+}
+
+.ant-modal .ant-modal-content {
+  border-radius: 16px;
+  box-shadow: var(--shadow-md);
+}
+
+.ant-drawer-right .ant-drawer-content {
+  border-radius: 16px 0 0 16px;
+  box-shadow: var(--shadow-md);
+}
+
+.ant-modal .ant-modal-header,
+.ant-drawer .ant-drawer-header {
+  border-bottom: 1px solid #eceef3;
+  margin-bottom: 0;
+  padding-bottom: 14px;
+}
+
+.ant-modal .ant-modal-title,
+.ant-drawer .ant-drawer-title {
+  color: var(--ink);
+  font-weight: 680;
+}
+
+.ant-tabs .ant-tabs-nav::before {
+  border-bottom-color: #eceef3;
+}
+
+.ant-tabs .ant-tabs-tab {
+  font-size: 13px;
+}
+
+.ant-segmented {
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: var(--shadow-sm);
+}
+
+.ant-segmented .ant-segmented-item-label {
+  min-height: 29px;
+  line-height: 29px;
+  font-size: 12px;
+}
+
+.ant-tag,
+.status-pill {
+  border: 0;
+  border-radius: 6px;
+  font-weight: 600;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 7px;
+  color: #687286;
+  background: #f3f4f7;
+  font-size: 12px;
+}
+
+.ant-tag.status-ok,
+.status-pill.is-ok {
+  color: var(--green);
+  background: var(--green-soft);
+}
+
+.ant-tag.status-warn,
+.status-pill.is-warn {
+  color: #d67a30;
+  background: var(--orange-soft);
+}
+
+.ant-tag.status-muted,
+.status-pill.is-muted {
+  color: #687286;
+  background: #f3f4f7;
+}
+
+.ant-tag-success {
+  color: var(--green);
+  background: var(--green-soft);
+}
+
+.ant-tag-warning {
+  color: #d67a30;
+  background: var(--orange-soft);
+}
+
+.ant-tag-error {
+  color: var(--red);
+  background: var(--red-soft);
+}
+
+.ant-tag-processing,
+.ant-tag-blue {
+  color: #5c6fdc;
+  background: var(--primary-soft);
+}
+
+.ant-message .ant-message-notice-content {
+  border-radius: 10px;
+  box-shadow: var(--shadow-md);
+}
+
+.ant-empty-description {
+  color: var(--muted);
+}
+
+.ant-spin-dot-item {
+  background: var(--primary);
+}
