@@ -65,6 +65,8 @@ export interface CheckInServiceOption {
   id: number
   key: string
   name: string
+  originalPrice: number
+  discount: number
   discountedPrice: number
 }
 
@@ -528,6 +530,8 @@ export function buildQuickCheckInServiceOptions(input: {
       id,
       key: `service:${id}`,
       name: String(service?.serviceName || service?.name || right.serviceName || right.courseTypeLabel || serviceNames[index] || `服务${id}`).trim(),
+      originalPrice: Number.isFinite(originalPrice) ? originalPrice : 0,
+      discount: Number.isFinite(discount) ? discount : 0,
       discountedPrice: Number.isFinite(discountedPrice) ? discountedPrice : 0,
     }
   })
@@ -541,4 +545,88 @@ export function checkInCourseSelectWarning(option?: Pick<CheckInPaymentOption, '
 export function checkInCourseSubmitWarning(option?: Pick<CheckInPaymentOption, 'isSelectable' | 'disabledReason'> | null): string {
   if (!option || option.isSelectable === false) return option?.disabledReason || '请选择课程'
   return ''
+}
+
+function addIsoDays(value: string, days: number): string {
+  const [year, month, day] = value.split('-').map(Number)
+  const date = new Date(year, month - 1, day)
+  date.setDate(date.getDate() + days)
+  const nextMonth = String(date.getMonth() + 1).padStart(2, '0')
+  const nextDay = String(date.getDate()).padStart(2, '0')
+  return `${date.getFullYear()}-${nextMonth}-${nextDay}`
+}
+
+function displayValidityRange(records: CheckInRecord[]): { validStartDate: string; validEndDate: string } | null {
+  const sorted = records
+    .filter((record) => normalizeDate(record.validStartDate) && normalizeDate(record.validEndDate))
+    .slice()
+    .sort((left, right) => {
+      const endCompare = normalizeDate(left.validEndDate).localeCompare(normalizeDate(right.validEndDate))
+      if (endCompare !== 0) return endCompare
+      const startCompare = normalizeDate(left.validStartDate).localeCompare(normalizeDate(right.validStartDate))
+      if (startCompare !== 0) return startCompare
+      const dateCompare = normalizeDate(left.paymentDate || left.date).localeCompare(normalizeDate(right.paymentDate || right.date))
+      if (dateCompare !== 0) return dateCompare
+      return Number(left.id || 0) - Number(right.id || 0)
+    })
+  if (!sorted.length) return null
+  const latest = sorted[sorted.length - 1]
+  let displayStart = normalizeDate(latest.validStartDate)
+  const displayEnd = normalizeDate(latest.validEndDate)
+  for (let index = sorted.length - 2; index >= 0; index -= 1) {
+    const previousEnd = normalizeDate(sorted[index]?.validEndDate)
+    const previousStart = normalizeDate(sorted[index]?.validStartDate)
+    if (!previousEnd || !displayStart || displayStart > addIsoDays(previousEnd, 1)) break
+    if (previousStart) displayStart = previousStart
+  }
+  if (!displayStart || !displayEnd) return null
+  return { validStartDate: displayStart, validEndDate: displayEnd }
+}
+
+export function clampQuickCheckInDate(date: string, input: {
+  card?: { id?: number; validStartDate?: string; validEndDate?: string; consumeDeadline?: string }
+  records?: CheckInRecord[]
+  singleCard?: boolean
+  today: string
+}): string {
+  const today = normalizeDate(input.today)
+  const card = input.card
+  const cardId = Number(card?.id || 0)
+  const allowUnscoped = !!input.singleCard
+  let start = normalizeDate(card?.validStartDate)
+  let end = normalizeDate(card?.validEndDate)
+  let deadline = normalizeDate(card?.consumeDeadline)
+  if (!start && !end && !deadline) {
+    const scoped = flattenPaymentRecords(input.records || []).filter((record) => {
+      const recordCardId = Number(record.studentCardId || 0)
+      if (cardId > 0) return recordCardId === cardId || (allowUnscoped && recordCardId <= 0)
+      return recordCardId <= 0
+    })
+    const range = displayValidityRange(scoped)
+    if (range) {
+      start = range.validStartDate
+      end = range.validEndDate
+    } else {
+      const deadlines = scoped
+        .filter((record) => !(normalizeDate(record.validStartDate) && normalizeDate(record.validEndDate)))
+        .map((record) => normalizeDate(record.consumeDeadline))
+        .filter(Boolean)
+        .sort()
+      if (deadlines.length) deadline = deadlines[deadlines.length - 1]
+      else {
+        const endDates = scoped.map((record) => normalizeDate(record.validEndDate)).filter(Boolean).sort()
+        end = endDates.length ? endDates[endDates.length - 1] : ''
+      }
+    }
+  }
+  let validityMax = ''
+  if (start && end) validityMax = deadline && deadline < end ? deadline : end
+  else if (deadline) validityMax = deadline
+  else if (end) validityMax = end
+  const max = validityMax && today && validityMax < today ? validityMax : today
+  let next = normalizeDate(date) || today
+  if (next > today) next = today
+  if (start && next < start) next = start
+  if (max && next > max) next = max
+  return next
 }

@@ -1,4 +1,4 @@
-import { deleteData, getData, postData, putData } from './http'
+import { deleteData, downloadData, getData, postData, putData } from './http'
 
 export type Query = Record<string, unknown>
 
@@ -25,4 +25,8 @@ export function putJson<T>(url: string, data?: unknown): Promise<T> {
 
 export function delJson<T>(url: string, params?: Query): Promise<T> {
   return deleteData<T>(url, clean(params))
+}
+
+export function downloadFile(url: string, params?: Query): Promise<{ blob: Blob; filename: string }> {
+  return downloadData(url, clean(params))
 }

@@ -68,17 +68,36 @@ export function paymentDateLabel(type: string, reason: string, category: string)
   return type === 'renew' ? '续费日期' : '缴费日期'
 }
 
+function inclusiveDayCount(start: Date, end: Date): number {
+  const dayMs = 24 * 60 * 60 * 1000
+  return Math.round((end.getTime() - start.getTime()) / dayMs) + 1
+}
+
+function roundHalfUp(value: number, scale: number): number {
+  const factor = 10 ** scale
+  const shifted = value * factor
+  const rounded = Math.sign(shifted) * Math.floor(Math.abs(shifted) + 0.5 + 1e-8)
+  return rounded / factor
+}
+
+/** 时段卡可转金额：实收 × 剩余天数 / 总有效天数。转让日早于开始日按整段计算。 */
+export function proratePeriodTransferAmount(paidAmount: number, validStartDate: string, validEndDate: string, transferDate: string): number {
+  const start = parseDateText(validStartDate)
+  const end = parseDateText(validEndDate)
+  const transfer = parseDateText(transferDate)
+  const safeAmount = Number(paidAmount)
+  if (!start || !end || !transfer || !Number.isFinite(safeAmount) || safeAmount <= 0) return 0
+  const totalDays = inclusiveDayCount(start, end)
+  if (totalDays <= 0) return 0
+  const remainingStart = transfer.getTime() > start.getTime() ? transfer : start
+  const remainingDays = remainingStart.getTime() > end.getTime() ? 0 : inclusiveDayCount(remainingStart, end)
+  if (remainingDays <= 0) return 0
+  if (remainingDays >= totalDays) return roundHalfUp(safeAmount, 2)
+  const dailyAmount = roundHalfUp(safeAmount / totalDays, 6)
+  return roundHalfUp(dailyAmount * remainingDays, 2)
+}
+
 export function transferTargetLabel(category: string): string {
   const card = String(category || '').toUpperCase()
   return card === 'PERIOD' || card === 'STORED_VALUE' ? '转让对象' : '转课对象'
-}
-
-export function supplementValidityError(type: string, category: string, start: string, end: string, deadline: string): string {
-  if (type !== 'supplement' || String(category || '').toUpperCase() === 'PERIOD') return ''
-  const stored = String(category || '').toUpperCase() === 'STORED_VALUE'
-  const hasRange = !!(start || end)
-  if (!hasRange && !deadline) return `请选择${stored ? '限时消费' : '限时销课'}或有效期`
-  if (hasRange && (!start || !end)) return '请选择有效期开始和结束日期'
-  if (hasRange && end < start) return '有效期结束不能早于开始'
-  return ''
 }

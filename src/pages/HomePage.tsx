@@ -1,11 +1,13 @@
-import { Button, Form, Input, Modal, Segmented, Spin, Switch, Table, message } from 'antd'
+import { Button, Form, Input, Modal, Spin, Table, Tabs, message } from 'antd'
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getJson, postJson } from '../api/biz'
+import { setOrgId } from '../session'
 import { loadHome } from '../api/home'
 import type { HomeBootstrap, Organization, ScheduleItem, UserInfo } from '../api/types'
 import { subscriptionBlocksPath, subscriptionExpiredText } from '../access'
-import { EmptyState, PageHead, money, todayIso, useShell } from './kit'
+import { AppIcon, EmptyState, PageHead, money, todayIso, useShell } from './kit'
+import { OrganizationCreateModal, type OrganizationCreateValues } from './organization-create-modal'
 import './HomePage.css'
 
 type HomeView = 'manager' | 'campus' | 'substitute' | 'member'
@@ -15,39 +17,6 @@ interface MemberTimetable {
   id: number
   isDefault?: number
   status?: number
-}
-
-const SHORTCUTS: Record<HomeView, Array<{ label: string; path: string; hint: string; campus?: boolean }>> = {
-  manager: [
-    { label: '机构管理', path: '/org', hint: '机构信息与配置' },
-    { label: '校区管理', path: '/campus', hint: '校区人员与权限', campus: true },
-    { label: '课时管理', path: '/hours', hint: '课时记录与核算', campus: true },
-    { label: '日常管理', path: '/daily', hint: '制度与奖惩管理', campus: true },
-    { label: '缴费管理', path: '/payments', hint: '收费记录与账单', campus: true },
-    { label: '工资管理', path: '/salary', hint: '老师薪酬与结算', campus: true },
-    { label: '收支管理', path: '/finance', hint: '收入支出全景', campus: true },
-    { label: '经营分析', path: '/profit', hint: '利润趋势与报表', campus: true },
-  ],
-  campus: [
-    { label: '校区管理', path: '/campus', hint: '校区人员与权限', campus: true },
-    { label: '课时管理', path: '/hours', hint: '课时记录与核算', campus: true },
-    { label: '日常管理', path: '/daily', hint: '制度与奖惩管理', campus: true },
-    { label: '缴费管理', path: '/payments', hint: '收费记录与账单', campus: true },
-    { label: '工资管理', path: '/salary', hint: '老师薪酬与结算', campus: true },
-    { label: '收支管理', path: '/finance', hint: '收入支出全景', campus: true },
-    { label: '经营分析', path: '/profit', hint: '利润趋势与报表', campus: true },
-  ],
-  substitute: [
-    { label: '我的课表', path: '/schedule', hint: '查看授课安排' },
-    { label: '我的学员', path: '/students', hint: '查看所带学员' },
-    { label: '我的课时', path: '/hours', hint: '查看授课课时' },
-    { label: '我的工资', path: '/salary', hint: '查看工资明细' },
-    { label: '个人中心', path: '/account', hint: '查看个人资料' },
-  ],
-  member: [
-    { label: '我的工资', path: '/salary', hint: '查看工资明细' },
-    { label: '个人中心', path: '/account', hint: '查看个人资料' },
-  ],
 }
 
 function campusAdminIds(user: UserInfo | null): number[] {
@@ -172,8 +141,7 @@ function accountName(user?: UserInfo | null): string {
 export function HomePage() {
   const shell = useShell()
   const navigate = useNavigate()
-  const [home, setHome] = useState<HomeBootstrap | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [home, setHome] = useState<HomeBootstrap | null>(shell.home)
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState('')
   const [day, setDay] = useState<DayTab>('today')
@@ -189,11 +157,10 @@ export function HomePage() {
   const managerView = view === 'manager' || view === 'campus'
   const showSchedule = view !== 'member'
 
-  async function loadMemberDay(nextUser: UserInfo | null | undefined, nextCampusId: number | null, nextDay: DayTab) {
+  async function fetchMemberDay(nextUser: UserInfo | null | undefined, nextCampusId: number | null, nextDay: DayTab): Promise<ScheduleItem[]> {
     const coachId = Number(nextUser?.orgMemberId || 0)
     if (coachId <= 0) {
-      setMemberLessons([])
-      return
+      return []
     }
     const date = nextDay === 'today' ? todayIso() : shiftIso(todayIso(), 1)
     const [timetableResult, lessonResult] = await Promise.allSettled([
@@ -204,50 +171,38 @@ export function HomePage() {
     const timetables = timetablesLoaded ? timetableResult.value || [] : []
     const lessons = lessonResult.status === 'fulfilled' ? lessonResult.value || [] : []
     if (lessonResult.status === 'rejected') {
-      setMemberLessons([])
       throw lessonResult.reason
     }
-    setMemberLessons(filterMemberLessons(lessons, timetables, timetablesLoaded, nextCampusId))
+    return filterMemberLessons(lessons, timetables, timetablesLoaded, nextCampusId)
   }
 
   useEffect(() => {
-    let active = true
-    setLoading(true)
-    loadHome(shell.campusId)
-      .then(async (data) => {
-        if (!active) return
-        setHome(data)
-        setError('')
-        const nextUser = data.user || shell.user
-        const org = (data.organizations || []).find((item) => item.id === data.currentOrgId) || null
-        const nextCampusId = data.resolvedCampusId || shell.campusId
-        if (homeView(nextUser, org, nextCampusId) === 'substitute') {
-          await loadMemberDay(nextUser, nextCampusId, day)
-        } else if (active) {
-          setMemberLessons([])
-        }
-      })
-      .catch((reason: unknown) => {
-        if (!active) return
-        setError(reason instanceof Error ? reason.message : '首页加载失败')
-      })
-      .finally(() => {
-        if (active) setLoading(false)
-      })
-    return () => {
-      active = false
-    }
-    // 日期切换单独刷新带课老师的课程，避免整页回到加载中。
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [shell.campusId, shell.currentOrgId])
+    if (!shell.home) return
+    setHome(shell.home)
+    setError('')
+  }, [shell.home])
 
   useEffect(() => {
-    if (!home || view !== 'substitute') return
+    if (!home) return
     let active = true
+    const nextUser = home.user || shell.user
+    const org = (home.organizations || []).find((item) => item.id === home.currentOrgId) || null
+    const nextCampusId = home.resolvedCampusId || shell.campusId
+    if (homeView(nextUser, org, nextCampusId) !== 'substitute') {
+      setMemberLessons([])
+      return () => {
+        active = false
+      }
+    }
     setRefreshing(true)
-    loadMemberDay(user, campusId, day)
+    fetchMemberDay(nextUser, nextCampusId, day)
+      .then((lessons) => {
+        if (active) setMemberLessons(lessons)
+      })
       .catch((reason: unknown) => {
-        if (active) message.error(reason instanceof Error ? reason.message : '课程加载失败')
+        if (!active) return
+        setMemberLessons([])
+        message.error(reason instanceof Error ? reason.message : '课程加载失败')
       })
       .finally(() => {
         if (active) setRefreshing(false)
@@ -255,9 +210,7 @@ export function HomePage() {
     return () => {
       active = false
     }
-    // 只在今天/明天切换时重取带课老师课程。首次进入由首页加载负责。
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [day])
+  }, [day, home])
 
   const dashboard = home?.dashboard
   const schedules = (managerView
@@ -274,10 +227,10 @@ export function HomePage() {
     }
   }, [dashboard, day, schedules])
   const coachRows = useMemo(() => groupByCoach(schedules), [schedules])
-  const shortcuts = SHORTCUTS[view]
-  const campusScopedHidden = view === 'campus' && !campusId
   const dayText = day === 'today' ? '今日' : '明日'
-  const emptySchedule = day === 'today' ? '今天暂无课程安排' : '明天暂无课程安排'
+  const emptySchedule = day === 'today'
+    ? (view === 'campus' ? '今天还没有课程安排' : '今天暂无课程安排')
+    : '明天暂无课程安排'
   const legend = useMemo(() => {
     const seen = new Set<number>()
     return schedules.flatMap((item) => {
@@ -312,7 +265,6 @@ export function HomePage() {
       const data = await loadHome(shell.campusId)
       setHome(data)
       setError('')
-      if (view === 'substitute') await loadMemberDay(data.user || user, data.resolvedCampusId || campusId, day)
     } catch (reason) {
       message.error(reason instanceof Error ? reason.message : '刷新失败')
     } finally {
@@ -320,7 +272,7 @@ export function HomePage() {
     }
   }
 
-  async function createOrg(values: { name: string; description?: string; campusAdminManageSalary?: boolean }) {
+  async function createOrg(values: OrganizationCreateValues) {
     const phone = String(shell.user?.phone || '').trim()
     const name = String(values.name || '').trim()
     if (!name) {
@@ -339,27 +291,98 @@ export function HomePage() {
       message.warning('请输入正确的手机号')
       return
     }
-    await postJson('/organizations', {
+    const created = await postJson<{ id?: number }>('/organizations', {
       name,
       phone,
       description: String(values.description || '').trim(),
       campusAdminManageSalary: values.campusAdminManageSalary ? 1 : 0,
     })
-    message.success('机构已创建。校区的地址、管理员和电话可以先不填。')
+    if (created?.id) setOrgId(created.id)
+    let collaboratorError = ''
+    try {
+      for (const item of values.collaborators || []) {
+        await postJson('/org-members/collaborators', { nickname: item.nickname, phone: item.phone })
+      }
+    } catch (reason) {
+      collaboratorError = reason instanceof Error ? reason.message : '部分协同管理员添加失败'
+    }
+    if (collaboratorError) message.warning(`机构已创建；${collaboratorError}`)
+    else message.success(values.collaborators?.length ? '机构已创建，协同管理员已加入。' : '机构已创建。请继续填写校区信息。')
     setCreatingOrg(false)
-    setCreatingCampus(true)
     shell.reload()
+    await openCampusCreator()
+  }
+
+  async function openCampusCreator() {
+    try {
+      const quota = await getJson<{ canCreate?: boolean; campusCount?: number; campusLimit?: number }>('/campus/quota')
+      if (quota.canCreate !== true) {
+        Modal.confirm({
+          title: '校区额度已满',
+          content: `当前已创建 ${quota.campusCount || 0} / ${quota.campusLimit || 0} 个校区，请升级会员后再创建。`,
+          okText: '查看会员套餐',
+          cancelText: '暂不创建',
+          onOk: () => navigate('/membership'),
+        })
+        return
+      }
+      setCreatingCampus(true)
+    } catch (reason) {
+      message.error(reason instanceof Error ? reason.message : '校区额度加载失败')
+    }
   }
 
   async function createCampus(values: { name: string; address?: string; contactPerson?: string; contactPhone?: string }) {
-    await postJson('/campus', { name: values.name, address: values.address, contactPerson: values.contactPerson, contactPhone: values.contactPhone })
+    const quota = await getJson<{ canCreate?: boolean }>('/campus/quota')
+    if (quota.canCreate !== true) {
+      message.warning('当前会员校区数量已达上限')
+      setCreatingCampus(false)
+      return
+    }
+    const name = String(values.name || '').trim()
+    const address = String(values.address || '').trim()
+    const manager = String(values.contactPerson || '').trim()
+    const phone = String(values.contactPhone || '').replace(/\D+/g, '').slice(0, 11)
+    if (!name) {
+      message.warning('请输入校区名称')
+      return
+    }
+    if (Array.from(name).length > 15) {
+      message.warning('校区名称最多15字')
+      return
+    }
+    if (Array.from(address).length > 100) {
+      message.warning('地址最多100字')
+      return
+    }
+    if (!manager) {
+      message.warning('请输入负责人')
+      return
+    }
+    if (Array.from(manager).length > 6) {
+      message.warning('负责人最多6字')
+      return
+    }
+    if (!phone) {
+      message.warning('请输入联系电话')
+      return
+    }
+    if (!/^1[3-9]\d{9}$/.test(phone)) {
+      message.warning('请输入正确的联系电话')
+      return
+    }
+    if (shell.campuses.some((item) => String(item.name || '').trim() === name)) {
+      message.warning('校区名称不能重复')
+      return
+    }
+    await postJson('/campus', { name, address, contactPerson: manager, contactPhone: phone })
     message.success('校区已创建')
     setCreatingCampus(false)
     shell.reload()
     navigate('/schedule')
   }
 
-  if (loading) return <Spin />
+  if (!home) return null
 
   if (!(home?.organizations || []).length) {
     const memberEmpty = homeView(shell.user, null, null) === 'member' || homeView(shell.user, null, null) === 'substitute'
@@ -370,19 +393,19 @@ export function HomePage() {
           text="网页端不进入家长端。已绑定手机号的机构用户可以创建机构，或先在小程序加入机构。"
           action={<Button type="primary" onClick={() => setCreatingOrg(true)}>创建机构</Button>}
         />
-        <OrgModal open={creatingOrg} onClose={() => setCreatingOrg(false)} onSubmit={createOrg} phone={shell.user?.phone} />
+        <OrganizationCreateModal open={creatingOrg} onClose={() => setCreatingOrg(false)} onSubmit={createOrg} phone={shell.user?.phone} onMembership={() => navigate('/membership')} />
       </section>
     )
   }
 
   return (
     <section>
-      <PageHead title={`${dayPartLabel()}，${accountName(user)}`} extra={`${dateHeadline()}${error ? ` · ${error}` : ''}`} />
+      <PageHead showTitle title={`${dayPartLabel()}，${accountName(user)}`} extra={`${dateHeadline()}${error ? ` · ${error}` : ''}`} />
       {!shell.campuses.length ? (
         <EmptyState
           title="当前机构还没有校区"
           text="建议先创建校区，后续老师、课程和课表都会更顺畅。"
-          action={<Button type="primary" onClick={() => setCreatingCampus(true)}>创建校区</Button>}
+          action={<Button type="primary" onClick={() => void openCampusCreator()}>创建校区</Button>}
         />
       ) : null}
       {managerView ? (
@@ -395,19 +418,21 @@ export function HomePage() {
       ) : null}
       {showSchedule ? (
         <section className="schedule-card">
-          <div className="work-toolbar" style={{ padding: '16px 18px 0' }}>
-            <Segmented
-              value={day}
+          <div className="work-toolbar home-schedule-toolbar">
+            <Tabs
+              className="tabs-nav-only home-schedule-tabs"
+              activeKey={day}
               onChange={(value) => setDay(value as DayTab)}
-              options={[{ label: '今日课程', value: 'today' }, { label: '明日课程', value: 'tomorrow' }]}
+              items={[{ key: 'today', label: '今日课程' }, { key: 'tomorrow', label: '明日课程' }]}
             />
-            <Button loading={refreshing} onClick={() => refreshSchedule()}>刷新</Button>
+            <Button className="home-schedule-refresh" icon={<AppIcon name="icon-refresh" size={14} />} loading={refreshing} onClick={() => refreshSchedule()}>刷新</Button>
           </div>
           <h2>{managerView ? `${dayText}课程` : `我的${dayText}课程`}</h2>
           {schedules.length === 0 ? <p className="schedule-meta" style={{ padding: '8px 18px 16px' }}>{emptySchedule}</p> : null}
           {managerView ? coachRows.map((row) => (
             <div className="overview-row" key={row.id}>
               <button className="overview-coach" type="button" disabled={!row.timetableId} onClick={() => row.timetableId && openPath(`/schedule?timetableId=${row.timetableId}`)}>
+                <AppIcon name="icon-person-neutral" size={14} />
                 {row.coachName}
               </button>
               <div>
@@ -453,28 +478,46 @@ export function HomePage() {
           ) : null}
         </section>
       ) : null}
-      <div className="shortcut-grid">
-        {shortcuts.filter((item) => !(item.campus && campusScopedHidden)).map((item) => (
-          <button className="shortcut-card" key={item.path + item.label} onClick={() => openPath(item.path)}>
-            <strong>{item.label}</strong>
-            <span>{item.hint}</span>
-          </button>
-        ))}
-      </div>
       <CourseRecordModal studentId={recordStudentId} onClose={() => setRecordStudentId(null)} onOpenStudent={(id) => { setRecordStudentId(null); openPath(`/students?studentId=${id}`) }} />
-      <OrgModal open={creatingOrg} onClose={() => setCreatingOrg(false)} onSubmit={createOrg} phone={shell.user?.phone} />
-      <Modal title="创建校区" open={creatingCampus} onCancel={() => setCreatingCampus(false)} footer={null} destroyOnClose>
+      <OrganizationCreateModal open={creatingOrg} onClose={() => setCreatingOrg(false)} onSubmit={createOrg} phone={shell.user?.phone} onMembership={() => navigate('/membership')} />
+      <Modal title="创建校区" open={creatingCampus} onCancel={() => setCreatingCampus(false)} footer={null} destroyOnHidden>
         <Form layout="vertical" onFinish={(values) => createCampus(values).catch((reason) => message.error(reason instanceof Error ? reason.message : '创建失败'))}>
-          <Form.Item name="name" label="校区名称" rules={[{ required: true, message: '请填写校区名称' }]}><Input maxLength={20} /></Form.Item>
-          <Form.Item name="address" label="详细地址"><Input maxLength={100} /></Form.Item>
-          <Form.Item name="contactPerson" label="校区管理员"><Input maxLength={20} /></Form.Item>
-          <Form.Item name="contactPhone" label="联系电话"><Input maxLength={20} /></Form.Item>
-          <p>地址、管理员和电话不是必填，可以先跳过。</p>
+          <Form.Item name="name" label="校区名称" rules={[{ required: true, message: '请输入校区名称' }]}><Input maxLength={15} /></Form.Item>
+          <Form.Item name="address" label="详细地址" extra="详细地址可以先不填"><Input maxLength={100} /></Form.Item>
+          <Form.Item name="contactPerson" label="负责人" rules={[{ required: true, message: '请输入负责人' }]}><Input maxLength={6} /></Form.Item>
+          <Form.Item name="contactPhone" label="联系电话" rules={[{ required: true, message: '请输入联系电话' }]}><Input maxLength={11} /></Form.Item>
           <Button type="primary" htmlType="submit">保存并进入课表</Button>
         </Form>
       </Modal>
     </section>
   )
+}
+
+const AUTO_CHECK_IN_REMARK = /^(?:排课)?自动打卡(?:\s+(\d{1,2}:\d{2}\s*-\s*\d{1,2}:\d{2}))?$/
+
+function courseRecordView(row: Record<string, unknown>): { date: string; title: string; hours: string; meta: string; auto: boolean; timeText: string } {
+  const remark = String(row.remark || '')
+  const matched = remark.match(AUTO_CHECK_IN_REMARK)
+  const auto = Number(row.autoCheckIn || 0) === 1 || !!matched
+  const remarkTime = matched?.[1] ? matched[1].replace(/\s+/g, '') : ''
+  const scheduleTime = String(row.scheduleTimeText || '')
+  const title = String(row.courseName || row.scheduledCourseName || row.courseTypeLabel || row.courseType || '上课记录')
+  const meta = [row.cardTypeLabel, row.coachName, matched ? '' : remark].map((item) => String(item || '').trim()).filter(Boolean).join(' · ')
+  return {
+    date: String(row.consumeDate || row.createTime || '').slice(0, 10) || '未记录日期',
+    title,
+    hours: `${formatRecordHours(row.hours)}课时`,
+    meta,
+    auto,
+    timeText: matched ? (remarkTime || scheduleTime) : (auto ? scheduleTime : ''),
+  }
+}
+
+function formatRecordHours(value: unknown): string {
+  const numeric = Number(value || 0)
+  if (!Number.isFinite(numeric)) return '0'
+  if (Number.isInteger(numeric)) return String(numeric)
+  return numeric.toFixed(2).replace(/\.?0+$/, '')
 }
 
 function courseSummary(student: Record<string, unknown> | null): { primary: string; primaryLabel: string; secondary: string; secondaryLabel: string; card: string; low: boolean } {
@@ -496,7 +539,7 @@ function courseSummary(student: Record<string, unknown> | null): { primary: stri
   }
   if (period) {
     const end = String(student?.periodValidEndDate || '')
-    const days = end ? Math.ceil((new Date(`${end.slice(0, 10)}T00:00:00`).getTime() - new Date(`${todayIso()}T00:00:00`).getTime()) / 86400000) : null
+    const days = end ? Math.max(0, Math.ceil((new Date(`${end.slice(0, 10)}T00:00:00`).getTime() - new Date(`${todayIso()}T00:00:00`).getTime()) / 86400000)) : null
     return {
       primary: days == null || Number.isNaN(days) ? '--' : `${days}天`,
       primaryLabel: '剩余天数',
@@ -537,7 +580,9 @@ function CourseRecordModal(props: { studentId: number | null; onClose: () => voi
     getJson<Record<string, unknown>>('/consumptions/home-course-records', { studentId: props.studentId, page: 1, pageSize: 10 })
       .then((data) => {
         if (!active) return
-        setStudent((data.student as Record<string, unknown>) || null)
+        const loaded = (data.student as Record<string, unknown>) || null
+        if (loaded && data.financialDetailsHidden === true) loaded.financialDetailsHidden = true
+        setStudent(loaded)
         setRows((data.consumptions as Array<Record<string, unknown>>) || [])
         setTotal(Number(data.total || 0))
         setHasMore(data.hasMore === true)
@@ -574,10 +619,13 @@ function CourseRecordModal(props: { studentId: number | null; onClose: () => voi
       onCancel={props.onClose}
       footer={props.studentId ? <Button type="primary" onClick={() => props.onOpenStudent(props.studentId || 0)}>进入学员</Button> : null}
       width={720}
-      destroyOnClose
+      destroyOnHidden
     >
-      <p className="schedule-meta">{[student?.campusName || '当前校区', summary.card, `${summary.primaryLabel} ${summary.primary}`, `${summary.secondaryLabel} ${summary.secondary}`, total ? `共${total}条上课记录` : ''].filter(Boolean).join(' · ')}</p>
-      {summary.low ? <p>不足5课时</p> : null}
+      <div className="stat-line">
+        <span>{summary.primaryLabel}<strong>{summary.primary}</strong></span>
+        <span>{summary.secondaryLabel}<strong>{summary.secondary}</strong></span>
+      </div>
+      <p className="schedule-meta">{[student?.campusName || '当前校区', summary.card, rows[0] ? courseRecordView(rows[0]).title : '', total ? `共${total}条上课记录` : ''].filter(Boolean).join(' · ')}{summary.low ? ' · 不足5课时' : ''}</p>
       {loading ? <Spin /> : null}
       {error ? <p>{error}</p> : null}
       {!loading && !error ? (
@@ -587,39 +635,18 @@ function CourseRecordModal(props: { studentId: number | null; onClose: () => voi
           pagination={false}
           locale={{ emptyText: '暂无上课记录' }}
           columns={[
-            { title: '日期', render: (_: unknown, row: Record<string, unknown>) => String(row.consumeDate || '').slice(0, 10) },
-            { title: '课程', render: (_: unknown, row: Record<string, unknown>) => String(row.courseName || row.courseTypeLabel || '上课记录') },
-            { title: '课时', dataIndex: 'hours' },
-            { title: '老师', dataIndex: 'coachName' },
-            { title: '方式', render: (_: unknown, row: Record<string, unknown>) => Number(row.autoCheckIn) === 1 ? '自动打卡' : '手动' },
+            { title: '日期', render: (_: unknown, row: Record<string, unknown>) => courseRecordView(row).date },
+            { title: '课程', render: (_: unknown, row: Record<string, unknown>) => courseRecordView(row).title },
+            { title: '课时', render: (_: unknown, row: Record<string, unknown>) => courseRecordView(row).hours },
+            { title: '说明', render: (_: unknown, row: Record<string, unknown>) => {
+              const view = courseRecordView(row)
+              return [view.meta, view.auto ? `自动打卡${view.timeText ? ` ${view.timeText}` : ''}` : ''].filter(Boolean).join(' · ')
+            } },
           ]}
         />
       ) : null}
       {!loading && !error && rows.length > 0 ? <p className="schedule-meta">{loadingMore ? '加载中...' : (hasMore ? '' : '没有更多记录了')}</p> : null}
       {hasMore ? <Button style={{ marginTop: 12 }} loading={loadingMore} onClick={() => more().catch((reason) => message.error(reason instanceof Error ? reason.message : '加载更多失败'))}>加载更多</Button> : null}
-    </Modal>
-  )
-}
-
-function OrgModal(props: {
-  open: boolean
-  phone?: string
-  onClose: () => void
-  onSubmit: (values: { name: string; description?: string; campusAdminManageSalary?: boolean }) => Promise<void>
-}) {
-  return (
-    <Modal title="创建机构" open={props.open} onCancel={props.onClose} footer={null} destroyOnClose>
-      <Form
-        layout="vertical"
-        initialValues={{ phone: props.phone, campusAdminManageSalary: false }}
-        onFinish={(values) => props.onSubmit(values).catch((reason) => message.error(reason instanceof Error ? reason.message : '创建失败'))}
-      >
-        <Form.Item name="name" label="机构名称" rules={[{ required: true, whitespace: true, message: '请输入机构名称' }, { max: 12, message: '机构名称最多12字' }]}><Input maxLength={12} /></Form.Item>
-        <Form.Item name="phone" label="联系电话"><Input disabled /></Form.Item>
-        <Form.Item name="description" label="机构描述"><Input.TextArea rows={3} /></Form.Item>
-        <Form.Item name="campusAdminManageSalary" label="校区管理员可管理本校区工资" valuePropName="checked"><Switch /></Form.Item>
-        <Button type="primary" htmlType="submit">创建</Button>
-      </Form>
     </Modal>
   )
 }

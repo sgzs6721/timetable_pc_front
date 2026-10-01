@@ -1,5 +1,6 @@
-import { Button } from 'antd'
-import type { ReactNode } from 'react'
+import { CopyOutlined, ReloadOutlined } from '@ant-design/icons'
+import { Button, Tooltip } from 'antd'
+import { useLayoutEffect, type ReactNode } from 'react'
 import { useOutletContext } from 'react-router-dom'
 import type { ShellContext } from '../layouts/AppShell'
 
@@ -9,6 +10,29 @@ export function useShell(): ShellContext {
 
 export function tell(error: unknown, fallback: string): string {
   return error instanceof Error && error.message ? error.message : fallback
+}
+
+export async function copyPlainText(value: string): Promise<boolean> {
+  const text = String(value || '').trim()
+  if (!text) return false
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text)
+      return true
+    }
+  } catch {
+    // 浏览器未授权剪贴板时，改用选中文本复制。
+  }
+  const area = document.createElement('textarea')
+  area.value = text
+  area.setAttribute('readonly', 'true')
+  area.style.position = 'fixed'
+  area.style.left = '-9999px'
+  document.body.appendChild(area)
+  area.select()
+  const copied = document.execCommand('copy')
+  area.remove()
+  return copied
 }
 
 export function todayIso(): string {
@@ -59,6 +83,21 @@ export function money(value: unknown): string {
   return Math.abs(number - Math.round(number)) < 0.001 ? `${Math.round(number)}` : number.toFixed(2)
 }
 
+/** 金额、单价、课时输入：整数最多保留指定位数，小数最多两位，多余部分直接丢掉。 */
+export function clampDecimalInput(value: unknown, integerDigits = 6): number | null {
+  if (value == null || value === '') return null
+  const numeric = Number(value)
+  if (!Number.isFinite(numeric) || numeric < 0) return 0
+  const truncated = Math.floor(numeric * 100 + 1e-8) / 100
+  const integer = Math.floor(truncated)
+  const decimal = Math.round((truncated - integer) * 100)
+  const digits = Math.max(1, Math.floor(integerDigits))
+  const sliced = Number(String(integer).slice(0, digits))
+  const next = sliced + decimal / 100
+  const cap = Number(`${'9'.repeat(digits)}.99`)
+  return next > cap ? cap : next
+}
+
 export function genderText(value: unknown): string {
   const text = String(value ?? '').toLowerCase()
   if (text === '1' || text === 'male' || text === 'm') return '男'
@@ -96,21 +135,34 @@ export function studentStatusText(student: {
   return '在学'
 }
 
-export function PageHead(props: { title: string; extra?: string; children?: ReactNode }) {
+export function PageHead(props: { title: string; extra?: string; children?: ReactNode; showTitle?: boolean }) {
+  const { setPageDescription } = useShell()
+  useLayoutEffect(() => {
+    setPageDescription(props.extra || '')
+    return () => setPageDescription('')
+  }, [props.extra, setPageDescription])
+
   return (
-    <header className="work-head">
-      <div>
-        <h1>{props.title}</h1>
-        {props.extra ? <p>{props.extra}</p> : null}
-      </div>
-      <div className="work-head-actions">{props.children}</div>
-    </header>
+    <>
+      {!props.showTitle ? <h1 className="page-title-visually-hidden">{props.title}</h1> : null}
+      {props.showTitle || props.children ? (
+        <header className={props.showTitle ? 'work-head has-title' : 'work-head'}>
+          {props.showTitle ? <div className="work-head-main"><h1>{props.title}</h1></div> : null}
+          {props.children ? <div className="work-head-actions">{props.children}</div> : null}
+        </header>
+      ) : null}
+    </>
   )
 }
 
-export function EmptyState(props: { title: string; text: string; action?: ReactNode }) {
+export function AppIcon(props: { name: string; size?: number; className?: string }) {
+  return <img className={props.className || 'app-icon'} src={`/icons/${props.name}.svg`} width={props.size || 18} height={props.size || 18} alt="" draggable={false} />
+}
+
+export function EmptyState(props: { title: string; text: string; action?: ReactNode; icon?: string }) {
   return (
     <section className="empty-card">
+      <AppIcon name={props.icon || 'icon-schedule-empty'} size={42} />
       <h2>{props.title}</h2>
       <p>{props.text}</p>
       {props.action}
@@ -133,5 +185,21 @@ export function NeedOrg(props: { orgId: number | null; children: ReactNode }) {
 }
 
 export function RefreshButton(props: { onClick: () => void; loading?: boolean }) {
-  return <Button onClick={props.onClick} loading={props.loading}>刷新</Button>
+  return <Button icon={<ReloadOutlined />} onClick={props.onClick} loading={props.loading}>刷新</Button>
+}
+
+export function PhoneCopyButton(props: { onClick: () => void }) {
+  return (
+    <Tooltip title="复制电话">
+      <Button
+        className="phone-copy-button"
+        type="text"
+        size="small"
+        htmlType="button"
+        icon={<CopyOutlined />}
+        aria-label="复制电话"
+        onClick={props.onClick}
+      />
+    </Tooltip>
+  )
 }

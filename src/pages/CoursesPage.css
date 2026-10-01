@@ -1,0 +1,67 @@
+.course-list-card > h2 {
+  margin: 0 0 16px;
+}
+
+.course-list-actionbar {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding: 10px;
+  border: 1px solid #e4eaf3;
+  border-radius: 13px;
+  background: #f8faff;
+}
+
+.course-create-button.ant-btn {
+  height: 38px;
+  padding-inline: 18px;
+}
+
+.course-list-stats.stat-line {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 6px;
+  margin: 0;
+}
+
+.course-list-stats.stat-line > span {
+  min-width: 0;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 11px;
+  border-radius: 9px;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.course-list-stats.stat-line strong {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.course-list-filters.work-toolbar {
+  min-width: 0;
+  justify-content: flex-end;
+  flex-wrap: nowrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+@media (max-width: 1280px) {
+  .course-list-actionbar {
+    grid-template-columns: auto 1fr;
+  }
+
+  .course-list-filters.work-toolbar {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+  }
+}

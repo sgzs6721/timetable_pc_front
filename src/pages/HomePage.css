@@ -1,116 +1,155 @@
 .home-hero h1 {
   margin: 0;
-  font-size: 25px;
-  letter-spacing: -0.025em;
+  font-size: 28px;
+  letter-spacing: -0.035em;
 }
 
 .home-hero p {
   margin: 7px 0 0;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .metric-grid {
-  margin-top: 22px;
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 14px;
+  gap: 15px;
+  margin-top: 4px;
 }
 
 .metric-card,
 .schedule-card {
-  background: var(--card);
   border: 1px solid var(--line);
-  border-radius: 14px;
+  border-radius: 17px;
+  background: rgba(255, 255, 255, 0.97);
   box-shadow: var(--shadow-sm);
 }
 
 .metric-card {
+  --metric: var(--primary);
+  --tint: var(--primary-soft);
   position: relative;
-  min-height: 129px;
-  padding: 19px 20px;
+  min-height: 142px;
+  padding: 22px 22px;
   overflow: hidden;
+  transition: transform 0.22s var(--ease), box-shadow 0.22s var(--ease), border-color 0.22s var(--ease);
+}
+
+.metric-card:hover {
+  border-color: #d6dffc;
+  box-shadow: 0 15px 34px rgba(34, 56, 101, 0.09);
+  transform: translateY(-3px);
+}
+
+.metric-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 22px;
+  width: 42px;
+  height: 3px;
+  border-radius: 0 0 5px 5px;
+  background: var(--metric);
 }
 
 .metric-card::after {
   content: "";
   position: absolute;
-  right: -25px;
-  bottom: -34px;
-  width: 105px;
-  height: 105px;
+  right: -34px;
+  bottom: -48px;
+  width: 145px;
+  height: 145px;
   border-radius: 50%;
-  background: var(--tint, #eef0ff);
-  opacity: 0.55;
+  background: radial-gradient(circle, var(--tint), transparent 69%);
 }
 
-.metric-card:nth-child(1) { --tint: #eef0ff; }
-.metric-card:nth-child(2) { --tint: #edf7ff; }
-.metric-card:nth-child(3) { --tint: #eaf8f3; }
-.metric-card:nth-child(4) { --tint: #fff4e9; }
+.metric-card:nth-child(1) { --metric: #315ff4; --tint: #dce6ff; }
+.metric-card:nth-child(2) { --metric: #12a7c7; --tint: #d5f4fa; }
+.metric-card:nth-child(3) { --metric: #0c9b6c; --tint: #d7f4e8; }
+.metric-card:nth-child(4) { --metric: #e98b36; --tint: #ffead2; }
 
 .metric-card span {
   position: relative;
   z-index: 1;
-  color: #687286;
+  color: #6e7b92;
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 620;
 }
 
 .metric-card strong {
   position: relative;
   z-index: 1;
   display: block;
-  margin-top: 18px;
-  color: #1b2436;
-  font-size: 27px;
-  font-weight: 700;
+  margin-top: 22px;
+  color: var(--ink);
+  font-size: 32px;
+  font-weight: 760;
   line-height: 1;
-  letter-spacing: -0.035em;
+  letter-spacing: -0.045em;
 }
 
 .metric-card em {
-  font-style: normal;
-  margin-left: 3px;
-  font-size: 11px;
+  margin-left: 4px;
   color: var(--muted);
+  font-size: 12px;
+  font-style: normal;
   font-weight: 500;
   letter-spacing: 0;
 }
 
 .schedule-card {
-  margin-top: 14px;
-  padding: 0 0 8px;
+  margin-top: 16px;
+  padding: 0 0 10px;
   overflow: hidden;
 }
 
 .schedule-card .work-toolbar {
-  min-height: 59px;
+  min-height: 66px;
   margin: 0;
-  padding: 12px 20px;
-  border-bottom: 1px solid #eceef3;
+  padding: 13px 21px;
+  border: 0;
+  border-bottom: 1px solid #edf1f6;
+  border-radius: 0;
+  background: linear-gradient(180deg, #fff, #fcfdff);
+}
+
+.ant-tabs.home-schedule-tabs > .ant-tabs-nav {
+  margin: 0 !important;
+  padding: 4px;
+}
+
+.home-schedule-tabs .ant-tabs-tab {
+  height: 30px;
+  padding: 0 13px !important;
+}
+
+.home-schedule-refresh.ant-btn {
+  height: 40px;
 }
 
 .schedule-card h2 {
-  margin: 16px 20px 4px;
-  font-size: 14px;
-  font-weight: 680;
+  margin: 18px 21px 6px;
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 720;
 }
 
 .schedule-row {
   display: grid;
-  grid-template-columns: 108px minmax(0, 1fr);
-  gap: 12px;
+  grid-template-columns: 112px minmax(0, 1fr);
+  gap: 14px;
   align-items: center;
-  min-height: 64px;
-  margin: 0 20px;
-  padding: 10px 0;
-  border-bottom: 1px solid #f0f1f5;
-  border-radius: 0;
+  min-height: 68px;
+  margin: 0 21px;
+  padding: 11px 8px;
+  border-bottom: 1px solid #edf1f6;
+  border-radius: 10px;
+  transition: background 0.18s var(--ease), padding-left 0.18s var(--ease);
 }
 
 .schedule-row:hover {
-  background: transparent;
+  padding-left: 13px;
+  background: #f6f9ff;
 }
 
 .schedule-row:hover .schedule-title {
@@ -119,14 +158,16 @@
 
 .schedule-time {
   color: var(--ink);
-  font-size: 12px;
-  font-weight: 650;
+  font-size: 13px;
+  font-weight: 680;
+  font-variant-numeric: tabular-nums;
 }
 
 .schedule-title {
-  color: #263147;
+  color: #2f3c57;
   font-size: 13px;
-  font-weight: 620;
+  font-weight: 650;
+  transition: color 0.18s var(--ease);
 }
 
 .schedule-meta {
@@ -137,24 +178,37 @@
 
 .overview-row {
   display: grid;
-  grid-template-columns: 120px minmax(0, 1fr);
-  gap: 12px;
+  grid-template-columns: 128px minmax(0, 1fr);
+  gap: 14px;
   align-items: start;
-  margin: 0 20px;
-  padding: 12px 0;
-  border-top: 1px solid #f0f1f5;
+  margin: 0 21px;
+  padding: 13px 8px;
+  border-top: 1px solid #edf1f6;
 }
 
 .overview-coach,
 .overview-link {
-  border: 0;
-  background: transparent;
-  color: var(--primary);
-  cursor: pointer;
-  font: inherit;
-  font-weight: 650;
   padding: 0;
+  border: 0;
+  color: var(--primary);
+  background: transparent;
+  font: inherit;
+  font-weight: 680;
   text-align: left;
+  cursor: pointer;
+}
+
+.overview-coach {
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  line-height: 20px;
+}
+
+.overview-coach .app-icon {
+  flex: none;
+  opacity: 0.78;
 }
 
 .overview-coach:disabled {
@@ -163,13 +217,29 @@
 }
 
 .overview-slot {
-  display: flex;
-  gap: 12px;
-  align-items: baseline;
-  padding: 4px 0;
+  min-height: 32px;
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr);
+  gap: 14px;
+  align-items: center;
+  padding: 0;
 }
 
-@media (max-width: 1100px) {
+.overview-slot + .overview-slot {
+  margin-top: 4px;
+}
+
+.overview-slot .schedule-time,
+.overview-slot .schedule-title,
+.overview-slot .overview-link {
+  line-height: 20px;
+}
+
+.legend-row {
+  padding: 12px 21px;
+}
+
+@media (max-width: 1260px) {
   .metric-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }

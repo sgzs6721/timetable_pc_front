@@ -1,8 +1,10 @@
 import { Button, Input, Popconfirm, Select, Table, message } from 'antd'
-import { useEffect, useState } from 'react'
+import { BarChartOutlined, DownOutlined, UpOutlined } from '@ant-design/icons'
+import { useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { delJson, getJson } from '../api/biz'
 import { EmptyState, NeedCampus, PageHead, money, monthKey, periodChoices, type PeriodOption, shiftPeriod, tell, todayIso, useShell } from './kit'
+import './HoursPage.css'
 
 interface HoursResult {
   month?: string
@@ -17,6 +19,7 @@ interface HoursResult {
   teacherOptions?: string[]
   summaryTrialHours?: number
   summaryServiceHours?: number
+  summaryServiceAmount?: number
   records?: Array<Record<string, unknown>>
   total?: number
 }
@@ -24,7 +27,12 @@ interface HoursResult {
 interface CampusHours {
   studentCount?: number
   activeStudentCount?: number
+  totalHours?: number
   consumedHours?: number
+  regularHours?: number
+  bonusHours?: number
+  consumedRegularHours?: number
+  consumedBonusHours?: number
   remainingRegularHours?: number
   remainingBonusHours?: number
 }
@@ -39,10 +47,12 @@ export function HoursPage() {
   const [endDate, setEndDate] = useState(search.get('endDate') || todayIso())
   const [course, setCourse] = useState('全部')
   const [teacher, setTeacher] = useState(search.get('teacherName') || '全部')
+  const appliedQuery = useRef(search.toString())
   const [keyword, setKeyword] = useState('')
   const [page, setPage] = useState(1)
   const [data, setData] = useState<HoursResult | null>(null)
   const [campusHours, setCampusHours] = useState<CampusHours | null>(null)
+  const [showCampusHours, setShowCampusHours] = useState(false)
   const role = String(shell.user?.role || '').trim().toLowerCase()
   const currentOrg = shell.organizations.find((item) => item.id === shell.currentOrgId) || null
   const canManage = role === 'owner' || role === 'admin' || (shell.user?.id != null && currentOrg?.ownerId === shell.user.id) || (shell.user?.campusAdminCampusIds || []).includes(Number(shell.campusId))
@@ -73,6 +83,22 @@ export function HoursPage() {
   }
 
   useEffect(() => {
+    const key = search.toString()
+    if (key === appliedQuery.current) return
+    appliedQuery.current = key
+    const nextMode = search.get('timeMode')
+    if (nextMode === 'custom_range' || nextMode === 'salary_cycle' || nextMode === 'natural_month' || nextMode === 'this_week' || nextMode === 'today') setMode(nextMode)
+    const nextMonth = search.get('month')
+    if (nextMonth) setMonth(nextMonth)
+    const nextStart = search.get('startDate')
+    if (nextStart) setStartDate(nextStart)
+    const nextEnd = search.get('endDate')
+    if (nextEnd) setEndDate(nextEnd)
+    const teacherName = search.get('teacherName')
+    if (teacherName) setTeacher(teacherName)
+  }, [search])
+
+  useEffect(() => {
     load(1).catch((error) => message.error(tell(error, '课时加载失败')))
     setPage(1)
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -86,22 +112,32 @@ export function HoursPage() {
     <NeedCampus campusId={shell.campusId}>
       <PageHead title={canManage ? '课时管理' : '我的课时'} extra={data?.rangeLabel || '按校区查看上课记录'} />
       <section className="work-card">
-        {campusHours ? (
-          <div className="stat-line">
-            <span>在学学员<strong>{campusHours.activeStudentCount || campusHours.studentCount || 0}</strong></span>
-            <span>已销课时<strong>{money(campusHours.consumedHours)}</strong></span>
-            <span>剩余正课<strong>{money(campusHours.remainingRegularHours)}</strong></span>
-            <span>剩余赠课<strong>{money(campusHours.remainingBonusHours)}</strong></span>
+        <div className="hours-section-head">
+          <div>
+            <h2>上课记录</h2>
+            <p>查看销课、体验课和服务记录</p>
           </div>
-        ) : null}
-        <div className="stat-line">
-          <span>课时<strong>{money(data?.summaryHours)}</strong></span>
-          <span>体验<strong>{money(data?.summaryTrialHours)}</strong></span>
-          <span>服务<strong>{money(data?.summaryServiceHours)}</strong></span>
-          <span>金额<strong>{money(data?.summaryAmount)}</strong></span>
-          <span>老师<strong>{data?.summaryTeacherCount || 0}</strong></span>
+          {campusHours ? (
+            <Button
+              className={`hours-campus-trigger${showCampusHours ? ' is-open' : ''}`}
+              icon={<BarChartOutlined />}
+              onClick={() => setShowCampusHours((open) => !open)}
+            >
+              校区课时
+              {showCampusHours ? <UpOutlined /> : <DownOutlined />}
+            </Button>
+          ) : null}
         </div>
-        <div className="work-toolbar">
+        <div className="hours-overview-bar">
+          <div className="stat-line hours-overview-stats">
+            <span><small>销课课时</small><strong>{money(data?.summaryHours)}</strong></span>
+            <span><small>体验课时</small><strong>{money(data?.summaryTrialHours)}</strong></span>
+            <span><small>销课金额</small><strong>{money(data?.summaryAmount)}</strong></span>
+            <span><small>服务金额</small><strong>{money(data?.summaryServiceAmount)}</strong></span>
+            <span><small>授课老师</small><strong>{data?.summaryTeacherCount || 0}</strong></span>
+          </div>
+          <div className="hours-overview-divider" />
+          <div className="work-toolbar hours-overview-filters">
           <Select
             style={{ width: 140 }}
             value={mode}
@@ -151,16 +187,37 @@ export function HoursPage() {
             />
           ) : null}
           <Input.Search allowClear placeholder="搜索学员" style={{ width: 200 }} onSearch={(value) => { setKeyword(value); setPage(1); load(1, value).catch((error) => message.error(tell(error, '课时加载失败'))) }} />
+          </div>
         </div>
+        {showCampusHours && campusHours ? (
+          <div className="hours-campus-panel">
+            <div className="hours-campus-panel-head">
+              <strong>校区课时概览</strong>
+              <span>当前校区学员课时汇总</span>
+            </div>
+            <div className="hours-campus-grid">
+              <span><small>在学学员</small><strong>{campusHours.activeStudentCount || campusHours.studentCount || 0}</strong></span>
+              <span><small>总课时</small><strong>{money(campusHours.totalHours)}</strong></span>
+              <span><small>已销课时</small><strong>{money(campusHours.consumedHours)}</strong></span>
+              <span><small>总正课</small><strong>{money(campusHours.regularHours)}</strong></span>
+              <span><small>总赠课</small><strong>{money(campusHours.bonusHours)}</strong></span>
+              <span><small>已上正课</small><strong>{money(campusHours.consumedRegularHours)}</strong></span>
+              <span><small>已上赠课</small><strong>{money(campusHours.consumedBonusHours)}</strong></span>
+              <span><small>剩余正课</small><strong>{money(campusHours.remainingRegularHours)}</strong></span>
+              <span><small>剩余赠课</small><strong>{money(campusHours.remainingBonusHours)}</strong></span>
+            </div>
+          </div>
+        ) : null}
         <Table
           rowKey={(row) => String(row.recordId || row.sortTime)}
           dataSource={data?.records || []}
           pagination={{ current: page, pageSize: 20, total: data?.total || 0, onChange: (next) => { setPage(next); load(next).catch(() => undefined) } }}
           columns={[
-            { title: '日期', dataIndex: 'date' },
-            { title: '老师', dataIndex: 'teacherName' },
-            { title: '学员', dataIndex: 'studentDisplayName' },
-            { title: '课程', dataIndex: 'courseName' },
+            { title: '日期', render: (_: unknown, row: Record<string, unknown>) => hoursDateText(row) },
+            { title: '时间', render: (_: unknown, row: Record<string, unknown>) => hoursClockText(row.scheduleTime) },
+            { title: '老师', render: (_: unknown, row: Record<string, unknown>) => hoursTeacherText(row) },
+            { title: '学员', render: (_: unknown, row: Record<string, unknown>) => hoursStudentText(row) },
+            { title: '课程', render: (_: unknown, row: Record<string, unknown>) => hoursCourseText(row) },
             { title: '类型', render: (_: unknown, row: Record<string, unknown>) => hoursTypeText(row) },
             { title: '打卡', render: (_: unknown, row: Record<string, unknown>) => row.recordType !== 'consumption' ? '' : Number(row.autoCheckIn) === 1 ? '自动' : '手动' },
             { title: '课时', render: (_: unknown, row: Record<string, unknown>) => hoursText(row.hours) },
@@ -169,7 +226,7 @@ export function HoursPage() {
             {
               title: '',
               render: (_: unknown, row: Record<string, unknown>) => canManage && row.recordType === 'consumption' && row.recordId ? (
-                <Popconfirm title="删除课时记录" description={`确定删除${row.studentDisplayName || '该学员'}的这条上课记录吗？删除后将返还 ${hoursText(row.hours)}。`} onConfirm={async () => {
+                <Popconfirm title="删除课时记录" description={`确定删除${hoursStudentText(row)}的这条上课记录吗？删除后将返还 ${hoursText(row.hours)}。`} onConfirm={async () => {
                   try {
                     await delJson(`/consumptions/${row.recordId}`)
                     message.success('已删除')
@@ -191,6 +248,65 @@ export function HoursPage() {
 
 function localIso(date: Date): string {
   return `${date.getFullYear()}-${`${date.getMonth() + 1}`.padStart(2, '0')}-${`${date.getDate()}`.padStart(2, '0')}`
+}
+
+const WEEKDAY_LABELS = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六']
+
+function isoDateText(value: unknown): string {
+  const match = String(value || '').trim().match(/(\d{4}-\d{2}-\d{2})/)
+  return match ? match[1] : ''
+}
+
+function weekdayText(date: string): string {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return ''
+  const parsed = new Date(Number(date.slice(0, 4)), Number(date.slice(5, 7)) - 1, Number(date.slice(8, 10)))
+  return WEEKDAY_LABELS[parsed.getDay()] || ''
+}
+
+function hoursDateText(row: Record<string, unknown>): string {
+  const date = isoDateText(row.scheduleTime) || isoDateText(row.date)
+  if (!date) return String(row.date || '')
+  const weekday = weekdayText(date)
+  return weekday ? `${date} ${weekday}` : date
+}
+
+function hoursClockText(value: unknown): string {
+  const text = String(value || '').trim()
+  const match = text.match(/(\d{2}:\d{2})(?::(\d{2})(?:\.\d+)?)?/)
+  if (!match) return ''
+  if (match[1] === '23:59' && match[2] === '59') return ''
+  return match[1]
+}
+
+function hoursStudentText(row: Record<string, unknown>): string {
+  return String(row.studentDisplayName || '').trim() || '未命名学员'
+}
+
+function hoursServiceRecord(row: Record<string, unknown>): boolean {
+  return row.serviceRecord === true || String(row.courseType || '').trim().startsWith('service:')
+}
+
+function hoursServiceText(row: Record<string, unknown>): string {
+  const raw = String(row.courseTypeLabel || row.courseName || '').trim() || '服务消费'
+  if (raw.startsWith('service:')) return '服务消费'
+  return raw.endsWith('服务') ? raw : `${raw}服务`
+}
+
+function hoursTeacherText(row: Record<string, unknown>): string {
+  if (hoursServiceRecord(row)) return hoursServiceText(row)
+  return String(row.teacherName || '').trim() || '未分配老师'
+}
+
+function hoursCourseText(row: Record<string, unknown>): string {
+  if (hoursServiceRecord(row)) return ''
+  const courseText = String(row.courseName || '').trim()
+  const studentText = String(row.studentDisplayName || '').trim()
+  if (courseText && courseText !== studentText) return courseText
+  const rawLabel = String(row.courseTypeLabel || '').trim()
+  const label = rawLabel === 'one_to_one' ? '一对一' : rawLabel
+  if (label && !/^\d+$/.test(label)) return label
+  if (row.recordType === 'preset_schedule') return String(row.recordTypeLabel || '').trim() || '体验课'
+  return ''
 }
 
 function hoursText(value: unknown): string {

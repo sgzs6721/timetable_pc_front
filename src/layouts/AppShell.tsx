@@ -1,9 +1,35 @@
-import { Button, Layout, Select, message } from 'antd'
-import { useEffect, useMemo, useState } from 'react'
+import {
+  AccountBookOutlined,
+  AppstoreOutlined,
+  AuditOutlined,
+  BankOutlined,
+  BarChartOutlined,
+  BookOutlined,
+  CalendarOutlined,
+  CrownOutlined,
+  CheckOutlined,
+  DownOutlined,
+  DollarCircleOutlined,
+  EnvironmentOutlined,
+  FieldTimeOutlined,
+  FundProjectionScreenOutlined,
+  IdcardOutlined,
+  LogoutOutlined,
+  MenuFoldOutlined,
+  MenuUnfoldOutlined,
+  MessageOutlined,
+  NotificationOutlined,
+  QuestionCircleOutlined,
+  SolutionOutlined,
+  UserOutlined,
+} from '@ant-design/icons'
+import { Avatar, Button, Dropdown, Layout, message } from 'antd'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { getUserInfo, logout } from '../api/auth'
 import { subscriptionBlocksPath, subscriptionExpiredText } from '../access'
 import { loadHome, setCurrentOrganization } from '../api/home'
+import { getJson } from '../api/biz'
 import type { Campus, HomeBootstrap, Organization, UserInfo } from '../api/types'
 import { navForUser } from '../nav'
 import { clearSession, getCampusId, getOrgId, setCampusId, setOrgId } from '../session'
@@ -13,7 +39,7 @@ const { Sider, Header, Content } = Layout
 
 const NAV_GROUPS = [
   { caption: '工作台', paths: ['/home', '/students', '/schedule', '/courses', '/hours'] },
-  { caption: '校务管理', paths: ['/org', '/campus', '/daily', '/payments', '/salary', '/finance', '/profit'] },
+  { caption: '校务管理', paths: ['/org', '/campus', '/daily', '/payments', '/salary', '/finance', '/profit', '/marketing'] },
   { caption: '系统', paths: ['/membership', '/account', '/guide', '/feedback'] },
 ]
 
@@ -33,62 +59,69 @@ function roleLabel(user: UserInfo | null, org: Organization | null): string {
   return '成员'
 }
 
+function RouteGlyph(props: { path: string }) {
+  let Icon = AppstoreOutlined
+  if (props.path === '/home') Icon = AppstoreOutlined
+  else if (props.path === '/students') Icon = IdcardOutlined
+  else if (props.path === '/schedule') Icon = CalendarOutlined
+  else if (props.path === '/courses') Icon = BookOutlined
+  else if (props.path === '/hours') Icon = FieldTimeOutlined
+  else if (props.path === '/org') Icon = BankOutlined
+  else if (props.path === '/campus') Icon = EnvironmentOutlined
+  else if (props.path === '/daily') Icon = AuditOutlined
+  else if (props.path === '/payments') Icon = DollarCircleOutlined
+  else if (props.path === '/salary') Icon = FundProjectionScreenOutlined
+  else if (props.path === '/finance') Icon = AccountBookOutlined
+  else if (props.path === '/profit') Icon = BarChartOutlined
+  else if (props.path === '/marketing') Icon = NotificationOutlined
+  else if (props.path === '/membership') Icon = CrownOutlined
+  else if (props.path === '/account') Icon = UserOutlined
+  else if (props.path === '/guide') Icon = QuestionCircleOutlined
+  else if (props.path === '/feedback') Icon = MessageOutlined
+  else Icon = SolutionOutlined
+  return <Icon />
+}
+
 function NavGlyph(props: { path: string }) {
-  const common = { fill: 'none', stroke: 'currentColor', strokeWidth: 1.8, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const }
-  if (props.path === '/home') {
-    return <svg className="nav-icon" viewBox="0 0 24 24" {...common}><rect x="3" y="3" width="7" height="7" rx="2" /><rect x="14" y="3" width="7" height="7" rx="2" /><rect x="3" y="14" width="7" height="7" rx="2" /><rect x="14" y="14" width="7" height="7" rx="2" /></svg>
-  }
-  if (props.path === '/students') {
-    return <svg className="nav-icon" viewBox="0 0 24 24" {...common}><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" /></svg>
-  }
-  if (props.path === '/schedule') {
-    return <svg className="nav-icon" viewBox="0 0 24 24" {...common}><rect x="3" y="4" width="18" height="17" rx="3" /><path d="M16 2v4M8 2v4M3 10h18" /></svg>
-  }
-  if (props.path === '/courses' || props.path === '/guide') {
-    return <svg className="nav-icon" viewBox="0 0 24 24" {...common}><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" /><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" /></svg>
-  }
-  if (props.path === '/hours') {
-    return <svg className="nav-icon" viewBox="0 0 24 24" {...common}><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
-  }
-  if (props.path === '/org' || props.path === '/campus') {
-    return <svg className="nav-icon" viewBox="0 0 24 24" {...common}><path d="M3 21h18M6 21V5l6-3 6 3v16M9 9h1M14 9h1M9 13h1M14 13h1M10 21v-4h4v4" /></svg>
-  }
-  if (props.path === '/daily') {
-    return <svg className="nav-icon" viewBox="0 0 24 24" {...common}><rect x="3" y="7" width="18" height="13" rx="2" /><path d="M8 7V4h8v3M3 12h18" /></svg>
-  }
-  if (props.path === '/payments' || props.path === '/membership') {
-    return <svg className="nav-icon" viewBox="0 0 24 24" {...common}><rect x="2" y="5" width="20" height="14" rx="3" /><path d="M2 10h20M6 15h4" /></svg>
-  }
-  if (props.path === '/salary' || props.path === '/finance') {
-    return <svg className="nav-icon" viewBox="0 0 24 24" {...common}><path d="M4 6h15a2 2 0 0 1 2 2v11H5a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3h13" /><path d="M16 12h5v4h-5a2 2 0 0 1 0-4z" /></svg>
-  }
-  if (props.path === '/profit') {
-    return <svg className="nav-icon" viewBox="0 0 24 24" {...common}><path d="M4 20V10M10 20V4M16 20v-7M22 20H2" /></svg>
-  }
-  if (props.path === '/account') {
-    return <svg className="nav-icon" viewBox="0 0 24 24" {...common}><circle cx="12" cy="8" r="4" /><path d="M4 21a8 8 0 0 1 16 0" /></svg>
-  }
-  return <svg className="nav-icon" viewBox="0 0 24 24" {...common}><circle cx="12" cy="12" r="3" /><path d="M12 5v2M12 17v2M5 12H3M21 12h-2" /></svg>
+  return <span className="nav-icon"><RouteGlyph path={props.path} /></span>
 }
 
 export interface ShellContext {
   user: UserInfo | null
+  home: HomeBootstrap | null
   organizations: Organization[]
   campuses: Campus[]
   currentOrgId: number | null
   campusId: number | null
   reload: () => void
+  setPageDescription: (description: string) => void
 }
 
 export function AppShell() {
   const navigate = useNavigate()
   const location = useLocation()
   const [user, setUser] = useState<UserInfo | null>(null)
+  const [homeBootstrap, setHomeBootstrap] = useState<HomeBootstrap | null>(null)
   const [organizations, setOrganizations] = useState<Organization[]>([])
   const [campuses, setCampuses] = useState<Campus[]>([])
   const [currentOrgId, setCurrentOrgId] = useState<number | null>(null)
   const [campusId, setCampusState] = useState<number | null>(Number(getCampusId()) || null)
   const [ready, setReady] = useState(false)
+  const [bootstrapError, setBootstrapError] = useState('')
+  const [marketingEnabled, setMarketingEnabled] = useState(true)
+  const [pageContext, setPageContext] = useState({ path: '', description: '' })
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => localStorage.getItem('timetable-sidebar-collapsed') === '1')
+
+  useEffect(() => {
+    localStorage.setItem('timetable-sidebar-collapsed', sidebarCollapsed ? '1' : '0')
+  }, [sidebarCollapsed])
+
+  const setPageDescription = useCallback((description: string) => {
+    setPageContext((current) => {
+      if (current.path === location.pathname && current.description === description) return current
+      return { path: location.pathname, description }
+    })
+  }, [location.pathname])
 
   async function refresh(): Promise<HomeBootstrap> {
     const info = await getUserInfo()
@@ -117,12 +150,25 @@ export function AppShell() {
     if (home.user) {
       setUser(home.user)
     }
+    setHomeBootstrap(home)
     setReady(true)
     return home
   }
 
+  function bootstrap() {
+    setReady(false)
+    setBootstrapError('')
+    refresh().catch((error) => {
+      setBootstrapError(error instanceof Error ? error.message : '工作台初始化失败')
+      setReady(true)
+    })
+  }
+
   useEffect(() => {
-    refresh().catch(() => undefined)
+    bootstrap()
+    getJson<{ marketingEnabled?: boolean }>('/platform-features')
+      .then((features) => setMarketingEnabled(features?.marketingEnabled !== false))
+      .catch(() => setMarketingEnabled(true))
   }, [])
 
   const currentOrg = organizations.find((item) => item.id === currentOrgId) || null
@@ -132,11 +178,13 @@ export function AppShell() {
       ? [
         { key: '/home', label: '首页' },
         { key: '/account', label: '个人中心' },
-        { key: '/guide', label: '使用文档' },
+        { key: '/guide', label: '需要帮助' },
         { key: '/feedback', label: '问题反馈' },
       ]
-      : navForUser(user, currentOrg).map((item) => ({ key: item.path, label: item.label }))),
-    [user, currentOrg, noOrganization],
+      : navForUser(user, currentOrg)
+        .filter((item) => item.path !== '/marketing' || marketingEnabled)
+        .map((item) => ({ key: item.path, label: item.label }))),
+    [user, currentOrg, noOrganization, marketingEnabled],
   )
 
   useEffect(() => {
@@ -144,6 +192,12 @@ export function AppShell() {
     if (['/home', '/account', '/guide', '/feedback'].includes(location.pathname)) return
     navigate('/home', { replace: true })
   }, [noOrganization, location.pathname, navigate])
+
+  useEffect(() => {
+    if (marketingEnabled || location.pathname !== '/marketing') return
+    message.info('营销功能当前未开放')
+    navigate('/home', { replace: true })
+  }, [marketingEnabled, location.pathname, navigate])
 
   async function changeOrg(orgId: number) {
     if (!orgId || orgId === currentOrgId) return
@@ -201,6 +255,7 @@ export function AppShell() {
 
   const shell: ShellContext = {
     user,
+    home: homeBootstrap,
     organizations,
     campuses,
     currentOrgId,
@@ -208,6 +263,7 @@ export function AppShell() {
     reload: () => {
       refresh().catch(() => undefined)
     },
+    setPageDescription,
   }
 
   function openPath(path: string) {
@@ -226,21 +282,30 @@ export function AppShell() {
   const rest = items.filter((item) => !listed.has(item.key))
   if (rest.length) grouped.push({ caption: '其他', paths: [], items: rest })
   const name = displayName(user)
+  const currentItem = items.find((item) => item.key === location.pathname)
+  const currentCampus = campuses.find((item) => item.id === campusId)
+  const pageDescription = pageContext.path === location.pathname ? pageContext.description : ''
 
   return (
-    <Layout className="app-shell">
-      <Sider className="app-sider" width={236} theme="dark">
+    <Layout className={sidebarCollapsed ? 'app-shell is-sidebar-collapsed' : 'app-shell'}>
+      <Sider className="app-sider" width={236} collapsedWidth={72} collapsed={sidebarCollapsed} trigger={null} theme="dark">
         <div className="app-brand">
           <div className="brand-mark" aria-hidden="true">
-            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-              <rect x="3" y="4" width="18" height="17" rx="3" />
-              <path d="M16 2v4M8 2v4M3 10h18" />
-            </svg>
+            <CalendarOutlined />
           </div>
           <div className="brand-copy">
             <strong>云效课时</strong>
-            <span>EDUCATION CLOUD</span>
+            <span>培训教务管理</span>
           </div>
+          <button
+            className="sidebar-toggle"
+            type="button"
+            aria-label={sidebarCollapsed ? '展开侧边栏' : '收起侧边栏'}
+            title={sidebarCollapsed ? '展开侧边栏' : '收起侧边栏'}
+            onClick={() => setSidebarCollapsed((value) => !value)}
+          >
+            {sidebarCollapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+          </button>
         </div>
         <nav className="nav-scroll">
           {grouped.map((group) => (
@@ -251,6 +316,8 @@ export function AppShell() {
                   key={item.key}
                   type="button"
                   className={location.pathname === item.key ? 'nav-item active' : 'nav-item'}
+                  title={sidebarCollapsed ? item.label : undefined}
+                  aria-label={item.label}
                   onClick={() => openPath(item.key)}
                 >
                   <NavGlyph path={item.key} />
@@ -261,48 +328,92 @@ export function AppShell() {
           ))}
         </nav>
         <div className="sidebar-footer">
-          <button className="help-card" type="button" onClick={() => openPath('/guide')}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-              <circle cx="12" cy="12" r="9" />
-              <path d="M9.5 9a2.6 2.6 0 1 1 4.4 1.9c-1 .8-1.9 1.2-1.9 3.1M12 18h.01" />
-            </svg>
-            <div><b>需要帮助？</b>查看使用手册与反馈</div>
+          <button className="sidebar-logout" type="button" onClick={onLogout} aria-label="退出登录">
+            <span className="sidebar-logout-icon"><LogoutOutlined /></span>
+            <span>退出登录</span>
           </button>
         </div>
       </Sider>
       <Layout>
         <Header className="app-header">
-          <div className="app-header-tools">
-            <Select
-              className="shell-select"
-              placeholder="选择机构"
-              value={organizations.some((item) => item.id === currentOrgId) ? currentOrgId || undefined : undefined}
-              options={organizations.map((item) => ({ value: item.id, label: item.name }))}
-              onChange={changeOrg}
-            />
-            <Select
-              className="shell-select"
-              placeholder="选择校区"
-              value={campuses.some((item) => item.id === campusId) ? campusId || undefined : undefined}
-              options={campuses.map((item) => ({ value: item.id, label: item.name }))}
-              onChange={changeCampus}
-            />
+          <div className="app-header-context">
+            <span className="header-context-icon" aria-hidden="true"><RouteGlyph path={location.pathname} /></span>
+            <div>
+              <strong>{currentItem?.label || '教务工作台'}</strong>
+              <span title={pageDescription}>{pageDescription}</span>
+            </div>
           </div>
           <div className="app-header-tools">
+            <div className="header-selects">
+              <Dropdown
+                disabled={!organizations.length}
+                trigger={['click']}
+                placement="bottomRight"
+                menu={{
+                  className: 'campus-switch-menu',
+                  selectable: true,
+                  selectedKeys: currentOrgId ? [String(currentOrgId)] : [],
+                  items: organizations.map((item) => ({
+                    key: String(item.id),
+                    label: <span className="campus-switch-menu-item"><span>{item.name || '未命名机构'}</span>{item.id === currentOrgId ? <em><CheckOutlined /> 当前</em> : null}</span>,
+                  })),
+                  onClick: ({ key }) => void changeOrg(Number(key)),
+                }}
+              >
+                <button className="shell-campus-switch shell-organization-switch" type="button" aria-label="切换机构">
+                  <span className="shell-select-label">机构</span>
+                  <strong>{currentOrg?.name || '请选择机构'}</strong>
+                  <span className="shell-campus-switch-action" aria-hidden="true"><DownOutlined /></span>
+                </button>
+              </Dropdown>
+              <Dropdown
+                disabled={!campuses.length}
+                trigger={['click']}
+                placement="bottomRight"
+                menu={{
+                  className: 'campus-switch-menu',
+                  selectable: true,
+                  selectedKeys: campusId ? [String(campusId)] : [],
+                  items: campuses.map((item) => ({
+                    key: String(item.id),
+                    label: <span className="campus-switch-menu-item"><span>{item.name || '未命名校区'}</span>{item.id === campusId ? <em><CheckOutlined /> 当前</em> : null}</span>,
+                  })),
+                  onClick: ({ key }) => void changeCampus(Number(key)),
+                }}
+              >
+                <button className="shell-campus-switch" type="button" aria-label="切换校区">
+                  <span className="shell-select-label">校区</span>
+                  <strong>{currentCampus?.name || '请选择校区'}</strong>
+                  <span className="shell-campus-switch-action" aria-hidden="true"><DownOutlined /></span>
+                </button>
+              </Dropdown>
+            </div>
             <button className="profile" type="button" onClick={() => navigate('/account')}>
-              <span className="avatar">{name.slice(0, 1)}</span>
               <span className="profile-copy">
                 <strong>{name}</strong>
                 <span>{roleLabel(user, currentOrg)}</span>
               </span>
+              <Avatar
+                className="profile-avatar"
+                shape="square"
+                size={39}
+                src={user?.avatarUrl || undefined}
+                icon={<UserOutlined />}
+              />
             </button>
-            <div className="top-divider" />
-            <button className="logout-button" type="button" onClick={onLogout}>退出</button>
           </div>
         </Header>
         <Content className="app-content">
           <div className="app-page">
-            {subscriptionBlocksPath(user, location.pathname, currentOrg) ? (
+            {!ready ? (
+              <div className="route-loading">正在恢复账号、机构与校区上下文…</div>
+            ) : bootstrapError ? (
+              <section className="empty-card">
+                <h2>工作台初始化失败</h2>
+                <p>{bootstrapError}</p>
+                <Button type="primary" onClick={bootstrap}>重新加载</Button>
+              </section>
+            ) : subscriptionBlocksPath(user, location.pathname, currentOrg) ? (
               <section className="empty-card">
                 <h2>试用期已结束</h2>
                 <p>{subscriptionExpiredText(user)}</p>

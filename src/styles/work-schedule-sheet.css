@@ -1,0 +1,557 @@
+.tt-slot.is-target {
+  background: #e7eefe;
+  box-shadow: inset 0 0 0 2px #4f7cff;
+}
+
+.tt-card.is-source {
+  outline: 2px solid #4f7cff;
+  outline-offset: 1px;
+}
+
+.tt-modebar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 10px 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #f4f7ff;
+}
+
+.tt-modebar span {
+  flex: 1;
+  color: #243056;
+  font-weight: 650;
+}
+
+.tt-modebar button {
+  height: 34px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 9px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.tt-modebar button:last-child {
+  background: #243056;
+  color: #fff;
+}
+
+.tt-modebar button.is-off {
+  background: #d5d8e2;
+  color: #fff;
+}
+
+.drag-options {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.drag-options.is-single {
+  grid-template-columns: 1fr 1fr;
+}
+
+.drag-options button {
+  height: 46px;
+  border: 0;
+  border-radius: 12px;
+  font-weight: 680;
+  cursor: pointer;
+}
+
+.drag-options .is-copy { background: #efe8ff; color: #6941c6; }
+.drag-options .is-move { background: #e7eefe; color: #2456d6; }
+.drag-options .is-cancel { background: #f3f4f7; color: #52607a; }
+
+.sheet-modal .ant-modal-content {
+  position: relative;
+  padding: 0;
+  overflow: hidden;
+  border-radius: 18px;
+}
+
+.sheet-head,
+.sheet-form,
+.sheet-actions,
+.sheet-records,
+.sheet-occupied,
+.sheet-echo,
+.sheet-foot {
+  padding-left: 18px;
+  padding-right: 18px;
+}
+
+.sheet-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 16px;
+  padding-bottom: 12px;
+}
+
+.sheet-head strong,
+.sheet-head em {
+  display: block;
+}
+
+.sheet-head em,
+.sheet-foot {
+  color: var(--muted);
+  font-style: normal;
+  font-size: 12px;
+}
+
+.sheet-head-actions,
+.sheet-field,
+.sheet-switch,
+.sheet-people header,
+.sheet-records header,
+.sheet-card header,
+.sheet-card footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sheet-head-actions button,
+.sheet-field > button,
+.sheet-picker,
+.sheet-actions button,
+.sheet-records header button,
+.sheet-people header button,
+.sheet-echo button,
+.sheet-trial button,
+.sheet-coaches button,
+.sheet-card button,
+.sheet-people article button {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.sheet-head-actions button {
+  color: #2456d6;
+}
+
+.sheet-x {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  color: #667085 !important;
+  font-size: 20px;
+}
+
+.sheet-echo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin: 0 18px 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #f7f8fb;
+}
+
+.sheet-echo small {
+  flex-basis: 100%;
+  color: #667085;
+  font-size: 12px;
+}
+
+.sheet-echo span,
+.sheet-field > span,
+.sheet-duration span,
+.sheet-trial > span {
+  color: #667085;
+  font-size: 13px;
+}
+
+.sheet-echo i {
+  margin-left: 8px;
+  color: #d97706;
+  font-style: normal;
+}
+
+.sheet-echo i.is-delete { color: #e11d48; }
+
+.sheet-echo button,
+.sheet-card footer button:last-child {
+  margin-left: auto;
+  color: #2456d6;
+}
+
+.sheet-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-bottom: 8px;
+}
+
+.sheet-field {
+  position: relative;
+  min-height: 40px;
+  padding: 6px 10px;
+  border-radius: 12px;
+  background: #f6f7fb;
+}
+
+.sheet-field > span {
+  width: 64px;
+  flex: none;
+}
+
+.sheet-field strong,
+.sheet-field input,
+.sheet-picker {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+}
+
+.sheet-field input {
+  height: 32px;
+  border: 0;
+  background: transparent;
+  outline: none;
+}
+
+.sheet-switch {
+  justify-content: space-between;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: #f6f7fb;
+}
+
+.sheet-menu {
+  position: absolute;
+  z-index: 5;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  max-height: 280px;
+  overflow: auto;
+  padding: 6px;
+  border: 1px solid #e6e8ef;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 12px 30px rgba(20, 28, 45, 0.12);
+}
+
+.sheet-menu button {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.sheet-menu button.is-on,
+.sheet-menu button:hover { background: #f4f7ff; }
+
+.sheet-tags,
+.sheet-tags em,
+.sheet-menu em {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #52607a;
+  font-style: normal;
+  font-size: 12px;
+}
+
+.sheet-menu .is-expired { color: #e11d48; }
+
+.sheet-stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sheet-stepper button {
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 8px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.sheet-stepper b small {
+  display: block;
+  color: #667085;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.sheet-duration,
+.sheet-trial > div,
+.sheet-coaches > div,
+.sheet-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.sheet-actions {
+  grid-template-columns: repeat(3, 1fr);
+  padding-bottom: 12px;
+}
+
+.sheet-actions.is-two { grid-template-columns: 1fr 1fr; }
+.sheet-actions.is-three { grid-template-columns: 1fr 1fr 1.2fr; }
+
+.sheet-actions button,
+.sheet-trial button,
+.sheet-coaches button {
+  height: 40px;
+  border-radius: 10px;
+  background: #f3f4f7;
+  font-weight: 650;
+}
+
+.sheet-actions .is-blue { background: #e7eefe; color: #2456d6; }
+.sheet-actions .is-violet { background: #efe8ff; color: #6941c6; }
+.sheet-actions .is-orange { background: #fff1e6; color: #c2410c; }
+.sheet-actions .is-red { background: #ffecec; color: #e11d48; }
+.sheet-actions .is-save { background: #243056; color: #fff; }
+.sheet-actions .is-occupy { background: #eef1f6; color: #344054; }
+.sheet-actions button:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.sheet-trial,
+.sheet-coaches,
+.sheet-people {
+  padding: 10px;
+  border-radius: 12px;
+  background: #f8f9fc;
+}
+
+.sheet-trial button.is-on,
+.sheet-coaches button.is-on {
+  background: #243056;
+  color: #fff;
+}
+
+.sheet-trial button.is-off {
+  opacity: 0.45;
+}
+
+.sheet-people header { margin-bottom: 8px; }
+.sheet-people header em,
+.sheet-people header span { color: #667085; font-size: 12px; }
+.sheet-people header em { margin-left: auto; font-style: normal; }
+
+.sheet-people article {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+}
+
+.sheet-people article.is-out { opacity: 0.55; }
+.sheet-people article.is-short b { color: #b45309; }
+.sheet-people small.is-low,
+.sheet-people article button.is-low { color: #dc2626; font-weight: 700; }
+.hours-low { color: #b45309; font-weight: 600; }
+.sheet-people .is-leave { color: #d97706; }
+.sheet-warn { margin: 6px 0 0; color: #c2410c; font-size: 12px; }
+
+.sheet-occupied {
+  padding-bottom: 16px;
+}
+
+.sheet-occupied b,
+.sheet-occupied p { display: block; }
+.sheet-occupied p { color: #667085; }
+
+.sheet-records { padding-bottom: 16px; }
+.sheet-records article {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid #eef0f5;
+}
+
+.sheet-card-mask {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: end center;
+  background: rgba(17, 24, 39, 0.28);
+}
+
+.sheet-card {
+  width: min(420px, 100%);
+  margin: 16px;
+  padding: 14px;
+  border-radius: 16px;
+  background: #fff;
+}
+
+.sheet-card button {
+  display: block;
+  width: 100%;
+  padding: 8px 0;
+  text-align: left;
+}
+
+.sheet-card button.is-on { color: #2456d6; }
+.sheet-card button b.is-low { color: #dc2626; font-weight: 700; }
+.sheet-card button small { display: block; color: #b45309; font-size: 12px; }
+.sheet-foot { padding-bottom: 14px; }
+
+.assigned-coaches { display: grid; gap: 8px; }
+.assigned-coaches > strong { font-size: 14px; }
+.assigned-coaches ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.assigned-coaches li { display: flex; align-items: center; justify-content: space-between; min-height: 40px; padding: 0 12px; border: 1px solid #e6ebf2; border-radius: 8px; background: #f8fafc; }
+.assigned-coaches p { margin: 0; color: #64748b; }
+
+/* Refined schedule editor surfaces */
+.tt-modebar {
+  padding: 10px 12px;
+  border: 1px solid #e5ebf4;
+  border-radius: 12px;
+  background: linear-gradient(145deg, #fafcff, #f4f7ff);
+}
+
+.tt-modebar button,
+.drag-options button,
+.sheet-head-actions button,
+.sheet-field > button,
+.sheet-picker,
+.sheet-actions button,
+.sheet-records header button,
+.sheet-people header button,
+.sheet-echo button,
+.sheet-trial button,
+.sheet-coaches button,
+.sheet-card button,
+.sheet-people article button {
+  border-radius: 9px;
+  transition: color 0.18s var(--ease), border-color 0.18s var(--ease), background 0.18s var(--ease), box-shadow 0.18s var(--ease), transform 0.18s var(--ease);
+}
+
+.tt-modebar button:hover,
+.drag-options button:hover,
+.sheet-actions button:not(:disabled):hover,
+.sheet-trial button:hover,
+.sheet-coaches button:hover {
+  filter: saturate(1.06);
+  transform: translateY(-1px);
+}
+
+.sheet-modal .ant-modal-content {
+  border-radius: 20px;
+  box-shadow: var(--shadow-lg);
+}
+
+.sheet-head {
+  border-bottom-color: var(--line);
+  background: linear-gradient(180deg, #fff, #fbfcff);
+}
+
+.sheet-head strong {
+  color: var(--ink);
+  font-size: 18px;
+  font-weight: 730;
+}
+
+.sheet-form,
+.sheet-records,
+.sheet-people,
+.sheet-occupied,
+.sheet-echo {
+  border-color: var(--line);
+}
+
+.sheet-echo {
+  border-radius: 12px;
+  background: #f8faff;
+}
+
+.sheet-field {
+  border-color: var(--line);
+  border-radius: 11px;
+  background: #fff;
+  transition: border-color 0.18s var(--ease), box-shadow 0.18s var(--ease);
+}
+
+.sheet-field:focus-within {
+  border-color: #aebfff;
+  box-shadow: 0 0 0 4px rgba(49, 95, 244, 0.09);
+}
+
+.sheet-menu {
+  border: 1px solid rgba(222, 229, 240, 0.9);
+  border-radius: 12px;
+  box-shadow: var(--shadow-md);
+}
+
+.sheet-menu button.is-on,
+.sheet-menu button:hover {
+  color: var(--primary);
+  background: var(--primary-soft);
+}
+
+.sheet-actions button {
+  min-height: 40px;
+  font-weight: 650;
+}
+
+.sheet-actions .is-blue { color: var(--primary); background: var(--primary-soft); }
+.sheet-actions .is-violet { color: var(--purple); background: var(--purple-soft); }
+.sheet-actions .is-orange { color: #c66b24; background: var(--orange-soft); }
+.sheet-actions .is-red { color: var(--red); background: var(--red-soft); }
+.sheet-actions .is-save {
+  color: #fff;
+  background: linear-gradient(135deg, var(--primary-light), var(--primary));
+  box-shadow: 0 7px 16px rgba(49, 95, 244, 0.18);
+}
+
+.sheet-trial button.is-on,
+.sheet-coaches button.is-on {
+  color: var(--primary);
+  border-color: #c1ceff;
+  background: var(--primary-soft);
+}
+
+.sheet-people article,
+.sheet-records article,
+.assigned-coaches li {
+  border-color: var(--line);
+  border-radius: 10px;
+  background: #f9faff;
+  transition: border-color 0.18s var(--ease), background 0.18s var(--ease), transform 0.18s var(--ease);
+}
+
+.sheet-people article:hover,
+.sheet-records article:hover {
+  border-color: #cfd9e8;
+  background: #fff;
+  transform: translateY(-1px);
+}
+
+.sheet-card {
+  border-color: var(--line);
+  border-radius: 12px;
+  box-shadow: var(--shadow-xs);
+}
+
+.sheet-card button.is-on {
+  color: var(--primary);
+}
+
+@media (max-width: 1100px) {
+  .shortcut-grid,
+  .split,
+  .section-grid {
+    grid-template-columns: 1fr;
+  }
+}

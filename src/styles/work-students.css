@@ -1,0 +1,355 @@
+.choice-tabs,
+.pay-method-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+}
+
+.choice-tabs button,
+.pay-method-tabs button {
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  color: var(--ink-2);
+  background: #fff;
+  box-shadow: var(--shadow-xs);
+  cursor: pointer;
+  font-size: 13px;
+  transition: color 0.18s var(--ease), border-color 0.18s var(--ease), background 0.18s var(--ease), box-shadow 0.18s var(--ease), transform 0.18s var(--ease);
+}
+
+.choice-tabs button:hover,
+.pay-method-tabs button:hover {
+  color: var(--primary);
+  border-color: #c6d3fb;
+  background: var(--primary-faint);
+  transform: translateY(-1px);
+}
+
+.choice-tabs button.is-on,
+.pay-method-tabs button.is-on {
+  color: var(--primary);
+  border-color: #c8d4ff;
+  background: var(--primary-soft);
+  box-shadow: inset 0 0 0 1px rgba(49, 95, 244, 0.06), 0 6px 15px rgba(49, 95, 244, 0.08);
+  font-weight: 680;
+}
+
+.choice-tabs button small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.choice-tabs button.is-on small {
+  color: #6a7ec3;
+}
+
+.choice-tabs button.is-male {
+  box-shadow: inset 3px 0 0 #60a5fa;
+}
+
+.choice-tabs button.is-female {
+  box-shadow: inset 3px 0 0 #f472b6;
+}
+
+.choice-tabs button .is-inactive,
+.check-timeline header span.is-inactive {
+  color: #9aa6b9;
+}
+
+.choice-tabs button.is-on .is-inactive {
+  color: #7d8cb8;
+}
+
+.teacher-pay-delta {
+  display: flex;
+  gap: 20px;
+}
+
+.teacher-pay-delta strong {
+  margin-left: 6px;
+}
+
+.pay-validity {
+  white-space: pre-line;
+}
+
+.pay-validity.is-expired {
+  color: var(--red);
+}
+
+.pay-validity.is-soon {
+  color: #cc762d;
+}
+
+.check-timeline {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.check-timeline article {
+  position: relative;
+  padding: 14px 16px 14px 18px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: var(--shadow-xs);
+  transition: border-color 0.18s var(--ease), box-shadow 0.18s var(--ease), transform 0.18s var(--ease);
+}
+
+.check-timeline article::before {
+  content: "";
+  position: absolute;
+  top: 17px;
+  bottom: 17px;
+  left: 0;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--primary);
+}
+
+.check-timeline article:hover {
+  border-color: #d3dcf0;
+  box-shadow: 0 8px 20px rgba(34, 56, 101, 0.07);
+  transform: translateY(-1px);
+}
+
+.check-timeline article.is-change,
+.check-timeline article.is-in,
+.check-timeline article.is-out {
+  background: #f9fbff;
+}
+
+.check-timeline article.is-out::before {
+  background: var(--orange);
+}
+
+.check-timeline article.is-out strong {
+  color: #b96a28;
+}
+
+.check-timeline header {
+  min-height: 34px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.check-timeline header em {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 12px;
+  font-style: normal;
+}
+
+.check-timeline header .ant-space {
+  margin-left: 8px;
+}
+
+.check-timeline p {
+  margin: 5px 0 0;
+  color: var(--ink-2);
+  font-size: 13px;
+}
+
+.name-with-icon,
+.login-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.cell-link {
+  padding: 0;
+  border: 0;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+  font-weight: 620;
+  cursor: pointer;
+  transition: color 0.18s var(--ease);
+}
+
+.cell-link:hover {
+  color: var(--primary);
+}
+
+.students-table .ant-table-thead > tr > th {
+  text-align: center;
+}
+
+.students-overview-line {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 15px;
+}
+
+.students-overview-line .stat-line {
+  min-width: 0;
+  flex: 1;
+  margin-bottom: 0;
+}
+
+.students-overview-actions {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 9px;
+  margin-left: auto;
+}
+
+.students-overview-actions .ant-btn {
+  min-height: 38px;
+}
+
+@media (max-width: 1180px) {
+  .students-overview-line {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .students-overview-actions {
+    margin-left: 0;
+  }
+}
+
+.students-table .ant-table-tbody > tr > td:nth-child(4) {
+  text-align: left;
+}
+
+.student-row-actions {
+  display: grid;
+  grid-template-columns: 56px 88px 56px;
+  align-items: center;
+  justify-content: center;
+}
+
+.student-row-actions > .ant-btn {
+  width: 100%;
+  padding-inline: 4px;
+  text-align: center;
+}
+
+.student-card-balances {
+  --student-hours-card-width: calc(24px + 3em + 8ch);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.student-card-balances > button,
+.student-card-balances > span {
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 7px;
+  border: 1px solid #dfe6f2;
+  border-radius: 8px;
+  color: #35435f;
+  background: #f8faff;
+  font: inherit;
+  font-size: 12px;
+  line-height: 20px;
+  white-space: nowrap;
+}
+
+.student-card-balances > button {
+  cursor: pointer;
+  transition: color 0.18s var(--ease), border-color 0.18s var(--ease), background 0.18s var(--ease);
+}
+
+.student-card-balances > button:hover {
+  color: var(--primary);
+  border-color: #c7d4ff;
+  background: var(--primary-soft);
+}
+
+.student-card-balances > button.is-warning,
+.student-card-balances > span.is-warning {
+  border-color: #f3c7cd;
+  color: #b4232c;
+  background: #fff1f3;
+}
+
+.student-card-balances > button.is-warning:hover {
+  border-color: #e9aeb7;
+  color: #991b2a;
+  background: #ffe7eb;
+}
+
+.student-card-balances > .is-warning small {
+  color: #b55a65;
+}
+
+.student-card-balances small {
+  width: 3em;
+  display: inline-block;
+  flex: 0 0 3em;
+  color: #7b879c;
+  font-size: inherit;
+  text-align: justify;
+  text-align-last: justify;
+}
+
+.student-card-balances .student-card-balance-separator {
+  color: #a7b0c1;
+}
+
+.student-card-balances .student-card-balance-value {
+  overflow: hidden;
+  max-width: 170px;
+  font-size: inherit;
+  font-weight: inherit;
+  font-variant-numeric: tabular-nums;
+  text-overflow: ellipsis;
+}
+
+.student-card-balances .is-hours-card .student-card-balance-value,
+.student-card-balances .is-stored-card .student-card-balance-value {
+  width: 7ch;
+  min-width: 7ch;
+  flex: 0 0 7ch;
+  text-align: center;
+}
+
+.student-card-balances > .is-hours-card,
+.student-card-balances > .is-stored-card {
+  width: var(--student-hours-card-width);
+  min-width: var(--student-hours-card-width);
+  flex: 0 0 var(--student-hours-card-width);
+}
+
+.student-card-balances > .is-period-card {
+  width: calc(var(--student-hours-card-width) + var(--student-hours-card-width) + 5px);
+  flex: 0 0 calc(var(--student-hours-card-width) + var(--student-hours-card-width) + 5px);
+}
+
+.student-card-balances > .is-period-card .student-card-balance-value {
+  min-width: 0;
+  flex: 1;
+}
+
+.student-card-balances > .is-period-card.is-pending {
+  width: var(--student-hours-card-width);
+  flex: 0 0 var(--student-hours-card-width);
+}
+
+.student-card-balances > .is-period-card.is-pending .student-card-balance-value {
+  text-align: center;
+}
+
+.tab-archived {
+  color: var(--muted);
+}
+
+.empty-card .app-icon {
+  margin-bottom: 10px;
+  filter: drop-shadow(0 8px 14px rgba(49, 95, 244, 0.12));
+}

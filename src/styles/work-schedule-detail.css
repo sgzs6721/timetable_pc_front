@@ -1,0 +1,574 @@
+.drag-route {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 13px;
+  align-items: center;
+  margin: 10px 0 18px;
+}
+
+.drag-route article {
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: #f8faff;
+}
+
+.drag-route article:last-child {
+  border-color: #dce4ff;
+  background: var(--primary-soft);
+}
+
+.drag-route span,
+.drag-route strong {
+  display: block;
+}
+
+.drag-route span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.drag-route strong {
+  margin-top: 3px;
+  color: var(--ink);
+}
+
+.drag-route em {
+  color: var(--primary);
+  font-size: 18px;
+  font-style: normal;
+}
+
+.day-table {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: #fff;
+}
+
+.day-table div {
+  min-height: 46px;
+  padding: 11px 13px;
+  border-right: 1px solid #edf1f6;
+  border-bottom: 1px solid #edf1f6;
+}
+
+.day-table div:nth-child(2n) {
+  border-right: 0;
+}
+
+.day-table .is-head {
+  color: #68768f;
+  background: #f7f9fd;
+  font-size: 12px;
+  font-weight: 680;
+}
+
+.day-table.is-pairs {
+  grid-template-columns: 92px minmax(0, 1fr) 92px minmax(0, 1fr);
+}
+
+.day-table.is-pairs div:nth-child(2n) {
+  border-right: 1px solid #edf1f6;
+}
+
+.day-table.is-pairs div:nth-child(4n) {
+  border-right: 0;
+}
+
+.day-table.is-pairs div {
+  white-space: pre-line;
+}
+
+.day-other {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin: 10px 0 14px;
+}
+
+.day-other > button,
+.day-other div > button {
+  align-self: flex-start;
+  padding: 0;
+  border: 0;
+  color: var(--ink);
+  background: transparent;
+  font-weight: 650;
+  cursor: pointer;
+  transition: color 0.18s var(--ease);
+}
+
+.day-other > button:hover,
+.day-other div > button:hover {
+  color: var(--primary);
+}
+
+.legend-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.legend-dot {
+  width: 9px;
+  height: 9px;
+  display: inline-block;
+  margin-right: 6px;
+  border-radius: 99px;
+  background: var(--primary);
+  box-shadow: 0 0 0 3px rgba(49, 95, 244, 0.1);
+}
+
+.split {
+  display: grid;
+  grid-template-columns: 270px minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.split > * {
+  min-width: 0;
+}
+
+.schedule-list-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+  padding: 7px;
+  border-bottom: 1px solid #e5eaf3;
+  background: #f5f7fb;
+}
+
+.schedule-list-column {
+  min-width: 0;
+}
+
+.schedule-head-tabs.ant-tabs {
+  min-width: 0;
+  flex: 1;
+}
+
+.ant-tabs.schedule-head-tabs > .ant-tabs-nav {
+  width: 100% !important;
+  margin: 0 !important;
+  padding: 0;
+  background: transparent;
+}
+
+.schedule-head-tabs .ant-tabs-nav-list {
+  width: 100%;
+}
+
+.schedule-head-tabs .ant-tabs-tab {
+  flex: 1;
+  justify-content: center;
+  height: 32px;
+  margin: 0 !important;
+  padding: 0 8px !important;
+}
+
+.schedule-create-button.ant-btn {
+  width: 32px;
+  min-width: 32px;
+  height: 32px;
+  padding: 0;
+  border-radius: 8px;
+  box-shadow: none;
+}
+
+.schedule-split > .work-card {
+  margin-top: 0;
+}
+
+.schedule-list-shell {
+  overflow: hidden;
+  padding: 0;
+  border-radius: 15px;
+}
+
+.schedule-list-panel {
+  padding: 10px 9px 12px;
+}
+
+.schedule-list-loading {
+  min-height: 320px;
+  padding: 10px 7px;
+}
+
+.schedule-list-loading .ant-skeleton-title {
+  height: 14px;
+  margin-bottom: 20px;
+}
+
+.schedule-list-loading .ant-skeleton-paragraph > li {
+  height: 46px;
+  margin-top: 9px;
+  border-radius: 10px;
+}
+
+.schedule-board-loading {
+  min-height: 520px;
+  padding: 12px 8px;
+}
+
+.schedule-board-loading .ant-skeleton-title {
+  height: 28px;
+  margin-bottom: 26px;
+  border-radius: 8px;
+}
+
+.schedule-board-loading .ant-skeleton-paragraph > li {
+  height: 48px;
+  margin-top: 12px;
+  border-radius: 9px;
+}
+
+.schedule-board-card:has(.schedule-board-empty) {
+  padding: 18px;
+}
+
+.schedule-split:has(.schedule-board-empty) {
+  align-items: stretch;
+}
+
+.schedule-split:has(.schedule-board-empty) .schedule-list-column,
+.schedule-split:has(.schedule-board-empty) .schedule-list-shell {
+  height: 100%;
+}
+
+.schedule-split:has(.schedule-board-empty) .schedule-list-shell,
+.schedule-split:has(.schedule-board-empty) .schedule-list-panel {
+  display: flex;
+  flex-direction: column;
+}
+
+.schedule-split:has(.schedule-board-empty) .schedule-list-panel,
+.schedule-split:has(.schedule-board-empty) .schedule-list-panel > .empty-card {
+  flex: 1;
+}
+
+.schedule-board-empty {
+  min-height: 330px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  padding: 42px 24px;
+  border-radius: 14px;
+  background:
+    radial-gradient(circle at 50% 38%, rgba(49, 95, 244, 0.07), transparent 30%),
+    linear-gradient(145deg, #fbfcff, #f6f8fd);
+  text-align: center;
+}
+
+.schedule-board-empty-icon {
+  width: 66px;
+  height: 66px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 17px;
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 10px 26px rgba(49, 95, 244, 0.12);
+}
+
+.schedule-board-empty h2 {
+  margin: 0;
+  color: var(--ink);
+  font-size: 18px;
+  font-weight: 720;
+}
+
+.schedule-board-empty p {
+  max-width: 360px;
+  margin: 9px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.timetable-group + .timetable-group {
+  margin-top: 10px;
+  padding-top: 6px;
+}
+
+.timetable-group-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+  padding: 0 6px 6px;
+  border-bottom: 1px solid #e7ebf2;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 720;
+  letter-spacing: 0.04em;
+}
+
+.timetable-group-name .app-icon {
+  flex: none;
+  opacity: 0.72;
+}
+
+.timetable-group-name .timetable-group-person {
+  color: #95a1b5;
+  opacity: 1;
+}
+
+.timetable-group-name .timetable-group-person.is-male {
+  filter: saturate(1.65) brightness(0.92);
+}
+
+.timetable-group-name .timetable-group-person.is-female {
+  filter: saturate(1.7) brightness(1.02);
+}
+
+.timetable-group-name em {
+  overflow: hidden;
+  padding-left: 6px;
+  border-left: 1px solid #dfe5ef;
+  color: #71809a;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 620;
+  letter-spacing: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.timetable-item {
+  width: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 26px;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 9px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  color: var(--ink-2);
+  background: transparent;
+  transition: color 0.18s var(--ease), border-color 0.18s var(--ease), background 0.18s var(--ease), transform 0.18s var(--ease);
+}
+
+.timetable-item-main {
+  width: 100%;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 0;
+  border: 0;
+  color: inherit;
+  background: transparent;
+  cursor: pointer;
+  font-size: 13px;
+  text-align: left;
+}
+
+.timetable-item-main span {
+  min-width: 0;
+  overflow: visible;
+}
+
+.timetable-item-main > :first-child {
+  flex: none;
+  margin-top: 2px;
+}
+
+.timetable-item-main b,
+.timetable-item-main small {
+  display: block;
+}
+
+.timetable-item-main b {
+  font-weight: 680;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.timetable-item-main .timetable-item-copy {
+  min-width: 0;
+  flex: 1;
+}
+
+.timetable-item-title-row {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.timetable-item-title-row b {
+  min-width: 0;
+  overflow: hidden;
+  flex: 0 1 auto;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.timetable-item-title-row .timetable-kind-outline {
+  margin-left: 0;
+}
+
+.timetable-item-main small {
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.timetable-item-main .timetable-item-meta {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 5px;
+  margin-left: 0;
+  white-space: nowrap;
+}
+
+.timetable-item-meta > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.timetable-kind-outline {
+  min-height: 18px;
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+  padding: 0 5px;
+  border: 1px solid #9fdac6;
+  border-radius: 4px;
+  color: #15966e;
+  background: transparent;
+  font-size: 9px;
+  font-style: normal;
+  font-weight: 680;
+  line-height: 1;
+}
+
+.timetable-kind-outline.is-range {
+  border-color: #cbd7ee;
+  color: #687a9a;
+}
+
+.timetable-item-created {
+  width: 100%;
+  display: block;
+  margin-top: 4px;
+  margin-left: 0;
+  color: #98a3b6;
+  font-size: 9px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.35;
+  white-space: nowrap;
+}
+
+.timetable-item:hover {
+  border-color: #e1e7f1;
+  background: #f8faff;
+  transform: translateX(2px);
+}
+
+.timetable-item.is-current {
+  color: var(--primary);
+  border-color: #ccd8ff;
+  background: linear-gradient(135deg, #f5f8ff, #eaf0ff);
+}
+
+.timetable-active,
+.timetable-set {
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  margin: 0;
+  padding: 0;
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 1;
+}
+
+.timetable-active {
+  color: var(--primary);
+  background: transparent;
+  box-shadow: none;
+}
+
+.timetable-set {
+  border: 1px solid var(--line);
+  color: var(--ink-2);
+  background: #fff;
+  cursor: pointer;
+  transition: color 0.18s var(--ease), border-color 0.18s var(--ease);
+}
+
+.timetable-set:hover {
+  color: var(--primary);
+  border-color: #bccafd;
+}
+
+.permission-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+  margin-top: 14px;
+}
+
+.permission-options button {
+  min-width: 92px;
+  height: 38px;
+  padding: 0 16px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  color: var(--ink);
+  background: #fff;
+  box-shadow: var(--shadow-xs);
+  cursor: pointer;
+  transition: color 0.18s var(--ease), border-color 0.18s var(--ease), background 0.18s var(--ease), transform 0.18s var(--ease);
+}
+
+.permission-options button:hover,
+.permission-options button.is-on {
+  color: var(--primary);
+  border-color: #bfd0ff;
+  background: var(--primary-soft);
+  transform: translateY(-1px);
+}
+
+.schedule-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+  align-items: center;
+  margin-bottom: 15px;
+  padding: 11px 12px;
+  border: 1px solid #e7edf5;
+  border-radius: 12px;
+  background: #f8faff;
+}
+
+.schedule-bar > strong {
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 720;
+}
+
+.schedule-bar > span {
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 680;
+  white-space: nowrap;
+}

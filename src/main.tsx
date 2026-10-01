@@ -8,54 +8,86 @@ import 'antd/dist/reset.css'
 import './styles/global.css'
 import './styles/work.css'
 import './styles/design.css'
+import './styles/staff.css'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <ConfigProvider
       locale={zhCN}
+      button={{ autoInsertSpace: false }}
       theme={{
         token: {
-          colorPrimary: '#5269e8',
-          colorInfo: '#5269e8',
-          colorSuccess: '#13a976',
-          colorWarning: '#f09243',
-          colorError: '#df5b64',
-          colorText: '#172033',
-          colorTextSecondary: '#7c8699',
-          colorTextTertiary: '#a8afbd',
-          colorBorder: '#e8eaf0',
-          colorBorderSecondary: '#eceef3',
-          colorBgLayout: '#f5f6f8',
+          colorPrimary: '#315ff4',
+          colorInfo: '#315ff4',
+          colorSuccess: '#0c9b6c',
+          colorWarning: '#e98b36',
+          colorError: '#dc5260',
+          colorText: '#17233d',
+          colorTextSecondary: '#5f6d87',
+          colorTextTertiary: '#8e99ad',
+          colorBorder: '#e3e9f2',
+          colorBorderSecondary: '#edf1f6',
+          colorBgLayout: '#f3f6fb',
           colorBgContainer: '#ffffff',
-          borderRadius: 10,
-          borderRadiusLG: 14,
-          controlHeight: 36,
-          fontFamily: 'Inter, "SF Pro Display", "PingFang SC", "Microsoft YaHei", sans-serif',
-          boxShadow: '0 1px 2px rgba(20, 29, 47, 0.03), 0 6px 20px rgba(20, 29, 47, 0.035)',
-          boxShadowSecondary: '0 16px 40px rgba(20, 29, 47, 0.08)',
+          borderRadius: 11,
+          borderRadiusLG: 16,
+          borderRadiusSM: 8,
+          controlHeight: 38,
+          controlHeightLG: 44,
+          fontSize: 13,
+          fontSizeSM: 12,
+          fontSizeLG: 14,
+          fontSizeHeading4: 17,
+          fontSizeHeading5: 15,
+          fontFamily: 'Inter, "SF Pro Display", "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", "Microsoft YaHei", sans-serif',
+          boxShadow: '0 1px 2px rgba(23, 35, 61, 0.035), 0 8px 24px rgba(38, 59, 108, 0.055)',
+          boxShadowSecondary: '0 16px 46px rgba(30, 45, 82, 0.11)',
+          motionDurationFast: '0.16s',
+          motionDurationMid: '0.22s',
         },
         components: {
           Button: {
-            primaryShadow: 'none',
-            defaultHoverBorderColor: '#cfd3de',
-            defaultHoverColor: '#172033',
+            primaryShadow: '0 7px 16px rgba(49, 95, 244, 0.18)',
+            controlHeight: 38,
+            controlHeightLG: 44,
+            contentFontSize: 13,
+            contentFontSizeLG: 14,
+            contentFontSizeSM: 12,
+            fontWeight: 600,
+            borderRadius: 10,
+            paddingInline: 16,
+            defaultHoverBorderColor: '#b7c5dc',
+            defaultHoverColor: '#17233d',
           },
           Table: {
-            headerBg: '#f7f8fa',
-            headerColor: '#687286',
+            headerBg: '#f7f9fd',
+            headerColor: '#65728b',
             headerSplitColor: 'transparent',
-            borderColor: '#f0f1f5',
-            rowHoverBg: '#f7f8fb',
-            cellPaddingBlock: 12,
-            cellPaddingInline: 14,
+            borderColor: '#edf1f6',
+            rowHoverBg: '#f6f9ff',
+            cellPaddingBlock: 14,
+            cellPaddingInline: 16,
           },
-          Modal: { titleFontSize: 16 },
-          Tabs: { inkBarColor: '#5269e8', itemSelectedColor: '#5269e8', itemHoverColor: '#4055d0' },
-          Segmented: { itemSelectedBg: '#172033', itemSelectedColor: '#ffffff', trackBg: '#ffffff' },
+          Modal: { titleFontSize: 18 },
+          Form: { labelFontSize: 13, itemMarginBottom: 18 },
+          Input: { inputFontSize: 13, inputFontSizeLG: 14, inputFontSizeSM: 12 },
+          Tabs: {
+            titleFontSize: 13,
+            itemColor: '#697791',
+            itemSelectedColor: '#315ff4',
+            itemHoverColor: '#224bd4',
+            inkBarColor: 'transparent',
+            horizontalItemGutter: 4,
+            horizontalItemPadding: '7px 15px',
+          },
+          Tag: { defaultBg: '#f1f4f9', defaultColor: '#60708b' },
+          Segmented: { itemSelectedBg: '#ffffff', itemSelectedColor: '#315ff4', trackBg: '#eef2f8' },
+          Select: { optionSelectedBg: '#edf2ff' },
+          Pagination: { itemActiveBg: '#edf2ff' },
         },
       }}
     >
-      <BrowserRouter>
+      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <App />
       </BrowserRouter>
     </ConfigProvider>

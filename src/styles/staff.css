@@ -1,0 +1,571 @@
+.staff-settings-card {
+  overflow: hidden;
+}
+
+.staff-list-head {
+  min-height: 62px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin: -17px -20px 16px;
+  padding: 10px 20px;
+  border-bottom: 1px solid #edf1f6;
+  background: linear-gradient(180deg, #fff, #fbfcff);
+}
+
+.staff-list-title {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+  flex: none;
+}
+
+.staff-list-title h2 {
+  margin: 0;
+}
+
+.staff-list-title span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.staff-list-tools {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.staff-list-tools .ant-input-search {
+  width: 230px;
+}
+
+.staff-row-actions {
+  display: grid;
+  grid-template-columns: 52px 52px 84px;
+  align-items: center;
+  justify-content: start;
+}
+
+.staff-row-actions > .ant-btn {
+  width: 100%;
+  padding-inline: 4px;
+  text-align: center;
+}
+
+.staff-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 16px;
+}
+
+.staff-form-full,
+.staff-form-grid > .ant-form-item-hidden {
+  grid-column: 1 / -1;
+}
+
+.staff-switch-form-item {
+  min-height: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  padding: 13px 15px;
+  border: 1px solid #e4eaf4;
+  border-radius: 12px;
+  background: #f7f9fd;
+}
+
+.staff-switch-copy strong,
+.staff-switch-copy span {
+  display: block;
+}
+
+.staff-switch-copy strong {
+  color: var(--ink);
+  font-size: 13px;
+}
+
+.staff-switch-copy span {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.staff-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.service-settings-card {
+  overflow: hidden;
+}
+
+.service-list-head {
+  min-height: 62px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin: -17px -20px 16px;
+  padding: 10px 20px;
+  border-bottom: 1px solid #edf1f6;
+  background: linear-gradient(180deg, #fff, #fbfcff);
+}
+
+.service-list-head > div {
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+}
+
+.service-list-head h2 {
+  flex: none;
+  margin: 0;
+}
+
+.service-list-head > div > span {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.campus-list-actions {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-right: 4px;
+}
+
+.campus-list-actions .ant-btn,
+.campus-list-actions .ant-select-selector {
+  min-height: 38px;
+}
+
+.campus-list-actions .ant-btn {
+  padding-inline: 16px;
+}
+
+.staff-create-role {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  margin: -6px 0 20px;
+}
+
+.salary-items-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 22px 0 14px;
+  padding-top: 18px;
+  border-top: 1px solid #edf1f6;
+}
+
+.salary-items-head h3 {
+  display: inline;
+  margin: 0;
+}
+
+.salary-items-head span {
+  margin-left: 10px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.salary-cycle-card,
+.salary-list-card {
+  overflow: hidden;
+}
+
+.salary-panel-head {
+  min-height: 62px;
+  display: flex;
+  align-items: center;
+  margin: -17px -20px 20px;
+  padding: 10px 20px;
+  border-bottom: 1px solid #edf1f6;
+  background: linear-gradient(180deg, #fff, #fbfcff);
+}
+
+.salary-panel-head > div {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+}
+
+.salary-panel-head h2 {
+  margin: 0;
+}
+
+.salary-panel-head span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.salary-cycle-form {
+  max-width: 1100px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0 16px;
+}
+
+.salary-payout-rules {
+  grid-column: 1 / -1;
+  margin-top: 4px;
+  padding-top: 20px;
+  border-top: 1px solid #e8edf5;
+}
+
+.salary-payout-rules-head strong,
+.salary-payout-rules-head span {
+  display: block;
+}
+
+.salary-payout-rules-head strong {
+  color: var(--ink);
+  font-size: 15px;
+}
+
+.salary-payout-rules-head span {
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.salary-payout-rule-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.salary-payout-rule-card {
+  min-width: 0;
+  padding: 15px;
+  border: 1px solid #e1e7f1;
+  border-radius: 13px;
+  background: linear-gradient(145deg, #fff, #f7f9fd);
+}
+
+.salary-payout-rule-card > strong {
+  display: block;
+  margin-bottom: 12px;
+  color: var(--ink);
+  font-size: 14px;
+}
+
+.salary-payout-rule-card .ant-segmented {
+  width: 100%;
+}
+
+.salary-payout-thresholds {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid #e8edf5;
+}
+
+.salary-payout-threshold-row {
+  display: grid;
+  grid-template-columns: auto 76px auto minmax(116px, 1fr);
+  align-items: center;
+  gap: 7px;
+  color: var(--ink-2);
+  font-size: 12px;
+}
+
+.salary-payout-threshold-row .ant-input-number,
+.salary-payout-threshold-row .ant-select {
+  width: 100%;
+}
+
+.salary-payout-thresholds small {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.salary-payout-empty {
+  margin-top: 14px;
+  padding: 18px;
+  border: 1px dashed #dce3ef;
+  border-radius: 12px;
+  color: var(--muted);
+  background: #fafbfe;
+  font-size: 12px;
+  text-align: center;
+}
+
+.salary-cycle-action {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 4px;
+}
+
+.salary-overview-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.salary-overview-grid > div {
+  min-height: 82px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 14px 18px;
+  border: 1px solid #e2e8f3;
+  border-radius: 13px;
+  background: linear-gradient(145deg, #fff, #f5f7ff);
+}
+
+.salary-overview-grid strong,
+.salary-overview-grid span {
+  display: block;
+}
+
+.salary-overview-grid strong {
+  color: var(--ink);
+  font-size: 21px;
+}
+
+.salary-overview-grid span {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.salary-overview-grid .is-warning strong {
+  color: #c36b16;
+}
+
+.salary-overview-grid .is-ready strong {
+  color: var(--green);
+}
+
+.salary-list-toolbar {
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+  padding: 6px 8px;
+  border: 1px solid #e6ebf4;
+  border-radius: 12px;
+  background: #f7f9fc;
+}
+
+.salary-list-toolbar > span {
+  padding-right: 8px;
+  color: var(--muted);
+  font-size: 12px;
+  text-align: right;
+}
+
+.salary-view-switch {
+  display: inline-flex;
+  gap: 4px;
+  padding: 3px;
+  border-radius: 9px;
+  background: #edf1f7;
+}
+
+.salary-view-switch .ant-btn {
+  min-width: 88px;
+  box-shadow: none;
+}
+
+.campus-sub-tabs > .ant-tabs-nav {
+  margin-bottom: 16px;
+  border-color: #e1e7f1;
+  background: #f7f9fc;
+  box-shadow: none;
+}
+
+.campus-sub-tabs > .ant-tabs-nav .ant-tabs-tab {
+  min-width: 92px;
+  justify-content: center;
+}
+
+@media (max-width: 1000px) {
+  .staff-list-head {
+    align-items: flex-start;
+  }
+
+  .staff-list-tools {
+    flex-wrap: wrap;
+  }
+
+  .salary-cycle-form,
+  .salary-overview-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .salary-payout-rule-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .salary-list-toolbar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .salary-list-toolbar > span {
+    padding: 0 4px 4px;
+    text-align: left;
+  }
+}
+.refund-settings-tabs .ant-tabs-nav {
+  margin-bottom: 20px;
+}
+
+.refund-settings-tabs .ant-tabs-nav-list {
+  gap: 6px;
+  padding: 4px;
+  border: 1px solid #dfe6f2;
+  border-radius: 12px;
+  background: #f8faff;
+}
+
+.refund-settings-tabs .ant-tabs-tab {
+  min-width: 92px;
+  justify-content: center;
+  margin: 0 !important;
+  padding: 9px 16px !important;
+  border-radius: 9px;
+}
+
+.refund-settings-tabs .ant-tabs-tab-active {
+  background: #eaf0ff;
+}
+
+.refund-settings-tabs .ant-tabs-ink-bar {
+  display: none;
+}
+
+.refund-rule-fields {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.8fr) minmax(440px, 1.5fr);
+  align-items: start;
+  gap: 20px;
+}
+
+.refund-fee-block,
+.refund-deduct-block {
+  padding: 18px;
+  border: 1px solid #e3e9f3;
+  border-radius: 14px;
+  background: #fbfcff;
+}
+
+.refund-setting-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.refund-setting-heading strong,
+.refund-setting-heading span,
+.refund-rule-option strong,
+.refund-rule-option span {
+  display: block;
+}
+
+.refund-setting-heading strong {
+  color: #202d46;
+  font-size: 14px;
+}
+
+.refund-setting-heading span,
+.refund-rule-option span,
+.refund-fee-input > span {
+  margin-top: 5px;
+  color: #8996aa;
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.refund-fee-input {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 118px;
+  align-items: center;
+  gap: 8px 14px;
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid #e8edf5;
+}
+
+.refund-fee-input label {
+  color: #526079;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.refund-fee-input .ant-input-number {
+  width: 118px;
+}
+
+.refund-fee-input > span {
+  grid-column: 1 / -1;
+  margin-top: 0;
+}
+
+.refund-rule-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.refund-rule-option.ant-radio-wrapper {
+  min-height: 68px;
+  align-items: flex-start;
+  margin: 0;
+  padding: 13px 14px;
+  border: 1px solid #e1e7f1;
+  border-radius: 11px;
+  background: #fff;
+  transition: border-color 0.18s, background 0.18s, box-shadow 0.18s;
+}
+
+.refund-rule-option.ant-radio-wrapper-checked {
+  border-color: #9ab3ff;
+  background: #f3f6ff;
+  box-shadow: 0 0 0 3px rgba(47, 99, 245, 0.06);
+}
+
+.refund-rule-option .ant-radio {
+  margin-top: 2px;
+}
+
+.refund-rule-option strong {
+  color: #36445e;
+  font-size: 13px;
+}
+
+.refund-save-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid #edf1f6;
+}
+
+@media (max-width: 1080px) {
+  .refund-rule-fields {
+    grid-template-columns: 1fr;
+  }
+}

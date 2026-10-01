@@ -25,7 +25,8 @@ const SECTIONS = [
   { id: 'service', title: '校区服务与日常管理', subtitle: '服务项目、制度和奖惩', steps: ['维护校区服务项目。', '规章制度未配置时显示空状态。', '奖惩记录选择老师、项目、日期和金额。'], tips: ['先配置服务和工资规则，再做缴费和排课。'] },
   { id: 'salary', title: '工资', subtitle: '设置、核算与发放', steps: ['有管理权进入工资管理，没有管理权只看我的工资。', '按记薪周期查看固定项、课时项、体验课和奖惩。', '管理员可以记录发放日期、方式和备注。'], tips: ['工资依赖课时单价、消课和奖惩日期。'] },
   { id: 'finance', title: '收支与经营分析', subtitle: '流水、成本和利润', steps: ['财务设置维护收入项目、支出项目和周期支出。', '收支总览分开看收入、运营支出和老师成本。', '经营分析选择周期，对比校区，查看每日趋势。', '点开日期可看课时成本、销课收入和经营支出，并从收入进入学员。'], tips: ['空白时先检查日期和校区。'] },
-  { id: 'membership', title: '会员与扩容', subtitle: '续费、升级和学员容量', steps: ['查看当前会员、有效期和套餐权益。', '同级续费可选 1 至 3 年，升级要查看补差价方式。', '可查看校区学员容量和扩容档位。', '不支持降级。'], tips: ['微信支付请在小程序会员页完成，网页不发起支付。'] },
+  { id: 'marketing', title: '营销中心', subtitle: '活动、报名、推广奖励与入账', steps: ['可预览并使用系统活动方案，也可创建自定义模板或直接创建活动。', '按场次报名的活动至少要配置一个场次才能发布。', '报名名单支持搜索、筛选、新老客改判、退款作废和 Excel 导出。', '推广榜、奖励发放和活动入账都在活动详情中查看。'], tips: ['奖励由机构线下兑现；付费报名作废前请先完成线下退款。'] },
+  { id: 'membership', title: '会员与扩容', subtitle: '续费、升级和学员容量', steps: ['查看当前会员、有效期和套餐权益。', '同级续费可选 1 至 3 年，升级要查看补差价方式。', '可按校区选择学员扩容档位。', '在网页生成微信付款码，扫码后页面会自动确认支付结果。'], tips: ['不支持降级；支付成功前不要重复下单。'] },
   { id: 'feedback', title: '反馈与账号', subtitle: '提交问题并退出', steps: ['问题反馈填写类别、标题、描述和联系方式，并查看自己提交的记录。', '个人中心可改昵称和头像，查看职位、机构和关联机构。', '退出会清理本机登录状态。'], tips: ['不要在反馈里填写密码或验证码。'] },
 ]
 
@@ -33,7 +34,7 @@ export function GuidePage() {
   const [open, setOpen] = useState('start')
   return (
     <section>
-      <PageHead title="使用文档" extra="机构、学员、排课、收费、工资与经营分析，按权限使用。" />
+      <PageHead title="需要帮助" extra="机构、学员、排课、收费、工资与经营分析，按权限使用。" />
       <section className="work-card">
         <h2>你能看到什么，取决于你的身份</h2>
         <div className="shortcut-grid">
@@ -46,20 +47,22 @@ export function GuidePage() {
           {FLOW.map((item) => <div className="shortcut-card" key={item.number}><strong>{item.number} {item.title}</strong><span>{item.text}</span></div>)}
         </div>
       </section>
-      {SECTIONS.map((section) => (
-        <section className="work-card guide-section" key={section.id}>
-          <button className="guide-toggle" type="button" onClick={() => setOpen(open === section.id ? '' : section.id)}>
-            <strong>{section.title}</strong>
-            <span>{section.subtitle}</span>
-          </button>
-          {open === section.id ? (
-            <div className="guide-body">
-              <ol>{section.steps.map((step) => <li key={step}>{step}</li>)}</ol>
-              <p>使用提醒：{section.tips.join(' ')}</p>
-            </div>
-          ) : null}
-        </section>
-      ))}
+      <div className="guide-section-grid">
+        {SECTIONS.map((section) => (
+          <section className="work-card guide-section" key={section.id}>
+            <button className="guide-toggle" type="button" onClick={() => setOpen(open === section.id ? '' : section.id)}>
+              <strong>{section.title}</strong>
+              <span>{section.subtitle}</span>
+            </button>
+            {open === section.id ? (
+              <div className="guide-body">
+                <ol>{section.steps.map((step) => <li key={step}>{step}</li>)}</ol>
+                <p>使用提醒：{section.tips.join(' ')}</p>
+              </div>
+            ) : null}
+          </section>
+        ))}
+      </div>
     </section>
   )
 }

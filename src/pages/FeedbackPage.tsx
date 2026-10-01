@@ -1,4 +1,4 @@
-import { Button, Form, Input, Select, Table, message } from 'antd'
+import { Button, Form, Input, Select, Table, Tabs, message } from 'antd'
 import { useEffect, useState } from 'react'
 import { getJson, postJson } from '../api/biz'
 import { PageHead, tell } from './kit'
@@ -15,6 +15,7 @@ interface Feedback {
 
 export function FeedbackPage() {
   const [rows, setRows] = useState<Feedback[]>([])
+  const [tab, setTab] = useState('submit')
 
   async function load() {
     setRows(await getJson<Feedback[]>('/feedback/my', { source: 'org', limit: 50 }))
@@ -27,6 +28,8 @@ export function FeedbackPage() {
   return (
     <section>
       <PageHead title="问题反馈" extra="提交后可以在这里查看处理状态和回复。" />
+      <Tabs activeKey={tab} onChange={setTab} items={[
+        { key: 'submit', label: '提交反馈', children: (
       <section className="work-card">
         <Form
           layout="vertical"
@@ -57,6 +60,7 @@ export function FeedbackPage() {
             try {
               await postJson('/feedback', { category: values.category, title: title.slice(0, 30), content: Array.from(content).slice(0, 500).join(''), contact, source: 'org' })
               message.success('反馈已提交')
+              setTab('records')
               await load()
             } catch (error) {
               message.error(tell(error, '提交失败'))
@@ -72,6 +76,8 @@ export function FeedbackPage() {
           <Button type="primary" htmlType="submit">提交</Button>
         </Form>
       </section>
+        ) },
+        { key: 'records', label: '我的反馈', children: (
       <section className="work-card">
         <Table
           rowKey="id"
@@ -88,6 +94,8 @@ export function FeedbackPage() {
           ]}
         />
       </section>
+        ) },
+      ]} />
     </section>
   )
 }

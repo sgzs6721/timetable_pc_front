@@ -1,44 +1,89 @@
 .legal-page {
   min-height: 100vh;
-  padding: 48px 20px 72px;
-  background: var(--page);
+  padding: 56px 24px 84px;
+  background:
+    radial-gradient(circle at 12% 0%, rgba(49, 95, 244, 0.13), transparent 27%),
+    radial-gradient(circle at 90% 100%, rgba(18, 167, 199, 0.09), transparent 25%),
+    var(--page);
 }
 
 .legal-card {
-  width: min(760px, 100%);
+  width: min(820px, 100%);
   margin: 0 auto;
-  padding: 36px 40px 48px;
-  background: var(--card);
-  border: 1px solid var(--line);
-  border-radius: 16px;
-  box-shadow: var(--shadow-sm);
+  padding: 44px 54px 58px;
+  border: 1px solid rgba(220, 228, 240, 0.9);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: var(--shadow-md);
 }
 
 .legal-back {
-  display: inline-block;
-  margin-bottom: 24px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 30px;
+  padding: 7px 11px;
+  border-radius: 9px;
+  color: var(--ink-3);
+  background: #f4f6fa;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.legal-back::before {
+  content: "←";
+  transition: transform 0.18s var(--ease);
+}
+
+.legal-back:hover::before {
+  transform: translateX(-3px);
 }
 
 .legal-kicker {
   margin: 0;
-  letter-spacing: 0.18em;
-  color: var(--accent);
-  font-size: 13px;
+  color: var(--primary);
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: 0.17em;
 }
 
 .legal-card h1 {
-  margin: 8px 0 12px;
-  font-size: 36px;
+  margin: 10px 0 14px;
+  color: var(--ink);
+  font-size: 38px;
+  font-weight: 760;
+  letter-spacing: -0.04em;
+}
+
+.legal-lead {
+  margin-bottom: 28px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--line);
 }
 
 .legal-lead,
 .legal-card p {
-  color: var(--muted);
-  line-height: 1.8;
+  color: var(--ink-3);
+  font-size: 14px;
+  line-height: 1.9;
 }
 
 .legal-card h2 {
-  margin: 28px 0 8px;
-  font-size: 18px;
+  position: relative;
+  margin: 34px 0 11px;
+  padding-left: 13px;
   color: var(--ink);
+  font-size: 19px;
+  font-weight: 720;
+}
+
+.legal-card h2::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 5px;
+  bottom: 5px;
+  width: 3px;
+  border-radius: 999px;
+  background: linear-gradient(var(--primary-light), var(--primary));
 }

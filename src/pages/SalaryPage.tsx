@@ -2,19 +2,25 @@ import { Button, Form, Input, Modal, Select, Table, message } from 'antd'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getJson, putJson } from '../api/biz'
-import { NeedCampus, PageHead, money, monthKey, periodChoices, type PeriodOption, tell, useShell } from './kit'
+import { NeedCampus, PageHead, genderText, money, monthKey, periodChoices, type PeriodOption, tell, useShell } from './kit'
 
 interface Staff {
   staffId: number
   staffName?: string
+  gender?: string
   roleLabel?: string
+  scheduleCount?: number
+  trialScheduleCount?: number
+  teachingHours?: number
+  payableHours?: number
   totalSalary?: number
   fixedSalaryTotal?: number
   unitSalaryTotal?: number
   trialSalaryTotal?: number
   rewardPenaltyTotal?: number
   payoutStatus?: number
-  campusDetails?: Array<{ itemDetails?: Array<Record<string, unknown>> }>
+  warningText?: string
+  campusDetails?: Array<{ campusName?: string; itemDetails?: Array<Record<string, unknown>> }>
 }
 
 interface Summary {
@@ -25,6 +31,10 @@ interface Summary {
   ownSalaryOnly?: boolean
   canManagePayoutStatus?: boolean
   totalSalary?: number
+  staffCount?: number
+  scheduleCount?: number
+  trialScheduleCount?: number
+  totalPayableHours?: number
   staffSummaries?: Staff[]
   periodOptions?: PeriodOption[]
 }
@@ -71,10 +81,15 @@ export function SalaryPage() {
   }
 
   useEffect(() => {
-    load().catch((error) => message.error(tell(error, '工资加载失败')))
+    load().catch((error) => message.error(tell(error, '工资汇总加载失败')))
   }, [shell.campusId, month])
 
   const mine = data?.ownSalaryOnly
+  const people = data?.staffSummaries || []
+  const paidPeople = people.filter((row) => row.payoutStatus === 1)
+  const paidTotal = paidPeople.reduce((total, row) => total + Number(row.totalSalary || 0), 0)
+  const pendingTotal = Math.max(Number(data?.totalSalary || 0) - paidTotal, 0)
+  const trialPeople = people.filter((row) => Number(row.trialScheduleCount || 0) > 0).length
   return (
     <NeedCampus campusId={shell.campusId}>
       <PageHead title={mine ? '我的工资' : '工资管理'} extra={data?.cycleRangeLabel || '按记薪周期汇总。没有管理权时只看自己的工资。'}>
@@ -86,20 +101,35 @@ export function SalaryPage() {
         />
       </PageHead>
       <section className="work-card">
-        <div className="stat-line"><span>应发合计<strong>{money(data?.totalSalary)}</strong></span></div>
-        <Table
+        <h2>工资明细</h2>
+        {!people.length ? <p>{mine ? '本周期暂无您的工资记录。这里只显示您本人的工资，其他老师不会出现。' : '本周期暂无可核算人员。只有在校区工资设置里配好工资项的老师，才会出现在这里。'}</p> : (
+          <div className="stat-line is-metrics salary-metrics">
+            <span>应发工资<strong>{money(data?.totalSalary)}<small>元</small></strong><em>固定项/单价项/奖惩</em></span>
+            <span>已发工资<strong>{money(paidTotal)}<small>元</small></strong><em>{paidPeople.length} 人已发放</em></span>
+            <span>待发工资<strong>{money(pendingTotal)}<small>元</small></strong><em>{people.length - paidPeople.length} 人待发放</em></span>
+            <span>折算课时<strong>{money(data?.totalPayableHours)}<small>小时</small></strong><em>已按体验比例折算</em></span>
+            <span>核算人数<strong>{data?.staffCount || people.length}<small>人</small></strong><em>共 {data?.scheduleCount || 0} 课时</em></span>
+            <span>体验人数<strong>{trialPeople}<small>人</small></strong><em>体验 {data?.trialScheduleCount || 0} 课时</em></span>
+          </div>
+        )}
+        {people.length ? <Table
           rowKey="staffId"
-          dataSource={data?.staffSummaries || []}
+          dataSource={people}
           pagination={false}
           columns={[
-            { title: '老师', dataIndex: 'staffName' },
-            { title: '角色', dataIndex: 'roleLabel' },
-            { title: '固定', render: (_: unknown, row: Staff) => money(row.fixedSalaryTotal) },
-            { title: '课时', render: (_: unknown, row: Staff) => money(row.unitSalaryTotal) },
-            { title: '体验', render: (_: unknown, row: Staff) => money(row.trialSalaryTotal) },
-            { title: '奖惩', render: (_: unknown, row: Staff) => money(row.rewardPenaltyTotal) },
+            { title: '老师', render: (_: unknown, row: Staff) => (
+              <div>
+                <div>{[row.staffName, genderText(row.gender), row.roleLabel].filter(Boolean).join(' · ')}</div>
+                <div className="range-label">{row.scheduleCount || 0} 课时 / 体验 {row.trialScheduleCount || 0} 课时 · {hoursSummary(row)}</div>
+                {row.warningText ? <div className="range-label">{row.warningText}</div> : null}
+              </div>
+            ) },
+            { title: '固定项', render: (_: unknown, row: Staff) => money(row.fixedSalaryTotal) },
+            { title: '单价项', render: (_: unknown, row: Staff) => money(row.unitSalaryTotal) },
+            { title: '体验课工资', render: (_: unknown, row: Staff) => money(row.trialSalaryTotal) },
+            { title: '奖惩合计', render: (_: unknown, row: Staff) => money(row.rewardPenaltyTotal) },
             { title: '应发', render: (_: unknown, row: Staff) => money(row.totalSalary) },
-            { title: '发放', render: (_: unknown, row: Staff) => <span className={row.payoutStatus === 1 ? 'status-pill is-ok' : 'status-pill is-warn'}>{row.payoutStatus === 1 ? '已发' : '未发'}</span> },
+            { title: '发放', render: (_: unknown, row: Staff) => <span className={row.payoutStatus === 1 ? 'status-pill is-ok' : 'status-pill is-warn'}>{row.payoutStatus === 1 ? '已发' : '应发'}</span> },
             { title: '', render: (_: unknown, row: Staff) => (
               <>
                 <Button type="link" onClick={() => setOpenId(openId === row.staffId ? null : row.staffId)}>明细</Button>
@@ -107,16 +137,21 @@ export function SalaryPage() {
               </>
             ) },
           ]}
-        />
-        {(data?.staffSummaries || []).filter((row) => row.staffId === openId).map((row) => (
+        /> : null}
+        {people.filter((row) => row.staffId === openId).map((row) => {
+          const details = row.campusDetails || []
+          const multiCampus = details.length > 1
+          const items = details.flatMap((detail) => (detail.itemDetails || []).map((item) => ({ ...item, campusName: detail.campusName })))
+          return (
           <div key={row.staffId} style={{ marginTop: 12 }}>
             <Table
-              rowKey={(item) => String(item.salaryItemId)}
+              rowKey={(item) => `${item.campusName || ''}-${item.salaryItemId}`}
               pagination={false}
-              dataSource={(row.campusDetails || []).flatMap((detail) => detail.itemDetails || [])}
+              dataSource={items}
               columns={[
-                { title: '工资项', dataIndex: 'salaryItemName' },
-                { title: '数量', dataIndex: 'quantity' },
+                ...(multiCampus ? [{ title: '校区', dataIndex: 'campusName' }] : []),
+                { title: '工资项', render: (_: unknown, item: Record<string, unknown>) => <span>{String(item.salaryItemName || '未命名工资项')}<br /><span className="range-label">{itemMeta(item.itemType)}</span></span> },
+                { title: '数量', render: (_: unknown, item: Record<string, unknown>) => quantityText(item.itemType, item.quantity) },
                 { title: '配置', render: (_: unknown, item: Record<string, unknown>) => money(item.configuredAmount) },
                 { title: '核算', render: (_: unknown, item: Record<string, unknown>) => money(item.calculatedAmount) },
               ]}
@@ -154,6 +189,17 @@ export function SalaryPage() {
                     message.warning('请选择发放日期')
                     return
                   }
+                  if (paid) {
+                    const confirmed = await new Promise<boolean>((resolve) => {
+                      Modal.confirm({
+                        title: '确认标记已发',
+                        content: `确认将${row.staffName || '该老师'}本周期工资标记为已发吗？`,
+                        onOk: () => resolve(true),
+                        onCancel: () => resolve(false),
+                      })
+                    })
+                    if (!confirmed) return
+                  }
                   try {
                     await putJson('/salary/cycle-record/status', {
                       campusId: shell.campusId,
@@ -171,7 +217,7 @@ export function SalaryPage() {
                   }
                 }}
               >
-                <Form.Item name="status" initialValue={row.payoutStatus || 0}><Select options={[{ value: 0, label: '未发' }, { value: 1, label: '已发' }]} /></Form.Item>
+                <Form.Item name="status" initialValue={row.payoutStatus || 0}><Select options={[{ value: 0, label: '应发' }, { value: 1, label: '已发' }]} /></Form.Item>
                 <Form.Item name="paymentDate"><Input type="date" /></Form.Item>
                 <Form.Item name="paymentType"><Select style={{ width: 120 }} placeholder="支付方式" options={[{ value: 1, label: '支付宝' }, { value: 2, label: '微信' }, { value: 3, label: '银行卡' }, { value: 4, label: '公户' }, { value: 5, label: '现金' }]} /></Form.Item>
                 <Form.Item name="paymentRemark"><Input placeholder="支付账户或流水号" /></Form.Item>
@@ -179,8 +225,29 @@ export function SalaryPage() {
               </Form>
             ) : null}
           </div>
-        ))}
+          )
+        })}
       </section>
     </NeedCampus>
   )
+}
+
+function hoursSummary(row: Staff): string {
+  const teaching = money(row.teachingHours)
+  const payable = money(row.payableHours)
+  if (teaching === payable) return `共计 ${teaching}h`
+  return `共计 ${teaching}h · 折算 ${payable}h`
+}
+
+function itemMeta(itemType: unknown): string {
+  const normalized = String(itemType || 'fixed').trim().toLowerCase()
+  if (normalized === 'unit') return '单价项'
+  if (normalized === 'reward') return '奖励项'
+  if (normalized === 'penalty') return '处罚项'
+  return '固定项'
+}
+
+function quantityText(itemType: unknown, quantity: unknown): string {
+  if (String(itemType || 'fixed').trim().toLowerCase() !== 'unit') return '--'
+  return `${money(quantity)}h`
 }

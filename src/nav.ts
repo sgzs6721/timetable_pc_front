@@ -8,30 +8,32 @@ export interface NavItem {
 
 const MANAGER_NAV: NavItem[] = [
   { key: 'home', label: '首页', path: '/home' },
-  { key: 'students', label: '学员', path: '/students' },
-  { key: 'schedule', label: '课表', path: '/schedule' },
-  { key: 'courses', label: '课程', path: '/courses' },
+  { key: 'students', label: '学员管理', path: '/students' },
+  { key: 'schedule', label: '课表管理', path: '/schedule' },
+  { key: 'courses', label: '课程管理', path: '/courses' },
   { key: 'hours', label: '课时管理', path: '/hours' },
   { key: 'org', label: '机构管理', path: '/org' },
-  { key: 'campus', label: '校区与老师', path: '/campus' },
+  { key: 'campus', label: '校区管理', path: '/campus' },
   { key: 'daily', label: '日常管理', path: '/daily' },
   { key: 'payments', label: '缴费管理', path: '/payments' },
   { key: 'salary', label: '工资管理', path: '/salary' },
   { key: 'finance', label: '收支管理', path: '/finance' },
   { key: 'profit', label: '经营分析', path: '/profit' },
+  { key: 'marketing', label: '营销中心', path: '/marketing' },
   { key: 'membership', label: '会员', path: '/membership' },
-  { key: 'guide', label: '使用文档', path: '/guide' },
+  { key: 'guide', label: '需要帮助', path: '/guide' },
   { key: 'feedback', label: '问题反馈', path: '/feedback' },
 ]
 
 const CAMPUS_ADMIN_NAV = MANAGER_NAV.filter((item) => item.key !== 'org')
 
 const TEACHER_NAV: NavItem[] = [
+  { key: 'home', label: '首页', path: '/home' },
   { key: 'schedule', label: '我的课表', path: '/schedule' },
   { key: 'students', label: '我的学员', path: '/students' },
   { key: 'hours', label: '我的课时', path: '/hours' },
   { key: 'salary', label: '我的工资', path: '/salary' },
-  { key: 'guide', label: '使用文档', path: '/guide' },
+  { key: 'guide', label: '需要帮助', path: '/guide' },
   { key: 'feedback', label: '问题反馈', path: '/feedback' },
 ]
 
@@ -39,13 +41,15 @@ const MEMBER_NAV: NavItem[] = [
   { key: 'home', label: '首页', path: '/home' },
   { key: 'salary', label: '我的工资', path: '/salary' },
   { key: 'account', label: '个人中心', path: '/account' },
-  { key: 'guide', label: '使用文档', path: '/guide' },
+  { key: 'guide', label: '需要帮助', path: '/guide' },
   { key: 'feedback', label: '问题反馈', path: '/feedback' },
 ]
 
 export function navForUser(user: UserInfo | null, org?: Organization | null): NavItem[] {
   if (!user) {
-    return [{ key: 'home', label: '首页', path: '/home' }]
+    // 首屏恢复账号上下文期间，先完整渲染静态管理菜单，避免侧栏从“仅首页”跳变。
+    // 内容区仍由 AppShell 的 ready 状态拦截；账号返回后会立即按真实角色收敛菜单。
+    return MANAGER_NAV
   }
   const role = (user.role || '').toLowerCase()
   const owner = role === 'owner' || (Number(user.id || 0) > 0 && Number(org?.ownerId || 0) === Number(user.id))
@@ -61,5 +65,5 @@ export function navForUser(user: UserInfo | null, org?: Organization | null): Na
   if (role === 'coach') {
     return MEMBER_NAV
   }
-  return [{ key: 'home', label: '首页', path: '/home' }, { key: 'guide', label: '使用文档', path: '/guide' }, { key: 'feedback', label: '问题反馈', path: '/feedback' }]
+  return [{ key: 'home', label: '首页', path: '/home' }, { key: 'guide', label: '需要帮助', path: '/guide' }, { key: 'feedback', label: '问题反馈', path: '/feedback' }]
 }
