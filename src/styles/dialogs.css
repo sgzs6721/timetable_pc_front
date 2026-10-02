@@ -1,8 +1,26 @@
 /* Shared presentation for every business modal, confirmation, popconfirm and drawer. */
 .ant-modal-root .ant-modal-mask,
 .ant-drawer-root .ant-drawer-mask {
-  background: rgba(12, 23, 49, 0.46);
-  backdrop-filter: blur(5px);
+  background: var(--dialog-mask);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+.ant-modal-root.coach-transfer-modal .ant-modal.ant-zoom-appear,
+.ant-modal-root.coach-transfer-modal .ant-modal.ant-zoom-enter,
+.ant-modal-root.coach-transfer-modal .ant-modal.ant-zoom-leave {
+  animation-duration: 0.16s !important;
+  animation-timing-function: var(--ease) !important;
+  backface-visibility: hidden;
+  will-change: transform, opacity;
+}
+
+.ant-modal-root.coach-transfer-modal .ant-modal-mask.ant-fade-appear,
+.ant-modal-root.coach-transfer-modal .ant-modal-mask.ant-fade-enter,
+.ant-modal-root.coach-transfer-modal .ant-modal-mask.ant-fade-leave {
+  animation-duration: 0.14s !important;
+  animation-timing-function: var(--ease) !important;
+  will-change: opacity;
 }
 
 .ant-modal .ant-modal-content,

@@ -500,8 +500,8 @@
 }
 
 .quick-checkin-service-row {
-  display: grid;
-  grid-template-columns: minmax(110px, auto) auto minmax(0, 1fr);
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 10px;
   padding: 9px;
@@ -515,17 +515,25 @@
   background: #f6f8ff;
 }
 
+.quick-checkin-service-row > .ant-btn {
+  min-width: 110px;
+  flex: 1 1 120px;
+}
+
 .quick-checkin-service-row > span {
-  overflow: hidden;
+  min-width: 0;
+  flex: 1 1 210px;
   color: var(--muted);
   font-size: 11px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 
 .quick-checkin-stepper {
   display: flex;
   align-items: center;
+  flex: none;
   gap: 4px;
 }
 
@@ -703,13 +711,5 @@
 
   .quick-checkin-course-fields > .is-full {
     grid-column: auto;
-  }
-
-  .quick-checkin-service-row {
-    grid-template-columns: 1fr auto;
-  }
-
-  .quick-checkin-service-row > span {
-    grid-column: 1 / -1;
   }
 }

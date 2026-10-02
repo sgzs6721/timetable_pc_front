@@ -135,12 +135,13 @@
   letter-spacing: 0.08em;
 }
 
-.login-kicker {
+.login-brand-en {
+  display: block;
   margin: 3px 0 0;
   color: #7187aa;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
-  letter-spacing: 0.17em;
+  letter-spacing: 0.08em;
 }
 
 .login-brand h1 {

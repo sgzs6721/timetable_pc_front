@@ -1,16 +1,49 @@
 import { Button, Checkbox, Form, Input, InputNumber, Modal, Select, Space, Switch, message } from 'antd'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { getJson, postJson } from '../api/biz'
 import { BusinessDatePicker } from '../components/BusinessDatePicker'
 import { PhoneCopyButton, copyPlainText, money, tell } from './kit'
 import type { Student, Card, ServiceRight, Named } from './students-model'
 import { CoachMultiSelect, CourseField, PERIOD_OPTIONS, ServiceMultiSelect, courseUnitPriceConfigured, serviceOriginalPrice } from './student-card-desk'
-import { ChoiceTabs, personName } from './students-domain'
+import { personName } from './students-domain'
+
+type StudentCardCategory = 'HOURS' | 'PERIOD' | 'STORED_VALUE'
+
+const STUDENT_CARD_TABS: Array<{ value: StudentCardCategory; label: string }> = [
+  { value: 'HOURS', label: '课时卡' },
+  { value: 'PERIOD', label: '时段卡' },
+  { value: 'STORED_VALUE', label: '储值卡' },
+]
 
 export function AddStudent(props: { open: boolean; coaches: Named[]; groups: Named[]; services: Named[]; campusId: number | null; onClose: () => void; onSaved: () => void }) {
+  const [form] = Form.useForm()
+  const [saving, setSaving] = useState(false)
+  const [activeCardCategory, setActiveCardCategory] = useState<StudentCardCategory>('HOURS')
+  const cardDrafts = Form.useWatch('cards', form) as CardFormValues[] | undefined
+  useEffect(() => {
+    if (!props.open) return
+    form.resetFields()
+    setActiveCardCategory('HOURS')
+  }, [form, props.open])
   return (
-    <Modal title="新增学员" open={props.open} onCancel={props.onClose} footer={null} destroyOnHidden width={720}>
+    <Modal
+      rootClassName="add-student-modal"
+      title="新增学员"
+      open={props.open}
+      onCancel={() => { if (!saving) props.onClose() }}
+      footer={(
+        <>
+          <Button disabled={saving} onClick={props.onClose}>取消</Button>
+          <Button type="primary" htmlType="submit" form="add-student-form" loading={saving}>保存学员</Button>
+        </>
+      )}
+      destroyOnHidden
+      width={820}
+    >
       <Form
+        form={form}
+        id="add-student-form"
+        className="add-student-form"
         layout="vertical"
         initialValues={{ cards: [{ cardCategory: 'HOURS', courseCategory: true }] }}
         onFinishFailed={(info) => {
@@ -43,6 +76,7 @@ export function AddStudent(props: { open: boolean; coaches: Named[]; groups: Nam
           const payloads = cards.map((card) => cardPayload(card, props.services))
           const coachIds = Array.from(new Set(payloads.flatMap((card) => card.coachMemberIds)))
           const groupIds = Array.from(new Set(payloads.map((card) => card.studentGroupId).filter((id): id is number => !!id)))
+          setSaving(true)
           try {
             await postJson<Student>('/students', {
               name: values.name.trim(),
@@ -63,25 +97,95 @@ export function AddStudent(props: { open: boolean; coaches: Named[]; groups: Nam
             props.onSaved()
           } catch (error) {
             message.error(tell(error, '添加失败'))
+          } finally {
+            setSaving(false)
           }
         }}
       >
-        <Form.Item name="name" label="姓名" rules={[{ required: true, whitespace: true, message: '请输入学员姓名' }, { max: 6, message: '学员姓名不能超过6个字' }]}><Input maxLength={6} /></Form.Item>
-        <Form.Item name="gender" label="性别" rules={[{ required: true, message: '请选择性别' }]}><Select options={[{ value: 1, label: '男' }, { value: 2, label: '女' }]} /></Form.Item>
-        <Form.Item name="phone" label="电话" rules={[{ pattern: /^$|^1[3-9]\d{9}$/, message: '请输入11位正确手机号' }]}><Input maxLength={11} /></Form.Item>
-        <Form.Item name="birthDate" label="出生日期" rules={[{ validator: validateBirthDate }]}><BusinessDatePicker maxDate={birthDateMax()} /></Form.Item>
-        <Form.List name="cards">
-          {(fields, { add, remove }) => (
-            <Space direction="vertical" style={{ width: '100%' }}>
-              {fields.map((field, index) => (
-                <CardDraft key={field.key} fieldName={field.name} index={index} coaches={props.coaches} groups={props.groups} services={props.services} onRemove={fields.length > 1 ? () => remove(field.name) : undefined} />
-              ))}
-              <Button onClick={() => add({ cardCategory: 'HOURS', courseCategory: true })}>再加一张卡</Button>
-            </Space>
-          )}
-        </Form.List>
-        <Form.Item name="remark" label="备注"><Input.TextArea rows={2} maxLength={200} placeholder="请输入备注（选填）" /></Form.Item>
-        <Button type="primary" htmlType="submit">保存</Button>
+        <section className="add-student-section add-student-section--profile">
+          <header className="add-student-section__head">
+            <div><h3>基本资料</h3><p>快速建立学员档案，姓名与性别为必填项</p></div>
+            <span>基础信息</span>
+          </header>
+          <div className="add-student-profile-grid">
+            <Form.Item className="add-student-field--name" name="name" label="姓名" rules={[{ required: true, whitespace: true, message: '请输入学员姓名' }, { max: 6, message: '学员姓名不能超过6个字' }]}>
+              <Input maxLength={6} placeholder="最多6个字" />
+            </Form.Item>
+            <Form.Item name="gender" label="性别" rules={[{ required: true, message: '请选择性别' }]}>
+              <Select placeholder="请选择" options={[{ value: 1, label: '男' }, { value: 2, label: '女' }]} />
+            </Form.Item>
+            <Form.Item name="phone" label="电话" rules={[{ pattern: /^$|^1[3-9]\d{9}$/, message: '请输入11位正确手机号' }]}>
+              <Input maxLength={11} placeholder="选填，11位手机号" />
+            </Form.Item>
+            <Form.Item name="birthDate" label="出生日期" rules={[{ validator: validateBirthDate }]}>
+              <BusinessDatePicker maxDate={birthDateMax()} />
+            </Form.Item>
+            <Form.Item className="add-student-field--remark" name="remark" label="备注">
+              <Input.TextArea rows={2} maxLength={200} placeholder="补充家长称呼、学习情况等信息（选填）" />
+            </Form.Item>
+          </div>
+        </section>
+
+        <section className="add-student-section add-student-section--cards">
+          <header className="add-student-section__head">
+            <div><h3>课程卡设置</h3><p>选择卡类型，并绑定对应课程与负责老师</p></div>
+            <span>至少1张</span>
+          </header>
+          <Form.List name="cards">
+            {(fields, { add, remove }) => (
+              <div className="add-student-card-workspace">
+                <div className="add-student-card-tabs" role="tablist" aria-label="课程卡类型">
+                  {STUDENT_CARD_TABS.map((tab) => {
+                    const count = fields.filter((field) => String(cardDrafts?.[field.name]?.cardCategory || form.getFieldValue(['cards', field.name, 'cardCategory']) || 'HOURS').toUpperCase() === tab.value).length
+                    const active = activeCardCategory === tab.value
+                    return (
+                      <button
+                        key={tab.value}
+                        type="button"
+                        role="tab"
+                        aria-selected={active}
+                        className={`add-student-card-tab add-student-card-tab--${tab.value.toLowerCase()}${active ? ' is-active' : ''}`}
+                        onClick={() => setActiveCardCategory(tab.value)}
+                      >
+                        <span>{tab.label}</span>
+                        <small>{count}</small>
+                      </button>
+                    )
+                  })}
+                </div>
+                <div className="add-student-card-panel" role="tabpanel">
+                  {fields.some((field) => String(cardDrafts?.[field.name]?.cardCategory || form.getFieldValue(['cards', field.name, 'cardCategory']) || 'HOURS').toUpperCase() === activeCardCategory) ? (
+                    <div className="add-student-card-list">
+                      {fields.map((field, index) => {
+                        const category = String(cardDrafts?.[field.name]?.cardCategory || form.getFieldValue(['cards', field.name, 'cardCategory']) || 'HOURS').toUpperCase()
+                        if (category !== activeCardCategory) return null
+                        return <CardDraft key={field.key} fieldName={field.name} index={index} coaches={props.coaches} groups={props.groups} services={props.services} onRemove={fields.length > 1 ? () => remove(field.name) : undefined} />
+                      })}
+                    </div>
+                  ) : (
+                    <div className="add-student-card-empty">当前还没有{STUDENT_CARD_TABS.find((tab) => tab.value === activeCardCategory)?.label}</div>
+                  )}
+                  <Button
+                    className={`add-student-add-card add-student-add-card--${activeCardCategory.toLowerCase()}`}
+                    type="dashed"
+                    onClick={() => {
+                      const current = (form.getFieldValue('cards') || []) as CardFormValues[]
+                      form.setFieldValue('cards', current.map((card) => String(card.cardCategory || 'HOURS').toUpperCase() === activeCardCategory ? { ...card, uiCollapsed: true } : card))
+                      add({
+                        cardCategory: activeCardCategory,
+                        periodType: activeCardCategory === 'PERIOD' ? 'MONTH' : undefined,
+                        courseCategory: true,
+                        uiCollapsed: false,
+                      })
+                    }}
+                  >
+                    ＋ 新增{STUDENT_CARD_TABS.find((tab) => tab.value === activeCardCategory)?.label}
+                  </Button>
+                </div>
+              </div>
+            )}
+          </Form.List>
+        </section>
       </Form>
     </Modal>
   )
@@ -97,12 +201,14 @@ export interface CardFormValues {
   serviceItemIds?: number[]
   rightDiscount?: Record<string, number>
   rightPrice?: Record<string, number>
+  uiCollapsed?: boolean
 }
 
 export function CardDraft(props: { fieldName: number; index: number; coaches: Named[]; groups: Named[]; services: Named[]; onRemove?: () => void }) {
   const form = Form.useFormInstance()
   const categoryValue = Form.useWatch(['cards', props.fieldName, 'cardCategory'])
   const courseFlag = Form.useWatch(['cards', props.fieldName, 'courseCategory'])
+  const collapsed = Form.useWatch(['cards', props.fieldName, 'uiCollapsed']) === true
   const drafts = Form.useWatch('cards') as Array<{ cardCategory?: string }> | undefined
   const category = String(categoryValue || 'HOURS').toUpperCase()
   const course = category === 'HOURS' || courseFlag !== false
@@ -110,37 +216,40 @@ export function CardDraft(props: { fieldName: number; index: number; coaches: Na
   const sameCategory = (drafts || []).map((item) => String(item?.cardCategory || 'HOURS').toUpperCase())
   const typeCount = sameCategory.filter((item) => item === category).length
   const typeIndex = sameCategory.slice(0, props.index + 1).filter((item) => item === category).length
-  const categoryRef = useRef(category)
-  categoryRef.current = category
   return (
-    <div className="panel-block">
-      <Space style={{ width: '100%', justifyContent: 'space-between' }}>
-        <strong>{typeCount > 1 ? `${label} ${typeIndex}` : label}</strong>
-        {props.onRemove ? <Button size="small" onClick={props.onRemove}>移除</Button> : null}
-      </Space>
-      <Form.Item name={[props.fieldName, 'cardCategory']} label="卡类型" rules={[{ required: true, message: '请选择卡类型' }]}>
-        <ChoiceTabs
-          options={[{ value: 'HOURS', label: '课时卡' }, { value: 'PERIOD', label: '时段卡' }, { value: 'STORED_VALUE', label: '储值卡' }]}
-          onPick={(value) => {
-            const previous = categoryRef.current
-            categoryRef.current = value
-            if (value === 'HOURS') {
-              form.setFieldValue(['cards', props.fieldName, 'courseCategory'], true)
-              form.setFieldValue(['cards', props.fieldName, 'serviceItemIds'], [])
-            } else if (previous === 'HOURS') {
-              form.setFieldValue(['cards', props.fieldName, 'courseCategory'], false)
-              form.setFieldValue(['cards', props.fieldName, 'studentGroupId'], undefined)
-              form.setFieldValue(['cards', props.fieldName, 'coachMemberIds'], [])
-            }
-          }}
-        />
-      </Form.Item>
-      {category === 'PERIOD' ? <Form.Item name={[props.fieldName, 'periodType']} label="时段" initialValue="MONTH"><Select options={PERIOD_OPTIONS} /></Form.Item> : null}
-      {category !== 'HOURS' ? <Form.Item name={[props.fieldName, 'courseCategory']} label="包含课程" valuePropName="checked" initialValue><Switch /></Form.Item> : null}
-      {course ? <CourseField groups={props.groups} category={category} name={[props.fieldName, 'studentGroupId']} storeName={['cards', props.fieldName, 'studentGroupId']} coachField={['cards', props.fieldName, 'coachMemberIds']} courseFlag={['cards', props.fieldName, 'courseCategory']} /> : null}
-      {course ? <Form.Item name={[props.fieldName, 'coachMemberIds']} label="选择老师"><CoachMultiSelect coaches={props.coaches} /></Form.Item> : null}
-      {category !== 'HOURS' ? <Form.Item name={[props.fieldName, 'serviceItemIds']} label={course ? '适用服务（多选）' : '适用服务（多选） *'}><ServiceMultiSelect services={props.services.filter((item) => item.enabled !== 0 && item.enabled !== false)} /></Form.Item> : null}
-      {category === 'STORED_VALUE' ? <StoredRights services={props.services} listName={props.fieldName} /> : null}
+    <div className={`add-student-card add-student-card--${category.toLowerCase()}${collapsed ? ' is-collapsed' : ''}`}>
+      <header className="add-student-card__head">
+        <div><span>{typeIndex}</span><strong>{typeCount > 1 ? `${label} ${typeIndex}` : label}</strong><small>配置学员可使用的课程权益</small></div>
+        <div className="add-student-card__actions">
+          {props.onRemove ? <Button size="small" danger type="text" onClick={props.onRemove}>移除此卡</Button> : null}
+          <button
+            type="button"
+            className="add-student-card__collapse"
+            aria-label={collapsed ? `展开${label}` : `收起${label}`}
+            onClick={() => {
+              const current = (form.getFieldValue('cards') || []) as CardFormValues[]
+              form.setFieldValue('cards', current.map((card, index) => {
+                if (index === props.fieldName) return { ...card, uiCollapsed: !collapsed }
+                if (collapsed && String(card.cardCategory || 'HOURS').toUpperCase() === category) return { ...card, uiCollapsed: true }
+                return card
+              }))
+            }}
+          >
+            <span className={collapsed ? 'is-collapsed' : ''} />
+          </button>
+        </div>
+      </header>
+      {collapsed ? null : <div className="add-student-card__grid">
+        <Form.Item name={[props.fieldName, 'cardCategory']} hidden>
+          <Input />
+        </Form.Item>
+        {category === 'PERIOD' ? <Form.Item name={[props.fieldName, 'periodType']} label="时段" initialValue="MONTH"><Select options={PERIOD_OPTIONS} /></Form.Item> : null}
+        {category !== 'HOURS' ? <Form.Item className="add-student-card__switch" name={[props.fieldName, 'courseCategory']} label="包含课程" valuePropName="checked" initialValue><Switch /></Form.Item> : null}
+        {course ? <div><CourseField variant="chips" groups={props.groups} category={category} name={[props.fieldName, 'studentGroupId']} storeName={['cards', props.fieldName, 'studentGroupId']} coachField={['cards', props.fieldName, 'coachMemberIds']} courseFlag={['cards', props.fieldName, 'courseCategory']} /></div> : null}
+        {course ? <Form.Item name={[props.fieldName, 'coachMemberIds']} label="选择老师（多选）"><CoachMultiSelect variant="chips" coaches={props.coaches} /></Form.Item> : null}
+        {category !== 'HOURS' ? <Form.Item className="add-student-card__wide" name={[props.fieldName, 'serviceItemIds']} label={course ? '适用服务（多选）' : '适用服务（多选） *'}><ServiceMultiSelect services={props.services.filter((item) => item.enabled !== 0 && item.enabled !== false)} /></Form.Item> : null}
+        {category === 'STORED_VALUE' ? <div className="add-student-card__wide"><StoredRights services={props.services} listName={props.fieldName} /></div> : null}
+      </div>}
     </div>
   )
 }
@@ -442,7 +551,7 @@ export function isActiveTeachingCoach(item: Named): boolean {
 }
 
 export function CoachTransfer(props: { open: boolean; coaches: Named[]; campusId: number; studentIds: number[]; onClose: () => void; onSaved: () => void }) {
-  const teachingCoaches = props.coaches.filter(isActiveTeachingCoach)
+  const teachingCoaches = useMemo(() => props.coaches.filter(isActiveTeachingCoach), [props.coaches])
   const [sourceId, setSourceId] = useState<number>()
   const [targetId, setTargetId] = useState<number>()
   const [students, setStudents] = useState<Student[]>([])
@@ -451,11 +560,7 @@ export function CoachTransfer(props: { open: boolean; coaches: Named[]; campusId
   const [loadingStudents, setLoadingStudents] = useState(false)
   useEffect(() => {
     if (!props.open) return
-    setSourceId(undefined)
-    setTargetId(undefined)
-    setStudents([])
     setPicked(props.studentIds)
-    setKeyword('')
     if (teachingCoaches.length < 2) message.warning('当前校区至少需要两位在职带课老师')
   }, [props.open])
   useEffect(() => {
@@ -486,7 +591,23 @@ export function CoachTransfer(props: { open: boolean; coaches: Named[]; campusId
     return !keyword.trim() || text.includes(keyword.trim())
   })
   return (
-    <Modal title="批量更换老师" open={props.open} onCancel={props.onClose} footer={null} destroyOnHidden width={640}>
+    <Modal
+      rootClassName="coach-transfer-modal"
+      title="批量更换老师"
+      open={props.open}
+      onCancel={props.onClose}
+      afterOpenChange={(open) => {
+        if (open) return
+        setSourceId(undefined)
+        setTargetId(undefined)
+        setStudents([])
+        setPicked([])
+        setKeyword('')
+      }}
+      footer={null}
+      forceRender
+      width={640}
+    >
       <p>仅调整当前负责关系。先选原老师，再勾选其名下在学学员。原老师和新老师都只能是在职带课老师。</p>
       {teachingCoaches.length < 2 ? <p>当前校区至少需要两位在职带课老师。</p> : null}
       <div className="work-toolbar">

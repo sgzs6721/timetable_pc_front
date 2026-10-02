@@ -1,9 +1,8 @@
-import { Button, Form, Modal, Tabs, message } from 'antd'
+import { Modal, Tabs, message } from 'antd'
 import { delJson, getJson, postJson } from '../api/biz'
-import { BusinessDatePicker } from '../components/BusinessDatePicker'
 import { tell } from './kit'
 import type { Schedule } from './schedule-model'
-import { addDays, clockText, isoWeekday, timetableShowsWeekday } from './schedule-board-helpers'
+import { addDays, clockText, timetableShowsWeekday } from './schedule-board-helpers'
 import { mergeRanges, parseBatchKey } from './schedule-board-fields'
 import { LookupTable, overviewDateSections, overviewStudentCount, overviewStudentSections } from './schedule-overview'
 import { CreateTimetable, EditTimetableForm, schedulableCampuses } from './schedule-timetable-forms'
@@ -12,7 +11,7 @@ import { DayScheduleDialog } from './schedule-day-dialog'
 import type { useScheduleController } from './schedule-controller'
 
 export function ScheduleDialogs({ vm }: { vm: ReturnType<typeof useScheduleController> }) {
-  const { setSelecting, current, weekStart, mode, schedules, templateSchedules, creating, setCreating, createSource, setCreateSource, editing, setEditing, copyDay, setCopyDay, cell, setCell, setPlacement, batch, setBatch, setDeleting, overview, setOverview, dayDialog, setDayDialog, lookup, setLookup, dragAction, setDragAction, shell, campusId, campusName, managesCampus, timetableLocked, days, templateMode, boardSchedules, slots, loadGroups, loadWeek, saveCell, removeSchedule, leaveSchedule, moveSchedule, copySchedule } = vm
+  const { setSelecting, current, weekStart, mode, templateSchedules, creating, setCreating, createSource, setCreateSource, editing, setEditing, cell, setCell, setPlacement, batch, setBatch, setDeleting, overview, setOverview, dayDialog, setDayDialog, lookup, setLookup, dragAction, setDragAction, shell, campusId, campusName, managesCampus, timetableLocked, days, templateMode, boardSchedules, slots, loadGroups, loadWeek, saveCell, removeSchedule, leaveSchedule, moveSchedule, copySchedule } = vm
   return (
     <>
       <CreateTimetable
@@ -36,31 +35,6 @@ export function ScheduleDialogs({ vm }: { vm: ReturnType<typeof useScheduleContr
             }}
           />
         ) : null}
-      </Modal>
-      <Modal title="复制整天课程" open={copyDay} onCancel={() => setCopyDay(false)} footer={null} destroyOnHidden>
-        <Form
-          layout="vertical"
-          initialValues={{ sourceDate: weekStart, targetDate: addDays(weekStart, 1) }}
-          onFinish={async (values: { sourceDate: string; targetDate: string }) => {
-            const scheduleIds = schedules.filter((item) => item.scheduleDate === values.sourceDate).map((item) => item.id)
-            if (!scheduleIds.length) {
-              message.info('这一天没有可复制的排课')
-              return
-            }
-            if (!timetableShowsWeekday(current, isoWeekday(values.targetDate))) {
-              message.warning('当前课表不显示该星期')
-              return
-            }
-            await postJson(`/schedules/timetable/${current?.id}/copy-day`, { scheduleIds, targetDate: values.targetDate })
-            message.success('已复制整天课程')
-            setCopyDay(false)
-            await loadWeek()
-          }}
-        >
-          <Form.Item name="sourceDate" label="来源日期" rules={[{ required: true }]}><BusinessDatePicker /></Form.Item>
-          <Form.Item name="targetDate" label="目标日期" rules={[{ required: true }]}><BusinessDatePicker /></Form.Item>
-          <Button type="primary" htmlType="submit">复制</Button>
-        </Form>
       </Modal>
       <CellDialog
         cell={cell}

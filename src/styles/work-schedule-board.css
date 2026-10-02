@@ -390,8 +390,8 @@
 .tt-place {
   position: absolute;
   z-index: 5;
-  left: 6px;
-  right: 6px;
+  left: 2px;
+  right: 2px;
   overflow: hidden;
   padding: 4px 6px;
   border-radius: 8px;
@@ -449,8 +449,8 @@
 .tt-card {
   position: absolute;
   z-index: 2;
-  left: 6px;
-  right: 6px;
+  left: 2px;
+  right: 2px;
   overflow: hidden;
   padding: 8px 10px;
   border: 0;
@@ -697,19 +697,6 @@
 .tt-campus-legend .tone-3 { background: #ea580c; }
 .tt-campus-legend .tone-4 { background: #16a34a; }
 .tt-campus-legend .tone-5 { background: #111827; }
-
-.tt-card.is-compare {
-  z-index: 1;
-  background: #f7f8fb;
-  color: #8b93a7;
-  box-shadow: inset 3px 0 0 #c5cad6;
-}
-
-.tt-card.is-cancelled-compare {
-  left: 3px;
-  right: 3px;
-  outline: 1px dashed var(--primary);
-}
 
 @media (max-width: 1380px) {
   .tt-toolbar-summary {

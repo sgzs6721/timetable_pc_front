@@ -15,6 +15,35 @@ import {
 } from './students-domain'
 
 const KEYWORD_KEY = 'pc-students-keyword'
+type StudentSortField = 'remainingHours' | 'totalHours' | 'paymentDate' | 'createTime'
+type StudentSortOrder = 'asc' | 'desc'
+
+const STUDENT_SORT_FIELDS: Array<{ value: StudentSortField; label: string }> = [
+  { value: 'remainingHours', label: '剩余课时' },
+  { value: 'totalHours', label: '总课时' },
+  { value: 'paymentDate', label: '缴费时间' },
+  { value: 'createTime', label: '建档时间' },
+]
+
+function CoachTransferLauncher(props: { coaches: Named[]; campusId: number; onSaved: () => void }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <>
+      <Button onClick={() => setOpen(true)}>批量更换老师</Button>
+      <CoachTransfer
+        open={open}
+        coaches={props.coaches}
+        campusId={props.campusId}
+        studentIds={[]}
+        onClose={() => setOpen(false)}
+        onSaved={() => {
+          setOpen(false)
+          props.onSaved()
+        }}
+      />
+    </>
+  )
+}
 
 export function StudentsPage() {
   const shell = useShell()
@@ -24,7 +53,8 @@ export function StudentsPage() {
   const [status, setStatus] = useState<string>('active')
   const [cardCategory, setCardCategory] = useState('')
   const [coachId, setCoachId] = useState<number | undefined>()
-  const [sort, setSort] = useState('remainingHours:asc')
+  const [sortField, setSortField] = useState<StudentSortField>('remainingHours')
+  const [sortOrder, setSortOrder] = useState<StudentSortOrder>('asc')
   const [assignStudent, setAssignStudent] = useState<Student | null>(null)
   const [rows, setRows] = useState<Student[]>([])
   const [total, setTotal] = useState(0)
@@ -49,7 +79,6 @@ export function StudentsPage() {
   const [orders, setOrders] = useState<Array<Record<string, unknown>>>([])
   const [parentPaidIds, setParentPaidIds] = useState<number[]>([])
   const [adding, setAdding] = useState(false)
-  const [transferOpen, setTransferOpen] = useState(false)
   const [checkStudent, setCheckStudent] = useState<Student | null>(null)
   const [checkCardId, setCheckCardId] = useState<number | undefined>()
   const [checkCardLocked, setCheckCardLocked] = useState(false)
@@ -141,8 +170,8 @@ export function StudentsPage() {
           status: queryStatus,
           cardCategory: cardCategory || undefined,
           coachMemberId: scopedCoachId,
-          sortField: sort.split(':')[0],
-          sortOrder: sort.split(':')[1],
+          sortField,
+          sortOrder,
           page: nextPage,
           pageSize: 20,
         }),
@@ -171,7 +200,7 @@ export function StudentsPage() {
     reloadServices()
     getJson<Named[]>('/campus/list').then(setCampuses).catch(() => setCampuses([]))
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [campusId, status, cardCategory, coachId, sort, canManageRole, userReady, reloadCoaches, reloadGroups, reloadServices])
+  }, [campusId, status, cardCategory, coachId, sortField, sortOrder, canManageRole, userReady, reloadCoaches, reloadGroups, reloadServices])
 
   useEffect(() => {
     const studentId = Number(params.get('studentId') || 0)
@@ -332,7 +361,7 @@ export function StudentsPage() {
               }
               setAdding(true)
             }}>新增学员</Button>
-            <Button onClick={() => setTransferOpen(true)}>批量更换老师</Button>
+            <CoachTransferLauncher coaches={coaches} campusId={campusId || 0} onSaved={() => load()} />
           </div> : null}
         </div>
         <div className="work-toolbar">
@@ -376,18 +405,28 @@ export function StudentsPage() {
               { value: 'PERIOD', label: '时段卡' },
             ]}
           />
-          <Select
-            style={{ width: 160 }}
-            value={sort}
-            onChange={setSort}
-            options={[
-              { value: 'remainingHours:asc', label: '剩余课时从少到多' },
-              { value: 'remainingHours:desc', label: '剩余课时从多到少' },
-              { value: 'totalHours:desc', label: '总课时从多到少' },
-              { value: 'paymentDate:desc', label: '最近缴费' },
-              { value: 'createTime:desc', label: '最近建档' },
-            ]}
-          />
+          <div className="students-sort-control" role="group" aria-label="学员排序">
+            <span className="students-sort-control__label">排序</span>
+            <Select<StudentSortField>
+              className="students-sort-control__field"
+              popupClassName="students-sort-field-dropdown"
+              variant="borderless"
+              aria-label="排序依据"
+              value={sortField}
+              onChange={setSortField}
+              options={STUDENT_SORT_FIELDS}
+            />
+            <button
+              type="button"
+              className="students-sort-control__direction"
+              aria-label={`当前${sortOrder === 'asc' ? '升序' : '降序'}，点击切换为${sortOrder === 'asc' ? '降序' : '升序'}`}
+              title={sortOrder === 'asc' ? '升序，点击切换为降序' : '降序，点击切换为升序'}
+              onClick={() => setSortOrder((current) => (current === 'asc' ? 'desc' : 'asc'))}
+            >
+              <span className={`students-sort-arrow is-up${sortOrder === 'asc' ? ' is-active' : ''}`} aria-hidden="true" />
+              <span className={`students-sort-arrow is-down${sortOrder === 'desc' ? ' is-active' : ''}`} aria-hidden="true" />
+            </button>
+          </div>
           {canManageRole ? (
             <Select
               allowClear
@@ -527,14 +566,6 @@ export function StudentsPage() {
         campusId={campusId}
         onClose={() => setAdding(false)}
         onSaved={() => { setAdding(false); load() }}
-      />
-      <CoachTransfer
-        open={transferOpen}
-        coaches={coaches}
-        campusId={campusId || 0}
-        studentIds={[]}
-        onClose={() => setTransferOpen(false)}
-        onSaved={() => { setTransferOpen(false); load() }}
       />
       <QuickCheckIn
         key={checkStudent?.id || 'closed'}

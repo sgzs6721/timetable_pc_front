@@ -20,7 +20,7 @@ import { ScheduleDialogs } from './schedule-dialogs'
 
 export function SchedulePage() {
   const vm = useScheduleController()
-  const { groups, groupsLoading, archived, setArchived, dayBand, setDayBand, selecting, setSelecting, current, setCurrent, weekStart, setWeekStart, mode, schedules, templateSchedules, setCreating, setCell, placement, setPlacement, batch, setBatch, deleting, setDeleting, deleteIds, setDeleteIds, compare, compareOn, setCampusFilter, setDragAction, dragHover, setDragHover, dragGuard, dragLessonKey, campusId, canCreate, days, splitWeekend, templateMode, boardSchedules, campusLegend, activeCampusId, boardDays, splitHead, slots, limits, loadGroups, loadWeek, switchBoardMode, removeSchedule, moveSchedule, copySchedule, openOverview, onTimetableMenu, openDay, choosePlacement } = vm
+  const { groups, groupsLoading, archived, setArchived, dayBand, setDayBand, selecting, setSelecting, current, setCurrent, weekStart, setWeekStart, mode, schedules, templateSchedules, setCreating, setCell, placement, setPlacement, batch, setBatch, deleting, setDeleting, deleteIds, setDeleteIds, setCampusFilter, setDragAction, dragHover, setDragHover, dragGuard, dragLessonKey, campusId, canCreate, days, splitWeekend, templateMode, boardSchedules, campusLegend, activeCampusId, boardDays, splitHead, slots, limits, loadGroups, loadWeek, switchBoardMode, removeSchedule, moveSchedule, copySchedule, openOverview, onTimetableMenu, openDay, choosePlacement } = vm
   const visibleGroups = groups.filter((group) => ((archived ? group.archivedTimetables : group.activeTimetables) || []).length > 0)
 
   return (
@@ -179,27 +179,44 @@ export function SchedulePage() {
                   </div>
                 ) : null}
                 <span className="tt-toolbar-spacer" />
-                <Button type={selecting ? 'primary' : 'default'} onClick={() => {
-                  const next = !selecting
-                  setSelecting(next)
-                  setDeleting(false)
-                  setBatch([])
-                  setDeleteIds([])
-                  if (next) message.info('请选择要排课的空白时间段')
-                }}>{selecting ? '退出批量排课' : '批量排课'}</Button>
+                <Dropdown
+                  menu={{
+                    items: [
+                      { key: 'create', label: selecting ? '退出批量排课' : '批量排课' },
+                      { key: 'delete', label: deleting ? '退出批量删除' : '批量删除', danger: true },
+                    ],
+                    onClick: ({ key }) => {
+                      if (key === 'create') {
+                        const next = !selecting
+                        setSelecting(next)
+                        setDeleting(false)
+                        setBatch([])
+                        setDeleteIds([])
+                        if (next) message.info('请选择要排课的空白时间段')
+                        return
+                      }
+                      onTimetableMenu('batch').catch((error) => message.error(tell(error, '操作失败')))
+                    },
+                  }}
+                >
+                  <Button type={selecting || deleting ? 'primary' : 'default'}>批量</Button>
+                </Dropdown>
                 {deleting ? <span className="range-label">正在选择要删除的课程</span> : null}
                 <Dropdown
                   menu={{
                     items: [
-                      { key: 'overview', label: templateMode ? '固定课表学员总览' : '本周学员总览' },
-                      { key: 'compare', label: compareOn ? '关闭对比' : '对比其他老师' },
-                      { key: 'copy-day', label: '复制整天' },
-                      { key: 'copy', label: '复制课表' },
-                      { key: 'create-from', label: '按此课表新建' },
-                      { key: 'batch', label: deleting ? '取消批量删除' : '批量删除' },
-                      { key: 'edit', label: '编辑课表' },
-                      { type: 'divider' },
-                      { key: 'default', label: '设为默认' },
+                      ...(archived ? [] : [
+                        { key: 'edit', label: '修改课表' },
+                        {
+                          key: 'copy-menu',
+                          label: '复制',
+                          children: [
+                            { key: 'copy', label: '直接复制' },
+                            { key: 'create-from', label: '基于当前课表修改创建' },
+                          ],
+                        },
+                        ...(Number(current.isDefault) === 1 ? [] : [{ key: 'default', label: '设为活动课表' }]),
+                      ]),
                       { key: 'archive', label: archived ? '恢复' : '归档' },
                       { key: 'delete', label: '删除', danger: true },
                     ],
@@ -316,11 +333,6 @@ export function SchedulePage() {
                     const shown = activeCampusId
                       ? own.filter((lesson) => Number(lesson.uiChangeStatus || 0) === 4 || Number(lesson.campusId || 0) === activeCampusId)
                       : own
-                    const compared = templateMode ? [] : compare.filter((item) => {
-                      if (own.some((lesson) => lesson.id === item.id)) return false
-                      const lessonDate = item.scheduleDate ? String(item.scheduleDate).slice(0, 10) : ''
-                      return lessonDate ? lessonDate === date : item.dayOfWeek === day
-                    })
                     return (
                       <div className={!templateMode && date === todayIso() ? 'tt-day is-today' : 'tt-day'} key={day} style={{ gridColumn: column + 2, gridRow: `2 / span ${slots.length}` }}>
                         {slots.map((slot) => {
@@ -616,15 +628,6 @@ export function SchedulePage() {
                               <b className={campusLegend.length > 1 && Number(lesson.campusId || 0) > 0 && lesson.uiChangeStatus !== 4 ? `campus-tone-${campusLegend.find((item) => item.id === Number(lesson.campusId))?.tone ?? 0}` : undefined}>{lesson.uiChangeStatus === 4 ? '占用' : lesson.displayName || lesson.courseName}</b>
                               {lesson.uiChangeStatus !== 4 ? <small>{[lesson.coachName, clockText(lesson.startTime), clockText(lesson.endTime)].filter(Boolean).join(' ')}</small> : null}
                             </button>
-                          )
-                        })}
-                        {compared.map((lesson) => {
-                          const frame = cardFrame(lesson, slots)
-                          return (
-                            <div key={`c-${lesson.id}`} className={lesson.uiChangeStatus === 3 ? 'tt-card is-cancelled-compare' : 'tt-card is-compare'} style={{ top: lesson.uiChangeStatus === 3 ? Math.max(2, frame.top - 2) : frame.top, height: lesson.uiChangeStatus === 3 ? frame.height + 4 : frame.height }}>
-                              <b>{lesson.uiChangeStatus === 3 ? '已请假' : lesson.uiChangeStatus === 4 ? '占用' : '其他老师'} {lesson.courseName}</b>
-                              <small>{lesson.coachName}</small>
-                            </div>
                           )
                         })}
                       </div>

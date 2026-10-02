@@ -196,8 +196,8 @@ export function cardFrame(lesson: Schedule, slots: Array<{ start: string; end: s
   const start = toMinutes(clockText(lesson.startTime || slots[0]?.start))
   const end = toMinutes(clockText(lesson.endTime || slots[0]?.end))
   const top = ((start - origin) / step) * SLOT_HEIGHT
-  const height = Math.max(36, ((Math.max(end, start + 15) - start) / step) * SLOT_HEIGHT - 8)
-  return { top: Math.max(4, top + 4), height }
+  const height = Math.max(36, ((Math.max(end, start + 15) - start) / step) * SLOT_HEIGHT - 4)
+  return { top: Math.max(2, top + 2), height }
 }
 
 export function lessonClass(lesson: Schedule, extra = ''): string {

@@ -62,7 +62,7 @@ export function LoginPage() {
             <span className="login-logo"><img src="/icons/app-icon-timetable.svg" width="38" height="38" alt="" /></span>
             <div>
               <strong>云效课时</strong>
-              <p className="login-kicker">EDUCATION CLOUD</p>
+              <span className="login-brand-en" lang="en">CloudClass</span>
             </div>
           </div>
           <h1>把一天的课，安排清楚。</h1>

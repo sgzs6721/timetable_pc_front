@@ -268,6 +268,7 @@ export function CourseField(props: {
   coachField: string | Array<string | number>
   courseFlag?: string | Array<string | number>
   originalId?: number
+  variant?: 'select' | 'chips'
 }) {
   const form = Form.useFormInstance()
   const catalog = useContext(CatalogLoadContext)
@@ -278,11 +279,22 @@ export function CourseField(props: {
   const selectedRef = useRef(selected)
   selectedRef.current = selected
   const courseOn = props.category === 'HOURS' || courseFlag !== false
+  const handleCourseChange = (next?: number) => {
+    if (!next) return
+    const course = props.groups.find((item) => item.id === next)
+    if (props.category === 'STORED_VALUE' && !courseUnitPriceConfigured(course)) {
+      form.setFieldValue(props.name, selectedRef.current ?? null)
+      return
+    }
+    const previous = props.groups.find((item) => item.id === selectedRef.current)
+    const current = (form.getFieldValue(props.coachField) || []) as number[]
+    form.setFieldValue(props.coachField, coachesAfterCourse(current, previous, course))
+  }
   if (!courseOn) return null
   return (
     <Form.Item
       name={props.name}
-      label="课程"
+      label={props.variant === 'chips' ? '选择课程（单选）' : '课程'}
       normalize={(next, prev) => {
         const course = props.groups.find((item) => item.id === next)
         if (props.category === 'STORED_VALUE' && next && !courseUnitPriceConfigured(course)) {
@@ -293,24 +305,18 @@ export function CourseField(props: {
       }}
     >
       {catalog.groups === 'ready' && props.groups.length > 0 ? (
-      <Select
-        allowClear
-        options={visibleCourses(props.groups, props.originalId || selected).map((item) => {
-          const missingPrice = props.category === 'STORED_VALUE' && !courseUnitPriceConfigured(item)
-          return { value: item.id, label: missingPrice ? `${courseOptionLabel(item)} · 未设置单价` : courseOptionLabel(item), disabled: missingPrice }
-        })}
-        onChange={(next?: number) => {
-          if (!next) return
-          const course = props.groups.find((item) => item.id === next)
-          if (props.category === 'STORED_VALUE' && !courseUnitPriceConfigured(course)) {
-            form.setFieldValue(props.name, selectedRef.current ?? null)
-            return
-          }
-          const previous = props.groups.find((item) => item.id === selectedRef.current)
-          const current = (form.getFieldValue(props.coachField) || []) as number[]
-          form.setFieldValue(props.coachField, coachesAfterCourse(current, previous, course))
-        }}
-      />
+        props.variant === 'chips' ? (
+          <CourseChipSelect groups={visibleCourses(props.groups, props.originalId || selected)} category={props.category} onPick={handleCourseChange} />
+        ) : (
+          <Select
+            allowClear
+            options={visibleCourses(props.groups, props.originalId || selected).map((item) => {
+              const missingPrice = props.category === 'STORED_VALUE' && !courseUnitPriceConfigured(item)
+              return { value: item.id, label: missingPrice ? `${courseOptionLabel(item)} · 未设置单价` : courseOptionLabel(item), disabled: missingPrice }
+            })}
+            onChange={handleCourseChange}
+          />
+        )
       ) : catalog.groups === 'failed' ? (
         <CatalogHold text="课程加载失败，点击重试" onRetry={catalog.retryGroups} />
       ) : catalog.groups === 'loading' ? (
@@ -319,6 +325,47 @@ export function CourseField(props: {
         <CatalogHold text="当前校区暂无课程，请先在课程管理中配置" />
       )}
     </Form.Item>
+  )
+}
+
+function CourseChipSelect(props: { value?: number; onChange?: (value: number) => void; onPick?: (value: number) => void; groups: Named[]; category: string }) {
+  const [expanded, setExpanded] = useState(false)
+  const selectedId = Number(props.value || 0)
+  const selected = props.groups.find((item) => Number(item.id) === selectedId)
+  const ordered = selected ? [selected, ...props.groups.filter((item) => Number(item.id) !== selectedId)] : props.groups
+  const showMore = ordered.length > 4
+  const visible = expanded ? ordered : ordered.slice(0, 4)
+  return (
+    <div className="student-choice-shell">
+      <div className="student-choice-grid student-choice-grid--courses">
+        {visible.map((item) => {
+          const id = Number(item.id)
+          const active = id === selectedId
+          const disabled = props.category === 'STORED_VALUE' && !courseUnitPriceConfigured(item)
+          const coaches = (item.coachNames || []).filter(Boolean).join('、') || item.coachName || ''
+          const status = courseInactiveText(item.inactiveReason)
+          const price = props.category !== 'HOURS' && courseUnitPriceConfigured(item) ? `¥${money(item.unitPrice)}/小时` : ''
+          const meta = [coaches, status, disabled ? '未设置单价' : price].filter(Boolean).join(' · ')
+          return (
+            <button
+              key={id}
+              type="button"
+              aria-pressed={active}
+              disabled={disabled}
+              className={`student-choice-chip${active ? ' is-selected' : ''}`}
+              onClick={() => {
+                props.onChange?.(id)
+                props.onPick?.(id)
+              }}
+            >
+              <span>{item.shortName || item.name || '未命名课程'}</span>
+              {meta ? <small>{meta}</small> : null}
+            </button>
+          )
+        })}
+      </div>
+      {showMore ? <button className="student-choice-more" type="button" onClick={() => setExpanded((value) => !value)}>{expanded ? '收起' : `更多课程（${ordered.length}）`}</button> : null}
+    </div>
   )
 }
 
@@ -441,12 +488,34 @@ export function disabledServiceWarning(services: Array<{ id: number; enabled?: n
   return blocked ? '该服务已停用' : ''
 }
 
-export function CoachMultiSelect(props: { value?: number[]; onChange?: (value: number[]) => void; coaches: Named[] }) {
+export function CoachMultiSelect(props: { value?: number[]; onChange?: (value: number[]) => void; coaches: Named[]; variant?: 'select' | 'chips' }) {
   const catalog = useContext(CatalogLoadContext)
   const choices = props.coaches.filter((item) => Number(item.status ?? 1) !== 0)
   if (catalog.coaches === 'loading') return <CatalogHold text="正在加载老师..." />
   if (catalog.coaches === 'failed') return <CatalogHold text="老师加载失败，点击重试" onRetry={catalog.retryCoaches} />
   if (!choices.length) return <CatalogHold text="当前校区暂无老师，请先配置校区老师" />
+  if (props.variant === 'chips') {
+    const selected = new Set((props.value || []).map(Number))
+    return (
+      <div className="student-choice-grid student-choice-grid--coaches">
+        {choices.map((item) => {
+          const id = Number(item.id)
+          const active = selected.has(id)
+          return (
+            <button
+              key={id}
+              type="button"
+              aria-pressed={active}
+              className={`student-choice-chip student-choice-chip--coach${active ? ' is-selected' : ''}`}
+              onClick={() => props.onChange?.(active ? [...selected].filter((value) => value !== id) : [...selected, id])}
+            >
+              <span>{personName(item)}</span>
+            </button>
+          )
+        })}
+      </div>
+    )
+  }
   return <Select mode="multiple" value={props.value} onChange={props.onChange} options={choices.map((item) => ({ value: item.id, label: personName(item) }))} />
 }
 

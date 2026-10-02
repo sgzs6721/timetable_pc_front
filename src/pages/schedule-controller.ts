@@ -26,7 +26,6 @@ export function useScheduleController() {
   const [creating, setCreating] = useState(false)
   const [createSource, setCreateSource] = useState<Timetable | null>(null)
   const [editing, setEditing] = useState(false)
-  const [copyDay, setCopyDay] = useState(false)
   const [cell, setCell] = useState<{ day: number; date: string; start: string; end: string; slotStart?: string; slotEnd?: string; schedule?: Schedule; echo?: { name: string; status: 'leave' | 'delete'; scheduleId: number; time?: string } } | null>(null)
   const [placement, setPlacement] = useState<{ kind: 'move' | 'copy'; schedule: Schedule; targets: Array<{ day: number; date: string; start: string; end: string }> } | null>(null)
   const [batch, setBatch] = useState<string[]>([])
@@ -35,10 +34,7 @@ export function useScheduleController() {
   const [overview, setOverview] = useState<Schedule[] | null>(null)
   const [dayDialog, setDayDialog] = useState<DayDialog | null>(null)
   const [lookup, setLookup] = useState<Schedule[] | null>(null)
-  const [compare, setCompare] = useState<Schedule[]>([])
-  const [compareOn, setCompareOn] = useState(false)
   const [campusFilter, setCampusFilter] = useState(0)
-  const compareAnnounce = useRef(false)
   const groupsRequestId = useRef(0)
   const [dragAction, setDragAction] = useState<{
     schedule: Schedule
@@ -180,36 +176,6 @@ export function useScheduleController() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [current?.id, weekStart])
 
-  useEffect(() => {
-    if (!compareOn) {
-      setCompare([])
-      return
-    }
-    if (!current || templateMode) return
-    const others = groups.flatMap((group) => group.activeTimetables || []).filter((item) => item.id !== current.id).map((item) => item.id)
-    if (!others.length) {
-      setCompare([])
-      return
-    }
-    let active = true
-    getJson<Array<{ schedules?: Schedule[] }>>('/schedules/timetables/week', { timetableIds: others.join(','), weekStart })
-      .then((packs) => {
-        if (!active) return
-        const rows = (packs || []).flatMap((item) => item.schedules || [])
-        setCompare(rows)
-        if (!compareAnnounce.current) return
-        compareAnnounce.current = false
-        message.success(rows.length ? '已显示其他老师课程' : '其他老师本周没有课程')
-      })
-      .catch((error) => {
-        if (!active) return
-        compareAnnounce.current = false
-        message.error(tell(error, '对比加载失败'))
-      })
-    return () => { active = false }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [compareOn, current?.id, weekStart, templateMode, groups])
-
   const limits = weekLimits(current, weekStart)
   useEffect(() => {
     if (!current) return
@@ -291,29 +257,6 @@ export function useScheduleController() {
 
   async function onTimetableMenu(key: string) {
     if (!current) return
-    if (key === 'overview') {
-      await openOverview()
-      return
-    }
-    if (key === 'compare') {
-      if (compareOn) {
-        setCompareOn(false)
-        message.success('已关闭对比')
-        return
-      }
-      const others = groups.flatMap((group) => group.activeTimetables || []).filter((item) => item.id !== current.id)
-      if (!others.length) {
-        message.info('没有其他老师课表')
-        return
-      }
-      compareAnnounce.current = true
-      setCompareOn(true)
-      return
-    }
-    if (key === 'copy-day') {
-      setCopyDay(true)
-      return
-    }
     if (key === 'copy' || key === 'create-from') {
       const activeCount = (timetableOwner(groups, current.id)?.activeTimetables || []).length
       if (activeCount >= 2) {
@@ -355,12 +298,12 @@ export function useScheduleController() {
     }
     if (key === 'default') {
       Modal.confirm({
-        title: '设为默认课表？',
-        okText: '设为默认',
+        title: '设为活动课表？',
+        okText: '确认设置',
         cancelText: '取消',
         onOk: async () => {
           await putJson(`/timetables/${current.id}/default`)
-          message.success('已设为默认')
+          message.success('已设为活动课表')
           await loadGroups(current.id)
         },
       })
@@ -488,8 +431,6 @@ export function useScheduleController() {
     setCreateSource,
     editing,
     setEditing,
-    copyDay,
-    setCopyDay,
     cell,
     setCell,
     placement,
@@ -506,8 +447,6 @@ export function useScheduleController() {
     setDayDialog,
     lookup,
     setLookup,
-    compare,
-    compareOn,
     setCampusFilter,
     dragAction,
     setDragAction,

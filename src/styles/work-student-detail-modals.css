@@ -2,6 +2,501 @@
   background: #f6f8fc;
 }
 
+.ant-modal-root.add-student-modal .ant-modal .ant-modal-body {
+  padding: 12px 14px 14px;
+  background: #f5f7fb;
+}
+
+.ant-modal-root.add-student-modal .ant-modal .ant-modal-footer {
+  padding: 10px 14px 12px;
+}
+
+.add-student-modal .ant-modal-footer .ant-btn {
+  min-width: 96px;
+}
+
+.add-student-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: 12px;
+}
+
+.add-student-section {
+  min-width: 0;
+  padding: 12px 14px 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--card);
+  box-shadow: var(--shadow-xs);
+}
+
+.add-student-section--cards {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.add-student-section__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 10px;
+}
+
+.add-student-section__head h3 {
+  margin: 0;
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 720;
+  line-height: 1.35;
+}
+
+.add-student-section__head p {
+  margin: 3px 0 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.add-student-section__head > span {
+  flex: 0 0 auto;
+  padding: 3px 8px;
+  border-radius: 999px;
+  color: #667694;
+  background: #f0f3f8;
+  font-size: 10px;
+  font-weight: 650;
+}
+
+.add-student-profile-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+  gap: 8px;
+}
+
+.add-student-profile-grid .ant-form-item,
+.add-student-card__grid .ant-form-item {
+  min-width: 0;
+  margin-bottom: 0 !important;
+}
+
+.add-student-field--remark {
+  grid-column: 1 / -1;
+}
+
+.add-student-field--remark textarea {
+  min-height: 52px !important;
+  resize: vertical;
+}
+
+.add-student-card-workspace {
+  min-height: 0;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid #dfe6f1;
+  border-radius: 12px;
+  background: #f8faff;
+}
+
+.add-student-card-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 94px));
+  justify-content: center;
+  gap: 3px;
+  padding: 4px;
+  border-bottom: 1px solid #dfe6f1;
+  background: #f4f6fa;
+}
+
+.add-student-card-tab {
+  position: relative;
+  min-width: 0;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: 8px;
+  color: #65728b;
+  background: transparent;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 650;
+  transition: color 0.16s var(--ease), background 0.16s var(--ease);
+}
+
+.add-student-card-tab::after {
+  position: absolute;
+  right: 20%;
+  bottom: 0;
+  left: 20%;
+  height: 3px;
+  border-radius: 999px 999px 0 0;
+  background: transparent;
+  content: '';
+}
+
+.add-student-card-tab:hover {
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.76);
+}
+
+.add-student-card-tab small {
+  min-width: 18px;
+  height: 18px;
+  display: inline-grid;
+  padding: 0 5px;
+  border-radius: 999px;
+  color: #7a879f;
+  background: #e7ebf2;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 18px;
+  place-items: center;
+}
+
+.add-student-card-tab--hours.is-active {
+  color: #245cdf;
+  background: #edf3ff;
+}
+
+.add-student-card-tab--hours.is-active::after {
+  background: #4f7cff;
+}
+
+.add-student-card-tab--hours.is-active small {
+  color: #245cdf;
+  background: #dce7ff;
+}
+
+.add-student-card-tab--period.is-active {
+  color: #6d45c8;
+  background: #f4efff;
+}
+
+.add-student-card-tab--period.is-active::after {
+  background: #8b5cf6;
+}
+
+.add-student-card-tab--period.is-active small {
+  color: #6d45c8;
+  background: #e9deff;
+}
+
+.add-student-card-tab--stored_value.is-active {
+  color: #087b63;
+  background: #eaf9f4;
+}
+
+.add-student-card-tab--stored_value.is-active::after {
+  background: #18a884;
+}
+
+.add-student-card-tab--stored_value.is-active small {
+  color: #087b63;
+  background: #d4f1e8;
+}
+
+.add-student-card-panel {
+  min-height: 0;
+  flex: 1;
+  padding: 10px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-color: #c5cfde transparent;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+}
+
+.add-student-card-panel::-webkit-scrollbar {
+  width: 6px;
+}
+
+.add-student-card-panel::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: #c5cfde;
+}
+
+.add-student-card-panel::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.add-student-card-list {
+  display: grid;
+  gap: 8px;
+}
+
+.add-student-card-empty {
+  min-height: 72px;
+  display: grid;
+  color: #8b97ab;
+  font-size: 12px;
+  place-items: center;
+}
+
+.add-student-card {
+  overflow: hidden;
+  border: 1px solid #dfe6f1;
+  border-radius: 12px;
+  background: #fbfcff;
+}
+
+.add-student-card--period {
+  border-color: #ded5f5;
+  background: #fdfcff;
+}
+
+.add-student-card--stored_value {
+  border-color: #bde8dc;
+  background: #fbfffd;
+}
+
+.add-student-card__head {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--line-soft);
+  background: linear-gradient(180deg, #fff, #f8faff);
+}
+
+.add-student-card.is-collapsed .add-student-card__head {
+  border-bottom: 0;
+}
+
+.add-student-card__head > div {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.add-student-card__actions {
+  display: inline-flex !important;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 3px !important;
+}
+
+.add-student-card__collapse {
+  width: 28px;
+  height: 28px;
+  display: inline-grid;
+  flex: 0 0 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  cursor: pointer;
+  place-items: center;
+}
+
+.add-student-card__collapse:hover {
+  background: #eef2f8;
+}
+
+.add-student-card__collapse > span {
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid #75839b;
+  border-bottom: 2px solid #75839b;
+  transform: translateY(2px) rotate(225deg);
+  transition: transform 0.16s var(--ease);
+}
+
+.add-student-card__collapse > span.is-collapsed {
+  transform: translateY(-2px) rotate(45deg);
+}
+
+.add-student-card__head > div > span {
+  width: 22px;
+  height: 22px;
+  display: inline-grid;
+  flex: 0 0 22px;
+  border-radius: 7px;
+  color: var(--primary);
+  background: var(--primary-soft);
+  font-size: 11px;
+  font-weight: 750;
+  place-items: center;
+}
+
+.add-student-card--period .add-student-card__head > div > span {
+  color: #7148c9;
+  background: #eee6ff;
+}
+
+.add-student-card--stored_value .add-student-card__head > div > span {
+  color: #087b63;
+  background: #dcf5ed;
+}
+
+.add-student-card__head strong {
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.add-student-card__head small {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.add-student-card__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+  gap: 10px;
+  padding: 10px 12px 12px;
+}
+
+.add-student-card__wide {
+  grid-column: 1 / -1;
+}
+
+.add-student-card__switch .ant-form-item-control-input {
+  min-height: var(--control-md);
+}
+
+.student-choice-shell {
+  min-width: 0;
+}
+
+.student-choice-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.student-choice-chip {
+  min-width: 0;
+  min-height: 38px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 2px;
+  padding: 7px 9px;
+  border: 1px solid #d8e0ed;
+  border-radius: 9px;
+  color: #40506c;
+  background: #fff;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.16s var(--ease), color 0.16s var(--ease), background 0.16s var(--ease), box-shadow 0.16s var(--ease);
+}
+
+.student-choice-chip:hover:not(:disabled) {
+  border-color: #9db3f4;
+  color: var(--primary);
+  background: #f8faff;
+}
+
+.student-choice-chip.is-selected {
+  border-color: #7595ff;
+  color: #245cdf;
+  background: #edf3ff;
+  box-shadow: inset 0 0 0 1px rgba(79, 124, 255, 0.12);
+}
+
+.student-choice-chip:disabled {
+  color: #9ca8ba;
+  background: #f5f6f8;
+  cursor: not-allowed;
+  opacity: 0.72;
+}
+
+.student-choice-chip > span,
+.student-choice-chip > small {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.student-choice-chip > span {
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.student-choice-chip > small {
+  color: #8491a8;
+  font-size: 9px;
+  font-weight: 500;
+}
+
+.student-choice-chip--coach {
+  min-height: 38px;
+  align-items: center;
+  padding-inline: 9px;
+  text-align: center;
+}
+
+.student-choice-more {
+  display: block;
+  margin: 7px 0 0 auto;
+  padding: 2px 0;
+  border: 0;
+  color: var(--primary);
+  background: transparent;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.add-student-add-card.ant-btn {
+  width: 100%;
+  height: var(--control-md);
+  margin-top: 8px;
+  border-color: #cfd9ea;
+  color: var(--ink-2);
+  background: #fff;
+}
+
+.add-student-add-card.ant-btn:hover {
+  border-color: #9eb3ee !important;
+  color: var(--primary) !important;
+  background: var(--primary-faint) !important;
+}
+
+@media (max-width: 1040px) {
+  .add-student-form {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (min-width: 1041px) {
+  .add-student-section--profile,
+  .add-student-section--cards {
+    height: 450px;
+    box-sizing: border-box;
+  }
+}
+
+@media (max-width: 760px) {
+  .add-student-card-tabs {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .add-student-card__wide,
+  .add-student-field--remark {
+    grid-column: 1 / -1;
+  }
+}
+
 .student-profile-edit-shell {
   overflow: hidden;
   border: 1px solid var(--line);
