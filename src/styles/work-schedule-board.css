@@ -231,9 +231,9 @@
 }
 
 .tt-grid {
-  min-width: 860px;
+  min-width: 820px;
   display: grid;
-  grid-template-columns: 72px repeat(var(--days, 7), minmax(128px, 1fr));
+  grid-template-columns: 72px repeat(var(--days, 7), minmax(108px, 1fr));
   grid-template-rows: 64px repeat(var(--rows, 12), 72px);
 }
 
@@ -601,7 +601,7 @@
   min-height: 30px;
   padding: 0 9px;
   border: 1px dashed var(--tt-legend-color);
-  border-radius: 8px;
+  border-radius: var(--radius-tag);
   background: #fff;
 }
 
@@ -655,7 +655,7 @@
   height: 28px;
   padding: 0 10px;
   border: 1px solid var(--line);
-  border-radius: 999px;
+  border-radius: var(--radius-tag);
   background: #fff;
   color: #344054;
   cursor: pointer;

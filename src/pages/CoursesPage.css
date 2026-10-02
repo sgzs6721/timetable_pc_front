@@ -15,7 +15,7 @@
 }
 
 .course-create-button.ant-btn {
-  height: 38px;
+  height: var(--control-md);
   padding-inline: 18px;
 }
 
@@ -28,7 +28,7 @@
 
 .course-list-stats.stat-line > span {
   min-width: 0;
-  height: 38px;
+  height: var(--control-md);
   display: flex;
   align-items: center;
   gap: 7px;

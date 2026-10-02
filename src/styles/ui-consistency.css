@@ -1,0 +1,198 @@
+/*
+ * Cross-page visual contract.
+ *
+ * Page styles may still decide layout and information density, while the rules
+ * below keep repeated hierarchy, tabs, toolbars and form actions identical.
+ */
+
+/* Tabs: one control language, with layout-only differences per context. */
+.campus-main-tabs > .ant-tabs-nav,
+.membership-main-tabs > .ant-tabs-nav,
+.org-settings-tabs > .ant-tabs-nav {
+  min-height: calc(var(--tab-height) + var(--space-2));
+  margin-bottom: var(--space-4);
+}
+
+.campus-main-tabs > .ant-tabs-nav .ant-tabs-tab,
+.membership-main-tabs > .ant-tabs-nav .ant-tabs-tab,
+.org-settings-tabs > .ant-tabs-nav .ant-tabs-tab {
+  min-width: 100px;
+  justify-content: center;
+}
+
+.campus-sub-tabs > .ant-tabs-nav,
+.refund-settings-tabs > .ant-tabs-nav,
+.salary-settings-tabs > .ant-tabs-nav {
+  margin-bottom: var(--space-4);
+  border-color: var(--line);
+  background: var(--surface-soft);
+  box-shadow: none;
+}
+
+.campus-sub-tabs > .ant-tabs-nav .ant-tabs-tab,
+.refund-settings-tabs > .ant-tabs-nav .ant-tabs-tab,
+.salary-settings-tabs > .ant-tabs-nav .ant-tabs-tab {
+  min-width: 92px;
+  justify-content: center;
+}
+
+.tabs-nav-only > .ant-tabs-nav {
+  margin-bottom: 0;
+}
+
+.schedule-head-tabs > .ant-tabs-nav {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+/* Full-width section headers used by list and settings cards. */
+.staff-list-head,
+.service-list-head,
+.salary-panel-head,
+.campus-affairs-card-head,
+.academic-section-head {
+  min-height: 58px;
+  gap: var(--space-4);
+  margin: calc(-1 * var(--space-4)) calc(-1 * var(--space-5)) var(--space-4);
+  padding: var(--space-2) var(--space-5);
+  border-bottom-color: var(--line-soft);
+  background: linear-gradient(180deg, var(--card), var(--surface-subtle));
+}
+
+.staff-list-title,
+.service-list-head > div,
+.salary-panel-head > div,
+.campus-affairs-card-title {
+  gap: var(--space-2);
+}
+
+.staff-list-title h2,
+.service-list-head h2,
+.salary-panel-head h2,
+.campus-affairs-card-title h2,
+.academic-section-head h2 {
+  color: var(--ink);
+  font-size: var(--text-title);
+  font-weight: 720;
+  line-height: 1.4;
+}
+
+.staff-list-title span,
+.service-list-head > div > span,
+.salary-panel-head span,
+.campus-affairs-card-title span,
+.academic-section-head > div > span {
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+
+/* In-card headings use the same title/support-copy scale. */
+.account-card-heading,
+.membership-section-head,
+.marketing-presets-head,
+.quick-checkin-section-heading {
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.account-card-heading h2,
+.membership-section-head h2,
+.marketing-presets-head h2,
+.org-card-heading h2 {
+  color: var(--ink);
+  font-size: var(--text-title);
+  font-weight: 720;
+  line-height: 1.4;
+}
+
+.account-card-heading p,
+.membership-section-head p,
+.marketing-presets-head p,
+.org-card-heading p {
+  margin-top: var(--space-1);
+  color: var(--muted);
+  font-size: var(--text-sm);
+  line-height: 1.6;
+}
+
+/* Repeated action rows have one spacing and control-size contract. */
+.work-head-actions,
+.inline-actions,
+.campus-list-actions,
+.staff-list-tools,
+.students-overview-actions,
+.staff-form-actions,
+.checkin-course-actions {
+  gap: var(--space-2);
+}
+
+.staff-form-actions .ant-btn,
+.checkin-course-actions .ant-btn,
+.org-form-actions .ant-btn,
+.quick-checkin-actions .ant-btn {
+  min-width: 86px;
+  height: var(--control-md);
+  border-radius: var(--radius-control);
+}
+
+/* Modal forms without an Ant Design footer still end with a clear action. */
+.ant-modal:not(.quick-checkin-modal):not(.sheet-modal) .ant-modal-body > .ant-form > .ant-btn:last-child {
+  min-width: 96px;
+  display: flex;
+  margin-top: var(--space-1);
+  margin-left: auto;
+}
+
+.ant-modal:not(.quick-checkin-modal):not(.sheet-modal) .ant-modal-body .staff-form-actions:last-child {
+  margin-top: var(--space-5);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--line-soft);
+}
+
+/* Toolbars and filter/action bars share the same surface treatment. */
+.course-list-actionbar,
+.marketing-detail-head,
+.referral-editor {
+  border-color: var(--line);
+  border-radius: var(--radius-panel);
+  background: var(--surface-soft);
+}
+
+.work-toolbar,
+.course-list-actionbar {
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+
+.range-label,
+.form-label-note,
+.cell-muted {
+  color: var(--muted);
+}
+
+/* Feedback is a writing task, so keep its line length calm on wide desktops
+ * instead of stretching four short fields across the entire workspace. */
+.feedback-submit-card {
+  padding-block: var(--space-5);
+}
+
+.feedback-submit-form {
+  width: min(100%, 900px);
+  margin-inline: auto;
+}
+
+.feedback-submit-form > .ant-btn:last-child {
+  min-width: 108px;
+  display: block;
+  margin-left: auto;
+}
+
+@media (max-width: 900px) {
+  .campus-main-tabs > .ant-tabs-nav .ant-tabs-tab,
+  .membership-main-tabs > .ant-tabs-nav .ant-tabs-tab,
+  .org-settings-tabs > .ant-tabs-nav .ant-tabs-tab {
+    min-width: 84px;
+  }
+}

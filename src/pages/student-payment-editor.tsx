@@ -1,6 +1,7 @@
 import { Button, Form, Input, InputNumber, Modal, Select, Space, Switch, message } from 'antd'
 import { useEffect, useState } from 'react'
 import { getJson, postJson, putJson } from '../api/biz'
+import { BusinessDatePicker } from '../components/BusinessDatePicker'
 import { computePeriodValidityEndDate, getPeriodValidityRule, paymentDateLabel, proratePeriodTransferAmount, transferTargetLabel } from './payment-rules'
 import { money, tell, todayIso } from './kit'
 import type { Student, Named, PayRecord, PayLaunch } from './students-model'
@@ -16,6 +17,7 @@ export function PaymentEditor(props: {
   groups: Named[]
   services: Named[]
   payments: PayRecord[]
+  preferredCardId?: number
   onClose: () => void
   onSaved: () => Promise<void>
 }) {
@@ -208,7 +210,7 @@ export function PaymentEditor(props: {
       consumeDeadline: record?.consumeDeadline,
       remark: record?.remark,
       adjustmentReason: record?.adjustmentReason,
-      studentCardId: record?.studentCardId || adjustMain?.studentCardId || props.student.cards?.[0]?.id,
+      studentCardId: record?.studentCardId || adjustMain?.studentCardId || props.preferredCardId || props.student.cards?.find((card) => card.status == null || Number(card.status) === 1)?.id,
       mainRecordId: adjustMain?.id || record?.mainRecordId,
       commissionEnabled: !!(record?.commissionEnabled || record?.commissionMemberId || (record?.commissionAllocations || []).length),
       commissionAllocations: record?.commissionAllocations?.length
@@ -378,7 +380,7 @@ export function PaymentEditor(props: {
           consumeDeadline: record?.consumeDeadline,
           remark: record?.remark,
           adjustmentReason: record?.adjustmentReason,
-          studentCardId: record?.studentCardId || adjustMain?.studentCardId || props.student.cards?.[0]?.id,
+          studentCardId: record?.studentCardId || adjustMain?.studentCardId || props.preferredCardId || props.student.cards?.find((card) => card.status == null || Number(card.status) === 1)?.id,
           mainRecordId: adjustMain?.id || record?.mainRecordId,
           commissionEnabled: record?.commissionEnabled || !!record?.commissionMemberId || !!(record?.commissionAllocations || []).length,
           commissionAllocations: record?.commissionAllocations?.length
@@ -580,7 +582,14 @@ export function PaymentEditor(props: {
             { value: 'renew', label: '续费' },
           ]).map((item) => ({ ...item, disabled: item.value === 'refund' && refundBlocked }))} />
         </Form.Item>
-        <Form.Item name="studentCardId" label="课时卡"><Select allowClear options={(props.student.cards || []).map((card) => ({ value: card.id, label: card.cardName || card.studentGroupName || card.cardCategory }))} /></Form.Item>
+        <Form.Item name="studentCardId" label="学员卡" rules={[{ required: true, message: '请选择学员卡' }]}>
+          <Select
+            disabled={!!record || !!adjustMain}
+            options={(props.student.cards || [])
+              .filter((card) => card.id && (card.status == null || Number(card.status) === 1 || card.id === record?.studentCardId || card.id === adjustMain?.studentCardId))
+              .map((card) => ({ value: card.id, label: card.cardName || card.studentGroupName || card.cardCategory }))}
+          />
+        </Form.Item>
         {payType === 'supplement' || payType === 'refund' || payType === 'adjustment' ? (
           <Form.Item name="mainRecordId" label="关联主记录" rules={[{ required: true, message: '请选择主缴费记录' }]}>
             <Select
@@ -694,7 +703,7 @@ export function PaymentEditor(props: {
         ) : null}
         {payType === 'adjustment' && !showAdjustHours && hourFields.hint ? <p>{hourFields.hint}</p> : null}
         <Form.Item name="paymentDate" label={paymentDateLabel(String(payType || 'new'), String(reason || ''), String(selectedCard?.cardCategory || ''))}>
-          <Input type="date" min={dateFloor || undefined} max={dateCeil || undefined} />
+          <BusinessDatePicker minDate={dateFloor || undefined} maxDate={dateCeil || undefined} />
         </Form.Item>
         {periodRefundValidity ? (
           <>
@@ -722,7 +731,7 @@ export function PaymentEditor(props: {
             <ValidityEndDate />
           </>
         ) : null}
-        {showDeadline ? <Form.Item name="consumeDeadline" label="有效期至"><Input type="date" /></Form.Item> : null}
+        {showDeadline ? <Form.Item name="consumeDeadline" label="有效期至"><BusinessDatePicker /></Form.Item> : null}
         {payType === 'adjustment' ? (
           <Form.Item name="adjustmentReason" label="调整方式" rules={[{ required: true, message: '请选择调整方式' }]}>
             <Select options={adjustmentReasonOptions(cardCategory, String(record?.adjustmentReason || reason || ''), { ready: hoursReady, regular: regularAvailable, gift: giftAvailable })} />

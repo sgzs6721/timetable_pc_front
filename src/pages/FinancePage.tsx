@@ -1,6 +1,7 @@
 import { Button, Form, Input, InputNumber, Modal, Popconfirm, Select, Space, Switch, Table, Tabs, message } from 'antd'
 import { useEffect, useState } from 'react'
 import { delJson, getJson, postJson, putJson } from '../api/biz'
+import { BusinessDatePicker, BusinessDateRangePicker } from '../components/BusinessDatePicker'
 import { MetricBars } from './bars'
 import { NeedCampus, PageHead, clampDecimalInput, money, monthKey, periodChoices, type PeriodOption, shiftPeriod, tell, todayIso, useShell } from './kit'
 
@@ -81,7 +82,14 @@ export function FinancePage() {
         <Select
           style={{ width: 140 }}
           value={mode}
-          onChange={setMode}
+          onChange={(value) => {
+            if (value === 'custom_range') {
+              const today = todayIso()
+              setStartDate(today)
+              setEndDate(today)
+            }
+            setMode(value)
+          }}
           options={[
             { value: 'today', label: '今天' },
             { value: 'this_week', label: '本周' },
@@ -98,10 +106,11 @@ export function FinancePage() {
           </>
         ) : null}
         {mode === 'custom_range' ? (
-          <>
-            <input type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} />
-            <input type="date" value={endDate} onChange={(event) => setEndDate(event.target.value)} />
-          </>
+          <BusinessDateRangePicker
+            value={[startDate, endDate]}
+            onChange={([start, end]) => { setStartDate(start); setEndDate(end) }}
+            style={{ width: 286 }}
+          />
         ) : null}
       </PageHead>
       <Tabs items={[
@@ -199,7 +208,7 @@ export function FinancePage() {
                 {categoryDirection === 'expense' && expenseRecurring ? (
                   <>
                     <Form.Item name="cycleMonths" label="周期月数"><InputNumber min={1} placeholder="3" /></Form.Item>
-                    <Form.Item name="startDate" label="开始时间" initialValue={todayIso()}><Input type="date" /></Form.Item>
+                    <Form.Item name="startDate" label="开始时间" initialValue={todayIso()}><BusinessDatePicker /></Form.Item>
                   </>
                 ) : null}
                 <Button htmlType="submit">{categoryDirection === 'expense' ? '新增配置项' : '新增'}</Button>
@@ -260,7 +269,7 @@ export function FinancePage() {
                 <Form.Item name="categoryId"><Select style={{ width: 140 }} placeholder="支出项目" options={categories.filter((item) => String(item.direction).includes('expense') || item.direction === 'expense').map((item) => ({ value: item.id, label: String(item.name) }))} /></Form.Item>
                 <Form.Item name="singleAmount" getValueFromEvent={(value) => clampDecimalInput(value)}><InputNumber placeholder="金额" min={0} /></Form.Item>
                 <Form.Item name="cycleMonths"><InputNumber placeholder="周期月数" min={1} /></Form.Item>
-                <Form.Item name="startDate" initialValue={todayIso()}><Input type="date" /></Form.Item>
+                <Form.Item name="startDate" initialValue={todayIso()}><BusinessDatePicker /></Form.Item>
                 <Form.Item name="remark"><Input placeholder="备注" /></Form.Item>
                 <Button htmlType="submit">添加周期支出</Button>
               </Form>
@@ -369,7 +378,7 @@ export function FinancePage() {
             <Form.Item name="name" label="名称" rules={[{ required: true }]}><Input /></Form.Item>
             <Form.Item name="singleAmount" label="单次金额" rules={[{ required: true }]} getValueFromEvent={(value) => clampDecimalInput(value)}><InputNumber style={{ width: '100%' }} min={0} /></Form.Item>
             <Form.Item name="cycleMonths" label="周期月数"><InputNumber style={{ width: '100%' }} min={1} /></Form.Item>
-            <Form.Item name="startDate" label="开始日期"><Input type="date" /></Form.Item>
+            <Form.Item name="startDate" label="开始日期"><BusinessDatePicker /></Form.Item>
             <Form.Item name="remark" label="备注"><Input /></Form.Item>
             <Button type="primary" htmlType="submit">保存</Button>
           </Form>
@@ -400,12 +409,17 @@ function RecordTable(props: {
   onChanged: () => Promise<void>
 }) {
   const [editing, setEditing] = useState<Record<string, unknown> | null>(null)
+  const [createForm] = Form.useForm()
   const entries = [
     ...props.categories
       .filter((item) => String(item.direction || '') === props.direction && Number(item.enabled) !== 0)
       .map((item) => ({ value: `category:${item.id}`, label: String(item.name) })),
     ...(props.direction === 'expense' ? props.plans.map((item) => ({ value: `plan:${item.id}`, label: `周期 · ${String(item.name || '')}` })) : []),
   ]
+  const editingEntry = editing?.planId ? `plan:${editing.planId}` : editing?.categoryId ? `category:${editing.categoryId}` : ''
+  if (editingEntry && !entries.some((item) => item.value === editingEntry)) {
+    entries.push({ value: editingEntry, label: String(editing?.sourceName || editing?.title || '历史项目') })
+  }
   function payloadOf(values: { entry: string; amount: number; bizDate?: string; paymentType: number; remark?: string }) {
     const [kind, rawId] = String(values.entry || '').split(':')
     const id = Number(rawId)
@@ -425,7 +439,7 @@ function RecordTable(props: {
   return (
     <section className="work-card">
       <h2>{props.direction === 'income' ? '收入明细' : '运营支出'}</h2>
-      <Form layout="inline" onFinish={async (values: { entry: string; amount: number; bizDate?: string; paymentType: number; remark?: string }) => {
+      <Form form={createForm} layout="inline" initialValues={{ bizDate: todayIso() }} onFinish={async (values: { entry: string; amount: number; bizDate?: string; paymentType: number; remark?: string }) => {
         const error = recordError(props.direction, props.campusId, values)
         if (error) {
           message.warning(error)
@@ -434,16 +448,17 @@ function RecordTable(props: {
         try {
           await postJson('/finance/records', payloadOf(values))
           message.success('已保存')
+          createForm.resetFields()
           await props.onChanged()
         } catch (error) {
           message.error(tell(error, '保存失败'))
         }
       }}>
         <Form.Item name="entry" rules={[{ required: true, message: '请选择项目' }]}><Select style={{ width: 180 }} placeholder={props.direction === 'income' ? '收入项目' : '支出项目'} options={entries} /></Form.Item>
-        <PlanEntryHint plans={props.plans} />
+        <PlanEntryHint plans={props.plans} categories={props.categories} />
         <Form.Item name="amount" rules={[{ required: true, message: '请输入有效金额' }]} getValueFromEvent={(value) => clampDecimalInput(value)}><InputNumber placeholder="金额" min={0.01} /></Form.Item>
         <Form.Item name="paymentType" rules={[{ required: true, message: props.direction === 'income' ? '请选择收入方式' : '请选择支出方式' }]}><Select style={{ width: 120 }} placeholder={props.direction === 'income' ? '收入方式' : '支出方式'} options={PAYMENT_TYPES} /></Form.Item>
-        <Form.Item name="bizDate" initialValue={todayIso()} rules={[{ required: true }]}><Input type="date" /></Form.Item>
+        <Form.Item name="bizDate" initialValue={todayIso()} rules={[{ required: true }]}><BusinessDatePicker /></Form.Item>
         <Form.Item name="remark"><Input placeholder="备注" maxLength={200} /></Form.Item>
         <Button htmlType="submit">立即录入</Button>
       </Form>
@@ -501,8 +516,8 @@ function RecordTable(props: {
             }}
           >
             <Form.Item name="entry" label="项目" rules={[{ required: true }]}><Select options={entries} /></Form.Item>
-            <PlanEntryHint plans={props.plans} />
-            <Form.Item name="bizDate" label="日期" rules={[{ required: true }]}><Input type="date" /></Form.Item>
+            <PlanEntryHint plans={props.plans} categories={props.categories} />
+            <Form.Item name="bizDate" label="日期" rules={[{ required: true }]}><BusinessDatePicker /></Form.Item>
             <Form.Item name="amount" label="金额" rules={[{ required: true, message: '请输入有效金额' }]} getValueFromEvent={(value) => clampDecimalInput(value)}><InputNumber style={{ width: '100%' }} min={0.01} /></Form.Item>
             <Form.Item name="paymentType" label={props.direction === 'income' ? '收入方式' : '支出方式'} rules={[{ required: true }]}><Select options={PAYMENT_TYPES} /></Form.Item>
             <Form.Item name="remark" label="备注"><Input maxLength={200} /></Form.Item>
@@ -514,9 +529,19 @@ function RecordTable(props: {
   )
 }
 
-function PlanEntryHint(props: { plans: Array<Record<string, unknown>> }) {
+function PlanEntryHint(props: { plans: Array<Record<string, unknown>>; categories: Array<Record<string, unknown>> }) {
   const entry = Form.useWatch('entry')
   const value = String(entry || '')
+  if (value.startsWith('category:')) {
+    const category = props.categories.find((item) => Number(item.id) === Number(value.slice(9)))
+    const meta = expenseSettingMeta(category?.remark)
+    if (!category || !meta.isRecurring) return null
+    return (
+      <p>
+        周期项目 · {meta.cycleMonths > 0 ? `每${meta.cycleMonths}个月支付一次` : '未设置周期'} · 开始日期 {String(meta.startDate || '').slice(0, 10) || '-'}
+      </p>
+    )
+  }
   if (!value.startsWith('plan:')) return null
   const plan = props.plans.find((item) => Number(item.id) === Number(value.slice(5)))
   if (!plan) return null

@@ -1,6 +1,8 @@
 import { Alert, Button, Form, Input, InputNumber, Modal, Popconfirm, Select, Space, Switch, Table, Tabs, Tag, message } from 'antd'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { delJson, getJson, postJson, putJson } from '../api/biz'
+import type { Campus } from '../api/types'
+import { BusinessDatePicker, BusinessDateTimePicker } from '../components/BusinessDatePicker'
 import { NeedCampus, PageHead, money, tell, useShell } from './kit'
 import { CampaignDetailDrawer, SettlementDrawer } from './marketing-detail'
 import { ReferralTierEditor, validateReferralTiers } from './marketing-referral'
@@ -45,7 +47,7 @@ function templatePayload(values: JsonMap): JsonMap {
   }
 }
 
-function campaignInitial(dto: CampaignDto | null, campusName: string): JsonMap {
+function campaignInitial(dto: CampaignDto | null, campus?: Campus): JsonMap {
   const item = dto?.campaign
   const content = dto?.content
   return item ? {
@@ -62,7 +64,11 @@ function campaignInitial(dto: CampaignDto | null, campusName: string): JsonMap {
     enrollStartTime: item.enrollStartTime?.slice(0, 16),
     enrollEndTime: item.enrollEndTime?.slice(0, 16),
   } : {
-    campusNameText: campusName, signupMode: 'INTENT', payMode: 'FREE', quotaTotal: 0, referralEnabled: false,
+    campusNameText: campus?.name || '',
+    address: campus?.address || '',
+    contactName: campus?.contactPerson || '',
+    contactPhone: campus?.contactPhone || '',
+    signupMode: 'INTENT', payMode: 'FREE', quotaTotal: 0, referralEnabled: false,
   }
 }
 
@@ -121,7 +127,7 @@ function localDateTime(value: unknown): string | null {
   return text.length === 16 ? `${text}:00` : text
 }
 
-function campaignValidation(values: JsonMap): string {
+function campaignValidation(values: JsonMap, quotaUsed = 0): string {
   if (!String(values.campusNameText || '').trim()) return '请填写校区展示名称'
   if (!String(values.address || '').trim()) return '请填写活动地址'
   if (values.payMode === 'PAID') {
@@ -130,6 +136,8 @@ function campaignValidation(values: JsonMap): string {
     if (!(price > 0)) return '付费报名的活动价必须大于 0'
     if (original > 0 && original < price) return '划线原价不能低于活动价'
   }
+  const quotaTotal = Number(values.quotaTotal || 0)
+  if (quotaTotal > 0 && quotaTotal < quotaUsed) return `名额不能少于已报名人数 ${quotaUsed}`
   const enrollStart = String(values.enrollStartTime || '')
   const enrollEnd = String(values.enrollEndTime || '')
   if (enrollStart && enrollEnd && enrollEnd <= enrollStart) return '报名结束时间必须晚于报名开始时间'
@@ -137,14 +145,21 @@ function campaignValidation(values: JsonMap): string {
   const activityEnd = String(values.activityEndDate || '')
   if (activityStart && activityEnd && activityEnd < activityStart) return '活动结束日期不能早于开始日期'
   const phone = String(values.contactPhone || '').trim()
-  if (!/^(?:1[3-9]\d{9}|0\d{2,3}-?\d{7,8})$/.test(phone)) return '请填写正确的联系电话，手机号或带区号的固定电话'
+  if (!/^(?:1[3-9]\d{9}|0\d{2,3}-?\d{7,8}(?:-\d{1,5})?)$/.test(phone)) return '请填写正确的联系电话，手机号或带区号的固定电话'
   return validateReferralTiers(values, 'referralEnabled', 'referralTiers')
+}
+
+function localNowText(): string {
+  const date = new Date()
+  const pad = (value: number) => String(value).padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
 }
 
 export function MarketingPage() {
   const shell = useShell()
   const campusId = shell.campusId
-  const campusName = shell.campuses.find((item) => item.id === campusId)?.name || ''
+  const campus = shell.campuses.find((item) => item.id === campusId)
+  const campusName = campus?.name || ''
   const [activeTab, setActiveTab] = useState('campaigns')
   const [loading, setLoading] = useState(false)
   const [campaigns, setCampaigns] = useState<CampaignDto[]>([])
@@ -161,6 +176,7 @@ export function MarketingPage() {
   const [templateForm] = Form.useForm()
   const [campaignForm] = Form.useForm()
   const campaignPayMode = Form.useWatch('payMode', campaignForm)
+  const campaignPublished = Boolean(campaignEdit?.campaign && campaignEdit.campaign.status !== 'DRAFT')
 
   const load = useCallback(async () => {
     if (!campusId) return
@@ -215,12 +231,12 @@ export function MarketingPage() {
       try {
         const full = await getJson<CampaignDto>(`/marketing/campaigns/${item.campaign.id}`, { campusId })
         setCampaignEdit(full)
-        campaignForm.setFieldsValue(campaignInitial(full, campusName))
+        campaignForm.setFieldsValue(campaignInitial(full, campus))
       } catch (error) {
         message.error(tell(error, '活动详情加载失败'))
       }
     } else {
-      campaignForm.setFieldsValue(campaignInitial(null, campusName))
+      campaignForm.setFieldsValue(campaignInitial(null, campus))
     }
   }
 
@@ -235,7 +251,7 @@ export function MarketingPage() {
       }
       if (!template?.id) throw new Error('系统方案初始化失败，请重试')
       await openCampaign(null)
-      campaignForm.setFieldsValue({ ...campaignInitial(null, campusName), ...presetCampaignValues(preset, campusName, template.id) })
+      campaignForm.setFieldsValue({ ...campaignInitial(null, campus), ...presetCampaignValues(preset, campusName, template.id) })
       setPreview(null)
       setPreviewPreset(null)
       message.success('活动方案已带入，请补充时间、地址和联系人后保存')
@@ -263,6 +279,19 @@ export function MarketingPage() {
         if (!sessions.length) {
           message.warning('按场次报名的活动至少需要一个场次才能发布')
           await openDetail(item)
+          return
+        }
+      }
+      if (action === 'publish') {
+        const deadline = String(item.campaign.enrollEndTime || '')
+        if (!deadline) {
+          message.warning('请先选择报名截止时间')
+          await openCampaign(item)
+          return
+        }
+        if (deadline <= localNowText()) {
+          message.warning('报名截止时间已过，请先延长报名时间再发布')
+          await openCampaign(item)
           return
         }
       }
@@ -442,7 +471,7 @@ export function MarketingPage() {
       <Modal open={campaignEdit !== undefined} title={campaignEdit?.campaign ? '编辑营销活动' : '新建营销活动'} width={920} onCancel={() => setCampaignEdit(undefined)} okText="保存活动" onOk={() => campaignForm.submit()} destroyOnHidden>
         <Form form={campaignForm} layout="vertical" onFinish={async (values) => {
           if (!campusId) return
-          const validation = campaignValidation(values)
+          const validation = campaignValidation(values, Number(campaignEdit?.campaign?.quotaUsed || 0))
           if (validation) { message.warning(validation); return }
           try {
             const payload = campaignPayload(values)
@@ -469,12 +498,12 @@ export function MarketingPage() {
             setCampaignEdit(undefined)
             await load()
           } catch (error) { message.error(tell(error, '活动保存失败')) }
-        }} initialValues={campaignInitial(campaignEdit || null, campusName)}>
+        }} initialValues={campaignInitial(campaignEdit || null, campus)}>
           {campaignEdit?.campaign?.status && campaignEdit.campaign.status !== 'DRAFT' ? <Alert className="form-alert" type="warning" showIcon message="活动已发布：模板、报名方式、支付方式、活动价和报名开始时间不可修改；其余字段以后台实际校验为准。" /> : null}
           <div className="form-grid form-grid-3">
-            <Form.Item name="templateId" label="活动模板（可选）"><Select allowClear placeholder="不选则自动保存为自定义模板" disabled={Boolean(campaignEdit?.campaign && campaignEdit.campaign.status !== 'DRAFT')} options={templates.filter((item) => Number(item.enabled ?? 1) !== 0 || item.id === campaignEdit?.campaign?.templateId).map((item) => ({ value: item.id, label: item.templateName }))} onChange={(value) => { if (value) applyTemplate(value) }} /></Form.Item>
-            <Form.Item name="signupMode" label="报名方式" rules={[{ required: true }]}><Select disabled={Boolean(campaignEdit?.campaign && campaignEdit.campaign.status !== 'DRAFT')} options={SIGNUP_MODES} /></Form.Item>
-            <Form.Item name="payMode" label="支付方式" rules={[{ required: true }]}><Select disabled={Boolean(campaignEdit?.campaign && campaignEdit.campaign.status !== 'DRAFT')} options={PAY_MODES} /></Form.Item>
+            <Form.Item name="templateId" label="活动模板（可选）"><Select allowClear placeholder="不选则自动保存为自定义模板" disabled={campaignPublished} options={templates.filter((item) => Number(item.enabled ?? 1) !== 0 || item.id === campaignEdit?.campaign?.templateId).map((item) => ({ value: item.id, label: item.templateName }))} onChange={(value) => { if (value) applyTemplate(value) }} /></Form.Item>
+            <Form.Item name="signupMode" label="报名方式" rules={[{ required: true }]}><Select disabled={campaignPublished} options={SIGNUP_MODES} /></Form.Item>
+            <Form.Item name="payMode" label="支付方式" rules={[{ required: true }]}><Select disabled={campaignPublished} options={PAY_MODES} /></Form.Item>
           </div>
           <div className="form-grid form-grid-3">
             <Form.Item name="campusNameText" label="校区展示名称" rules={[{ required: true }, { max: 40 }]}><Input /></Form.Item>
@@ -482,15 +511,15 @@ export function MarketingPage() {
             <Form.Item name="quotaTotal" label="总名额（0 表示不限）" rules={[{ required: true }]}><InputNumber min={0} precision={0} style={{ width: '100%' }} /></Form.Item>
           </div>
           <div className="form-grid form-grid-3">
-            {campaignPayMode === 'PAID' ? <Form.Item name="price" label="活动价" rules={[{ required: true, message: '请输入活动价' }]}><InputNumber min={0.01} max={999999.99} precision={2} style={{ width: '100%' }} disabled={Boolean(campaignEdit?.campaign && campaignEdit.campaign.status !== 'DRAFT')} /></Form.Item> : <div className="marketing-free-note"><b>免费报名</b><span>活动不会发起在线支付</span></div>}
+            {campaignPayMode === 'PAID' ? <Form.Item name="price" label="活动价" rules={[{ required: true, message: '请输入活动价' }]}><InputNumber min={0.01} max={999999.99} precision={2} style={{ width: '100%' }} disabled={campaignPublished} /></Form.Item> : <div className="marketing-free-note"><b>免费报名</b><span>活动不会发起在线支付</span></div>}
             {campaignPayMode === 'PAID' ? <Form.Item name="originalPrice" label="划线原价"><InputNumber min={0} max={999999.99} precision={2} style={{ width: '100%' }} /></Form.Item> : <div />}
             <Form.Item name="posterTheme" label="海报主题"><Select options={THEMES} /></Form.Item>
           </div>
           <div className="form-grid">
-            <Form.Item name="enrollStartTime" label="报名开始时间" rules={[{ required: true }]}><Input type="datetime-local" disabled={Boolean(campaignEdit?.campaign && campaignEdit.campaign.status !== 'DRAFT')} /></Form.Item>
-            <Form.Item name="enrollEndTime" label="报名结束时间" rules={[{ required: true }]}><Input type="datetime-local" /></Form.Item>
-            <Form.Item name="activityStartDate" label="活动开始日期" rules={[{ required: true }]}><Input type="date" /></Form.Item>
-            <Form.Item name="activityEndDate" label="活动结束日期" rules={[{ required: true }]}><Input type="date" /></Form.Item>
+            <Form.Item name="enrollStartTime" label="报名开始时间" rules={[{ required: true }]}><BusinessDateTimePicker disabled={campaignPublished} /></Form.Item>
+            <Form.Item name="enrollEndTime" label="报名结束时间" rules={[{ required: true }]}><BusinessDateTimePicker /></Form.Item>
+            <Form.Item name="activityStartDate" label="活动开始日期"><BusinessDatePicker /></Form.Item>
+            <Form.Item name="activityEndDate" label="活动结束日期"><BusinessDatePicker /></Form.Item>
           </div>
           <div className="form-grid">
             <Form.Item name="contactName" label="联系人" rules={[{ required: true, whitespace: true }, { max: 20 }]}><Input /></Form.Item>
@@ -500,14 +529,15 @@ export function MarketingPage() {
             <Form.Item name="headline" label="活动主标题" rules={[{ required: true }, { max: 30 }]}><Input /></Form.Item>
             <Form.Item name="subHeadline" label="活动副标题" rules={[{ max: 120 }]}><Input /></Form.Item>
           </div>
-          <Form.Item name="coverImageUrl" label="封面图片地址"><Input /></Form.Item>
-          <Form.Item name="sellingPointsText" label="活动卖点（每行一条）"><Input.TextArea rows={3} /></Form.Item>
+          <Form.Item name="coverImageUrl" label="封面图片地址" rules={[{ max: 255 }]}><Input maxLength={255} /></Form.Item>
+          <Form.Item name="sellingPointsText" label="活动卖点（每行一条，最多 6 条）" rules={[{ max: 1000 }]}><Input.TextArea rows={3} maxLength={1000} showCount /></Form.Item>
           <div className="form-grid">
-            <Form.Item name="detailText" label="活动详情"><Input.TextArea rows={4} /></Form.Item>
-            <Form.Item name="noticeText" label="报名须知"><Input.TextArea rows={4} /></Form.Item>
+            <Form.Item name="detailText" label="活动详情" rules={[{ max: 2000 }]}><Input.TextArea rows={4} maxLength={2000} showCount /></Form.Item>
+            <Form.Item name="noticeText" label="报名须知" rules={[{ max: 1000 }]}><Input.TextArea rows={4} maxLength={1000} showCount /></Form.Item>
           </div>
-          <Form.Item name="referralEnabled" label="开启老带新" valuePropName="checked"><Switch /></Form.Item>
-          <ReferralTierEditor form={campaignForm} name="referralTiers" enabledName="referralEnabled" />
+          {campaignPublished ? <Alert className="form-alert" type="info" showIcon message="老带新规则发布后保持原配置；如需更换奖励规则，请结束本活动后另发一个。" /> : null}
+          <Form.Item name="referralEnabled" label="开启老带新" valuePropName="checked"><Switch disabled={campaignPublished} /></Form.Item>
+          <ReferralTierEditor form={campaignForm} name="referralTiers" enabledName="referralEnabled" disabled={campaignPublished} />
         </Form>
       </Modal>
 

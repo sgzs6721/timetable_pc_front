@@ -57,12 +57,17 @@ export function timetableFormError(values: {
   weekendStartTime?: string
   weekendEndTime?: string
 }, locked = false): string {
+  const validTime = (value?: string) => /^(?:0[6-9]|1\d|2[0-2]):(?:00|30)$/.test(clockText(value)) || clockText(value) === '23:00'
   if (!timetableName(values.name)) return '请输入课表名称'
   if (locked) return ''
   if (!values.createByMemberId) return '请选择所属人员'
   if (!(values.weekDays || []).length) return '至少选择一天'
+  if (!validTime(values.startTime) || !validTime(values.endTime)) return '课表时间只能选择06:00至23:00内的整点或半点'
   if (clockText(values.startTime) >= clockText(values.endTime)) return '结束时间必须晚于开始时间'
-  if (Number(values.splitWeekend) === 1 && clockText(values.weekendStartTime) >= clockText(values.weekendEndTime)) return '结束时间必须晚于开始时间'
+  if (Number(values.splitWeekend) === 1) {
+    if (!validTime(values.weekendStartTime) || !validTime(values.weekendEndTime)) return '周末时间只能选择06:00至23:00内的整点或半点'
+    if (clockText(values.weekendStartTime) >= clockText(values.weekendEndTime)) return '结束时间必须晚于开始时间'
+  }
   if (Number(values.isWeekly) !== 1) {
     if (!values.startDate) return '请选择开始日期'
     if (!values.endDate) return '请选择结束日期'

@@ -1,5 +1,5 @@
-import { Button, Form, Input, Modal, Popconfirm, Space, Switch, Table, Tabs, message } from 'antd'
-import { BankOutlined, CrownOutlined, FileTextOutlined, PhoneOutlined } from '@ant-design/icons'
+import { Button, Form, Input, Modal, Popconfirm, Space, Switch, Table, message } from 'antd'
+import { BankOutlined, CrownOutlined, FileTextOutlined, PhoneOutlined, SafetyCertificateOutlined, TeamOutlined, WarningOutlined } from '@ant-design/icons'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { delJson, getJson, postJson, putJson } from '../api/biz'
@@ -135,22 +135,18 @@ export function OrgPage() {
   return (
     <section className="org-page">
       <PageHead title="机构管理" extra="维护机构资料、协同管理员和机构级权限。" />
-      <Tabs
-        className="org-settings-tabs"
-        tabBarExtraContent={(
-          <Button className="org-membership-entry" icon={<CrownOutlined />} onClick={() => navigate('/membership')}>
-            会员续费与升级
-          </Button>
-        )}
-        items={[
-        { key: 'basic', label: '基本资料', children: (
-      <section className="work-card org-profile-card">
+      <div className="org-settings-grid">
+      <div className="org-settings-column org-settings-column--left">
+      <section className="work-card org-block-card org-profile-card">
         <div className="org-card-heading">
           <span className="org-card-heading-icon"><BankOutlined /></span>
           <div>
             <h2>机构基本资料</h2>
             <p>维护机构对外显示的名称、联系电话与简介</p>
           </div>
+          <Button className="org-membership-entry" icon={<CrownOutlined />} onClick={() => navigate('/membership')}>
+            会员续费与升级
+          </Button>
         </div>
         <Form
           className="org-basic-form"
@@ -185,14 +181,14 @@ export function OrgPage() {
             <Form.Item name="name" label="机构名称" rules={[{ required: true, message: '请输入机构名称' }]}>
               <Input prefix={<BankOutlined />} maxLength={12} placeholder="请输入机构名称（12字内）" showCount />
             </Form.Item>
-            <Form.Item label="联系电话" extra="使用当前登录账号的手机号，不支持修改。">
+            <Form.Item label="联系电话">
               <div className="org-phone-field">
                 <Input prefix={<PhoneOutlined />} value={accountPhone || org?.phone} disabled />
                 <PhoneCopyButton onClick={() => copyPhone(accountPhone || org?.phone || '')} />
               </div>
             </Form.Item>
             <Form.Item className="org-description-field" name="description" label="机构描述">
-              <Input.TextArea rows={4} maxLength={50} placeholder="请输入机构描述（选填，50字内）" showCount />
+              <Input.TextArea rows={3} maxLength={50} placeholder="请输入机构描述（选填，50字内）" showCount />
             </Form.Item>
           </div>
           <div className="org-form-actions">
@@ -201,11 +197,9 @@ export function OrgPage() {
           </div>
         </Form>
       </section>
-        ) },
-        { key: 'permission', label: '权限设置', children: (
-      <section className="work-card org-permission-card">
+      <section className="work-card org-block-card org-permission-card">
         <div className="org-card-heading">
-          <span className="org-card-heading-icon"><BankOutlined /></span>
+          <span className="org-card-heading-icon org-card-heading-icon--amber"><SafetyCertificateOutlined /></span>
           <div>
             <h2>机构权限</h2>
             <p>控制校区管理员可以使用的机构级能力</p>
@@ -224,13 +218,23 @@ export function OrgPage() {
           />
         </div>
       </section>
-        ) },
-        { key: 'members', label: '协同管理员', children: (
-      <section className="work-card">
+      </div>
+      <div className="org-settings-column org-settings-column--right">
+      <section className={`work-card org-block-card org-collaborators-card ${owner ? '' : 'org-collaborators-card--wide'}`}>
+        <div className="org-card-heading">
+          <span className="org-card-heading-icon org-card-heading-icon--green"><TeamOutlined /></span>
+          <div>
+            <h2>协同管理员</h2>
+            <p>邀请成员共同维护机构资料与业务设置</p>
+          </div>
+          <span className="org-card-count">{collaborators.length} 人</span>
+        </div>
+        <div className="org-collaborators-body">
         {owner ? (
           <Form
+            className="org-collaborator-form"
             form={addForm}
-            layout="inline"
+            layout="vertical"
             onFinish={async (values: { phone: string; nickname?: string }) => {
               if (savingMember) return
               const error = collaboratorError(values)
@@ -253,11 +257,15 @@ export function OrgPage() {
           >
             <Form.Item name="phone" rules={[{ required: true, message: '请输入手机号' }]}><Input placeholder="手机号" maxLength={11} /></Form.Item>
             <Form.Item name="nickname"><Input placeholder="姓名" maxLength={6} /></Form.Item>
-            <CollaboratorSubmitButton label="添加" savingLabel="添加中..." saving={savingMember} problem={collaboratorError} />
+            <div className="org-collaborator-submit">
+              <CollaboratorSubmitButton label="添加" savingLabel="添加中..." saving={savingMember} problem={collaboratorError} />
+            </div>
           </Form>
-        ) : <p>协同管理员不能添加成员。</p>}
+        ) : <p className="org-readonly-note">当前为协同管理员，仅可查看成员列表。</p>}
         <Table
-          style={{ marginTop: 12 }}
+          className="org-collaborator-table"
+          size="middle"
+          scroll={{ x: 520 }}
           rowKey="id"
           dataSource={collaborators}
           pagination={false}
@@ -322,15 +330,22 @@ export function OrgPage() {
             </Form>
           ) : null}
         </Modal>
+        </div>
       </section>
-        ) },
-        ...(owner ? [{ key: 'danger', label: '解散机构', children: (
-      <>
+      </div>
       {owner ? (
-        <section className="work-card">
-          <h2>解散机构</h2>
-          <p>只有机构创建者可以解散。解散后当前机构不再可用，请输入机构名称确认。</p>
-          <Button danger onClick={() => { setDissolveName(''); setDissolveOpen(true) }}>解散机构</Button>
+        <section className="work-card org-block-card org-danger-card">
+          <div className="org-card-heading org-card-heading--danger">
+            <span className="org-card-heading-icon org-card-heading-icon--danger"><WarningOutlined /></span>
+            <div>
+              <h2>解散机构</h2>
+              <p>不可恢复的机构级操作</p>
+            </div>
+          </div>
+          <div className="org-danger-body">
+            <p>只有机构创建者可以解散。解散后当前机构不再可用，请输入机构名称确认。</p>
+            <Button danger onClick={() => { setDissolveName(''); setDissolveOpen(true) }}>解散机构</Button>
+          </div>
           <Modal title="解散机构" open={dissolveOpen} onCancel={() => setDissolveOpen(false)} footer={null} destroyOnHidden>
             <p>请输入「{org?.name || ''}」，必须与机构名称完全一致。</p>
             <Input value={dissolveName} onChange={(event) => setDissolveName(event.target.value)} placeholder="机构名称" />
@@ -355,9 +370,7 @@ export function OrgPage() {
           </Modal>
         </section>
       ) : null}
-      </>
-        ) }] : []),
-      ]} />
+      </div>
     </section>
   )
 }

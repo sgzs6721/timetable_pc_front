@@ -1,0 +1,51 @@
+import { delJson, getJson, postJson, putJson } from './biz'
+import type {
+  ParentBoard,
+  ParentChild,
+  ParentClassRecord,
+  ParentCourseCatalogItem,
+  ParentCourseDetail,
+  ParentCourseStats,
+  ParentFeeItem,
+  ParentHome,
+  ParentPayment,
+} from '../parent/parent-model'
+
+export const parentApi = {
+  home: () => getJson<ParentHome>('/parent/home'),
+  board: (params: { childId?: number; studentId?: number; weekStart?: string }) => getJson<ParentBoard>('/parent/board', params),
+  createChild: (data: { name: string }) => postJson<ParentChild>('/parent/children', data),
+  updateChild: (id: number, name: string) => putJson<ParentChild>(`/parent/children/${id}`, { name }),
+  updateStudentName: (id: number, name: string) => putJson<ParentChild>(`/parent/students/${id}/display-name`, { name }),
+  deleteChild: (id: number) => delJson<void>(`/parent/children/${id}`),
+  catalog: () => getJson<ParentCourseCatalogItem[]>('/parent/course-catalog'),
+  createCourse: (data: { childId?: number; studentId?: number; name: string }) => postJson('/parent/courses', data),
+  createOrgCourses: (data: { childId?: number; studentId?: number; orgName: string; campusName?: string; names: string[] }) => postJson('/parent/org-courses', data),
+  updateOrgCourse: (id: number, data: { childId?: number; studentId?: number; orgName: string; campusName?: string; name: string }) => putJson(`/parent/org-courses/${id}`, data),
+  updateAlias: (data: { studentId: number; refKey: string; name?: string }) => putJson('/parent/institution-courses/alias', data),
+  deleteCourse: (id: number) => delJson<void>(`/parent/courses/${id}`),
+  course: (id: number) => getJson<ParentCourseDetail>(`/parent/courses/${id}`),
+  addPayment: (id: number, data: { amount: number; payDate?: string; remark?: string }) => postJson(`/parent/courses/${id}/payments`, data),
+  updatePayment: (id: number, data: { amount: number; payDate?: string; remark?: string }) => putJson(`/parent/course-payments/${id}`, data),
+  deletePayment: (id: number) => delJson<void>(`/parent/course-payments/${id}`),
+  addClassDate: (id: number, data: { classDate: string; remark?: string }) => postJson(`/parent/courses/${id}/class-dates`, data),
+  updateClassDate: (id: number, data: { classDate: string; remark?: string }) => putJson(`/parent/class-dates/${id}`, data),
+  deleteClassDate: (id: number) => delJson<void>(`/parent/class-dates/${id}`),
+  payments: (member: ParentChild) => member.source === 'PRIVATE'
+    ? getJson<ParentPayment[]>(`/parent/children/${member.childId}/payments`)
+    : getJson<ParentPayment[]>(`/parent/institution-students/${member.studentId}/payments`),
+  classes: (member: ParentChild) => member.source === 'PRIVATE'
+    ? getJson<ParentClassRecord[]>(`/parent/children/${member.childId}/classes`)
+    : getJson<ParentClassRecord[]>(`/parent/institution-students/${member.studentId}/classes`),
+  stats: (member: ParentChild) => getJson<ParentCourseStats>('/parent/course-stats', member.source === 'PRIVATE' ? { childId: member.childId } : { studentId: member.studentId }),
+  share: (member: ParentChild) => postJson<{ shareCode: string }>('/parent/shares', member.source === 'PRIVATE' ? { childId: member.childId } : { studentId: member.studentId }),
+  sharedBoard: (shareCode: string, weekStart?: string) => getJson<ParentBoard>(`/parent/shares/${encodeURIComponent(shareCode)}/board`, { weekStart }),
+  sharedStats: (shareCode: string) => getJson<ParentCourseStats>(`/parent/shares/${encodeURIComponent(shareCode)}/course-stats`),
+  feeItems: (studentId: number) => getJson<ParentFeeItem[]>(`/parent/institution-students/${studentId}/fee-items`),
+  createPayOrder: (feeItemId: number) => postJson<{ orderNo: string; itemName?: string; amount?: number; status?: string }>(`/parent/fee-items/${feeItemId}/orders`),
+  setupTimetable: (id: number, data: unknown) => putJson(`/parent/timetables/${id}/setup`, data),
+  createEntry: (data: unknown) => postJson('/parent/timetable-entries', data),
+  updateEntry: (id: number, data: unknown) => putJson(`/parent/timetable-entries/${id}`, data),
+  deleteSlot: (id: number) => delJson<void>(`/parent/slots/${id}`),
+  addSlot: (courseId: number, data: unknown) => postJson(`/parent/courses/${courseId}/slots`, data),
+}

@@ -1,6 +1,7 @@
-import { Button, Form, Input, InputNumber, Select, Space, message } from 'antd'
+import { Button, Form, InputNumber, Select, Space, message } from 'antd'
 import { useEffect, useRef, useState } from 'react'
 import { getJson } from '../api/biz'
+import { BusinessDatePicker } from '../components/BusinessDatePicker'
 import { AppIcon, money, todayIso } from './kit'
 import type { Card, Named, PayRecord } from './students-model'
 import { serviceOriginalPrice } from './student-card-desk'
@@ -400,12 +401,12 @@ export function ValidityStartDate() {
   const form = Form.useFormInstance()
   return (
     <Form.Item name="validStartDate" label="有效期开始" getValueFromEvent={(event) => {
-      const value = String(event?.target?.value || '')
+      const value = String(event?.target?.value ?? event ?? '')
       const end = String(form.getFieldValue('validEndDate') || '').slice(0, 10)
       if (value && end && value > end) form.setFieldValue('validEndDate', value)
       return value
     }}>
-      <Input type="date" />
+      <BusinessDatePicker />
     </Form.Item>
   )
 }
@@ -414,17 +415,16 @@ export function ValidityEndDate() {
   const form = Form.useFormInstance()
   return (
     <Form.Item name="validEndDate" label="有效期结束" getValueFromEvent={(event) => {
-      const value = String(event?.target?.value || '')
+      const value = String(event?.target?.value ?? event ?? '')
       const start = String(form.getFieldValue('validStartDate') || '').slice(0, 10)
       if (start && value && value < start) {
         message.warning('结束日期不能早于开始日期')
         const current = String(form.getFieldValue('validEndDate') || '')
-        if (event?.target) event.target.value = current
         return current
       }
       return value
     }}>
-      <Input type="date" />
+      <BusinessDatePicker />
     </Form.Item>
   )
 }
@@ -671,4 +671,3 @@ export function CommissionPeople(props: { coaches: Named[]; value?: Array<{ memb
     </div>
   )
 }
-

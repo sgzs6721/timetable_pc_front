@@ -433,6 +433,23 @@ export function timetableName(value?: string): string {
   return Array.from(String(value || '').trim()).slice(0, 12).join('')
 }
 
+export function scheduleInstanceKey(schedule: Schedule): string {
+  return [
+    Number(schedule.id || 0),
+    String(schedule.scheduleDate || ''),
+    Number(schedule.dayOfWeek || 0),
+    clockText(schedule.startTime),
+    clockText(schedule.endTime),
+  ].join('|')
+}
+
+export function duplicateTimetableName(value?: string): string {
+  const suffix = '-副本'
+  const limit = 12
+  const base = String(value || '').trim() || '课表'
+  return `${Array.from(base).slice(0, Math.max(limit - Array.from(suffix).length, 0)).join('')}${suffix}`
+}
+
 export function editTimetableSignature(values: Partial<Timetable>, locked: boolean): string {
   const name = timetableName(values.name)
   if (locked) return name

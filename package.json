@@ -6,12 +6,15 @@
   "scripts": {
     "dev": "vite",
     "check:source-size": "node scripts/check-source-size.mjs",
-    "build": "npm run check:source-size && tsc --noEmit && vite build",
+    "check:ui-contract": "node scripts/check-ui-contract.mjs",
+    "check:parity": "node scripts/check-miniapp-parity.mjs",
+    "build": "npm run check:source-size && npm run check:ui-contract && npm run check:parity && tsc --noEmit && vite build",
     "preview": "vite preview"
   },
   "dependencies": {
     "antd": "^5.22.6",
     "axios": "^1.7.9",
+    "dayjs": "^1.11.23",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.28.1"

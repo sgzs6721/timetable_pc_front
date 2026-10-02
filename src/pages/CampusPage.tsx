@@ -2,7 +2,6 @@ import { Button, Form, Input, InputNumber, Modal, Popconfirm, Select, Space, Tab
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { delJson, getJson, postJson, putJson } from '../api/biz'
-import { setCampusId } from '../session'
 import { NeedOrg, PageHead, PhoneCopyButton, clampDecimalInput, copyPlainText, tell, useShell } from './kit'
 import { CampusAffairs } from './campus-affairs'
 import { AcademicSettings } from './campus-academic'
@@ -21,9 +20,24 @@ function canManageCampusSalary(user: { id?: number; role?: string; campusAdminCa
 }
 
 function campusTabKey(value: string | null): string {
-  if (value === 'teacher' || value === 'position') return 'staff'
-  if (value === 'permission') return 'affairs'
-  return value || 'campus'
+  if (value === 'teacher' || value === 'teachers' || value === 'position' || value === 'positions') return 'staff'
+  if (value === 'permission' || value === 'permissions' || value === 'rules' || value === 'rewards') return 'affairs'
+  if (value === 'services' || value === 'trial') return 'service'
+  return ['campus', 'service', 'staff', 'salary', 'academic', 'affairs'].includes(String(value || '')) ? String(value) : 'campus'
+}
+
+function campusStaffTabKey(value: string | null): string {
+  return value === 'position' || value === 'positions' ? 'positions' : 'teachers'
+}
+
+function campusServiceTabKey(value: string | null): string {
+  return value === 'trial' ? 'trial' : 'services'
+}
+
+function campusAffairsTabKey(value: string | null): string {
+  if (value === 'permission' || value === 'permissions') return 'permissions'
+  if (value === 'rewards') return 'rewards'
+  return 'rules'
 }
 
 export function CampusPage() {
@@ -31,19 +45,18 @@ export function CampusPage() {
   const campusId = shell.campusId
   const [search] = useSearchParams()
   const [tab, setTab] = useState(campusTabKey(search.get('tab')))
+  const [serviceTab, setServiceTab] = useState(campusServiceTabKey(search.get('tab')))
+  const [staffTab, setStaffTab] = useState(campusStaffTabKey(search.get('tab')))
+  const [affairsTab, setAffairsTab] = useState(campusAffairsTabKey(search.get('tab')))
   useEffect(() => {
     const next = search.get('tab')
-    if (next) setTab(campusTabKey(next))
+    setTab(campusTabKey(next))
+    setServiceTab(campusServiceTabKey(next))
+    setStaffTab(campusStaffTabKey(next))
+    setAffairsTab(campusAffairsTabKey(next))
   }, [search])
   const currentOrg = shell.organizations.find((item) => item.id === shell.currentOrgId) || null
   const salaryAllowed = canManageCampusSalary(shell.user, currentOrg, campusId)
-  function openSection(nextTab: string, nextCampusId: number) {
-    if (nextCampusId && nextCampusId !== campusId) {
-      setCampusId(nextCampusId)
-      shell.reload()
-    }
-    setTab(nextTab)
-  }
   return (
     <NeedOrg orgId={shell.currentOrgId}>
       <PageHead title="校区管理" extra="校区资料、服务、老师、职位、权限和工资。" />
@@ -55,18 +68,18 @@ export function CampusPage() {
           setTab(key)
         }}
         items={[
-          { key: 'campus', label: '校区', children: <CampusList onOpen={openSection} /> },
-          { key: 'service', label: '校区服务', children: <Tabs className="campus-sub-tabs" defaultActiveKey="services" items={[
+          { key: 'campus', label: '校区', children: <CampusList /> },
+          { key: 'service', label: '校区服务', children: <Tabs className="campus-sub-tabs" activeKey={serviceTab} onChange={setServiceTab} items={[
             { key: 'services', label: '服务项目', children: <Services campusId={campusId} /> },
             { key: 'trial', label: '体验类型', children: <AcademicSettings campusId={campusId} section="trial" /> },
           ]} /> },
-          { key: 'staff', label: '人员设置', children: <Tabs className="campus-sub-tabs" defaultActiveKey="teachers" items={[
+          { key: 'staff', label: '人员设置', children: <Tabs className="campus-sub-tabs" activeKey={staffTab} onChange={setStaffTab} items={[
             { key: 'teachers', label: '老师列表', children: <Teachers campusId={campusId} /> },
             { key: 'positions', label: '职位设置', children: <Positions campusId={campusId} /> },
           ]} /> },
           { key: 'salary', label: '工资设置', children: salaryAllowed ? <CampusSalary campusId={campusId} /> : <p>当前不能设置员工工资</p> },
           { key: 'academic', label: '教务设置', children: <AcademicSettings campusId={campusId} section="academic" /> },
-          { key: 'affairs', label: '校务设置', children: <Tabs className="campus-sub-tabs" defaultActiveKey="rules" items={[
+          { key: 'affairs', label: '校务设置', children: <Tabs className="campus-sub-tabs" activeKey={affairsTab} onChange={setAffairsTab} items={[
             { key: 'rules', label: '规章制度', children: <CampusAffairs campusId={campusId} section="rules" /> },
             { key: 'rewards', label: '奖惩项', children: <CampusAffairs campusId={campusId} section="rewards" /> },
             { key: 'permissions', label: '权限设置', children: <Permissions campusId={campusId} /> },
@@ -127,7 +140,7 @@ async function copyCampusPhone(phone: string) {
   else Modal.info({ title: '联系电话', content: text, okText: '知道了' })
 }
 
-function CampusList(props: { onOpen: (tab: string, campusId: number) => void }) {
+function CampusList() {
   const shell = useShell()
   const [rows, setRows] = useState<Campus[]>([])
   const [online, setOnline] = useState('all')
@@ -219,8 +232,6 @@ function CampusList(props: { onOpen: (tab: string, campusId: number) => void }) 
             title: '操作',
             render: (_: unknown, row: Campus) => (
               <Space>
-                <Button type="link" onClick={() => props.onOpen('staff', row.id)}>人员管理</Button>
-                <Button type="link" onClick={() => props.onOpen('service', row.id)}>校区服务</Button>
                 <Button type="link" onClick={() => setEditing(row)}>编辑</Button>
                 {orgManager ? (
                   <Button type="link" onClick={async () => {

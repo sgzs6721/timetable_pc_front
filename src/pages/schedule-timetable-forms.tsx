@@ -1,9 +1,10 @@
 import { Button, Form, Input, Modal, Select, Switch, message } from 'antd'
 import { useEffect, useState } from 'react'
 import { getJson, postJson, putJson } from '../api/biz'
+import { BusinessDatePicker } from '../components/BusinessDatePicker'
 import { tell } from './kit'
 import type { Timetable } from './schedule-model'
-import { clockText, editTimetableSignature } from './schedule-board-helpers'
+import { clockText, duplicateTimetableName, editTimetableSignature } from './schedule-board-helpers'
 import { TimetableKindSelect, WeekDaySelect, timetableBody, timetableFormError } from './schedule-board-fields'
 
 export function WeekendFields(props: { disabled?: boolean }) {
@@ -15,8 +16,8 @@ export function WeekendFields(props: { disabled?: boolean }) {
       </Form.Item>
       {Number(split) === 1 ? (
         <>
-          <Form.Item name="weekendStartTime" label="周末开始"><Input type="time" disabled={props.disabled} /></Form.Item>
-          <Form.Item name="weekendEndTime" label="周末结束"><Input type="time" disabled={props.disabled} /></Form.Item>
+          <Form.Item name="weekendStartTime" label="周末开始"><Input type="time" min="06:00" max="23:00" step={1800} disabled={props.disabled} /></Form.Item>
+          <Form.Item name="weekendEndTime" label="周末结束"><Input type="time" min="06:00" max="23:00" step={1800} disabled={props.disabled} /></Form.Item>
         </>
       ) : null}
     </>
@@ -56,8 +57,8 @@ export function EditTimetableForm(props: { current: Timetable; locked: boolean; 
       <Form.Item name="isWeekly" label="课表类型"><TimetableKindSelect disabled={props.locked} /></Form.Item>
       <TimetableDateFields disabled={props.locked} />
       {props.locked ? <p>已排课，不可修改</p> : null}
-      <Form.Item name="startTime" label="开始时间"><Input type="time" disabled={props.locked} /></Form.Item>
-      <Form.Item name="endTime" label="结束时间"><Input type="time" disabled={props.locked} /></Form.Item>
+      <Form.Item name="startTime" label="开始时间"><Input type="time" min="06:00" max="23:00" step={1800} disabled={props.locked} /></Form.Item>
+      <Form.Item name="endTime" label="结束时间"><Input type="time" min="06:00" max="23:00" step={1800} disabled={props.locked} /></Form.Item>
       <Form.Item name="weekDays" label="上课日"><WeekDaySelect disabled={props.locked} /></Form.Item>
       <WeekendFields disabled={props.locked} />
       <Button type="primary" htmlType="submit" disabled={!dirty || saving}>{saving ? '保存中...' : '保存修改'}</Button>
@@ -97,6 +98,7 @@ export function CreateTimetable(props: { open: boolean; campusId: number; manage
       <Form
         layout="vertical"
         initialValues={{
+          name: props.source ? duplicateTimetableName(props.source.name) : undefined,
           isWeekly: props.source?.isWeekly ?? 1,
           startTime: clockText(props.source?.startTime) || '08:00',
           endTime: clockText(props.source?.endTime) || '21:00',
@@ -112,7 +114,7 @@ export function CreateTimetable(props: { open: boolean; campusId: number; manage
           if (saving) return
           const problem = timetableFormError(values)
           if (problem) {
-            message.warning('请检查输入项')
+            message.warning(problem)
             return
           }
           const member = members.find((item) => item.id === values.createByMemberId)
@@ -147,8 +149,8 @@ export function CreateTimetable(props: { open: boolean; campusId: number; manage
         <Form.Item name="isWeekly" label="课表类型"><TimetableKindSelect /></Form.Item>
         <TimetableDateFields />
         <Form.Item name="weekDays" label="上课日"><WeekDaySelect /></Form.Item>
-        <Form.Item name="startTime" label="开始时间"><Input type="time" /></Form.Item>
-        <Form.Item name="endTime" label="结束时间"><Input type="time" /></Form.Item>
+        <Form.Item name="startTime" label="开始时间"><Input type="time" min="06:00" max="23:00" step={1800} /></Form.Item>
+        <Form.Item name="endTime" label="结束时间"><Input type="time" min="06:00" max="23:00" step={1800} /></Form.Item>
         <p>排课粒度固定为 1 小时。</p>
         <WeekendFields />
         <CreateTimetableButton members={members} saving={saving} />
@@ -162,8 +164,8 @@ export function TimetableDateFields(props: { disabled?: boolean }) {
   if (Number(weekly ?? 1) === 1) return null
   return (
     <>
-      <Form.Item name="startDate" label="开始日期" rules={[{ required: true, message: '请选择开始日期' }]}><Input type="date" disabled={props.disabled} /></Form.Item>
-      <Form.Item name="endDate" label="结束日期" rules={[{ required: true, message: '请选择结束日期' }]}><Input type="date" disabled={props.disabled} /></Form.Item>
+      <Form.Item name="startDate" label="开始日期" rules={[{ required: true, message: '请选择开始日期' }]}><BusinessDatePicker disabled={props.disabled} /></Form.Item>
+      <Form.Item name="endDate" label="结束日期" rules={[{ required: true, message: '请选择结束日期' }]}><BusinessDatePicker disabled={props.disabled} /></Form.Item>
     </>
   )
 }

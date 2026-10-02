@@ -2,6 +2,7 @@ import { Alert, Button, Descriptions, Drawer, Form, Input, InputNumber, Modal, P
 import type { FormInstance } from 'antd'
 import { useCallback, useEffect, useState } from 'react'
 import { delJson, downloadFile, getJson, postJson } from '../api/biz'
+import { BusinessDatePicker } from '../components/BusinessDatePicker'
 import { copyPlainText, money, tell } from './kit'
 import { PLAY_TYPES, SIGNUP_MODES, STATUS_COLOR, STATUS_TEXT, enumText, type CampaignDto, type CampaignSession, type Enrollment, type JsonMap, type SettlementCampaign } from './marketing-model'
 
@@ -55,21 +56,61 @@ export function CampaignDetailDrawer(props: {
     } finally { setLoading(false) }
   }, [id, props.campusId, props.open])
 
-  const loadEnrollments = useCallback(async (page = enrollmentPage) => {
+  async function loadEnrollments(page = enrollmentPage, selectedFilters = filters) {
     if (!props.open || !id) return
     const data = await getJson<{ records?: Enrollment[]; total?: number }>(`/marketing/campaigns/${id}/enrollments`, {
-      campusId: props.campusId, ...filters, page, pageSize: 20,
+      campusId: props.campusId, ...selectedFilters, page, pageSize: 20,
     })
     setEnrollments(data.records || [])
     setEnrollmentTotal(Number(data.total || 0))
     setEnrollmentPage(page)
-  }, [enrollmentPage, filters, id, props.campusId, props.open])
+  }
 
-  useEffect(() => { if (props.open) { setTab('overview'); setRewardStatus('PENDING'); void loadDetailData(); void loadEnrollments(1) } }, [props.open, id, loadDetailData, loadEnrollments])
+  useEffect(() => {
+    if (!props.open) return
+    const initialFilters = { keyword: '', enrollStatus: '', customerType: '' }
+    setTab('overview')
+    setRewardStatus('PENDING')
+    setFilters(initialFilters)
+    void loadDetailData()
+    void loadEnrollments(1, initialFilters)
+  }, [props.open, id, loadDetailData])
 
   const campaign = props.dto?.campaign
   const content = props.dto?.content
   const status = props.dto?.displayStatus || campaign?.status || ''
+  const sessionEditable = campaign?.status !== 'ENDED'
+
+  function openSession(row?: CampaignSession) {
+    sessionForm.resetFields()
+    if (row) {
+      setSessionEdit(row)
+      sessionForm.setFieldsValue({ ...row, startTime: row.startTime?.slice(0, 5), endTime: row.endTime?.slice(0, 5) })
+      return
+    }
+    setSessionEdit(null)
+    sessionForm.setFieldsValue({ status: 'OPEN', quotaTotal: 0, sortOrder: sessions.length })
+  }
+
+  async function removeSession(row: CampaignSession) {
+    try {
+      await delJson(`/marketing/campaigns/${id}/sessions/${row.id}`, { campusId: props.campusId })
+      message.success('场次已删除')
+      await loadDetailData()
+    } catch (error) {
+      message.error(tell(error, '场次删除失败'))
+    }
+  }
+
+  async function closeSession(row: CampaignSession) {
+    try {
+      await postJson(`/marketing/campaigns/${id}/sessions?campusId=${props.campusId}`, { ...row, status: 'CLOSED' })
+      message.success('场次已关闭')
+      await loadDetailData()
+    } catch (error) {
+      message.error(tell(error, '场次关闭失败'))
+    }
+  }
 
   function mutateReward(row: JsonMap, action: 'grant' | 'void') {
     let value = ''
@@ -157,14 +198,14 @@ export function CampaignDetailDrawer(props: {
         </section>
       </> : null}
       {tab === 'sessions' ? <section className="work-card">
-        <div className="work-toolbar"><Button type="primary" onClick={() => { setSessionEdit(null); sessionForm.setFieldsValue({ status: 'OPEN', quotaTotal: 0, sortOrder: sessions.length }) }}>添加场次</Button><span className="range-label">仅“选择具体场次”的活动会向家长展示这里的时间。</span></div>
+        <div className="work-toolbar">{sessionEditable ? <Button type="primary" onClick={() => openSession()}>添加场次</Button> : null}<span className="range-label">仅“选择具体场次”的活动会向家长展示这里的时间。</span></div>
         <Table rowKey="id" dataSource={sessions} loading={loading} pagination={false} columns={[
           { title: '日期', dataIndex: 'sessionDate' },
           { title: '时间', render: (_, row: CampaignSession) => `${String(row.startTime || '').slice(0, 5)} - ${String(row.endTime || '').slice(0, 5)}` },
           { title: '教室', dataIndex: 'classroomText' }, { title: '老师', dataIndex: 'coachNameText' },
           { title: '名额', render: (_, row: CampaignSession) => `${row.quotaUsed || 0}/${row.quotaTotal || '不限'}` },
           { title: '状态', dataIndex: 'status', render: (value) => value === 'CLOSED' ? <Tag>关闭</Tag> : <Tag color="green">开放</Tag> },
-          { title: '操作', render: (_, row: CampaignSession) => <Space><Button type="link" onClick={() => { setSessionEdit(row); sessionForm.setFieldsValue({ ...row, startTime: row.startTime?.slice(0, 5), endTime: row.endTime?.slice(0, 5) }) }}>编辑</Button><Popconfirm title="确认删除这个场次？" onConfirm={async () => { await delJson(`/marketing/campaigns/${id}/sessions/${row.id}`, { campusId: props.campusId }); await loadDetailData() }}><Button type="link" danger>删除</Button></Popconfirm></Space> },
+          { title: '操作', render: (_, row: CampaignSession) => sessionEditable ? <Space><Button type="link" onClick={() => openSession(row)}>编辑</Button>{row.status !== 'CLOSED' ? <Popconfirm title="关闭后家长不能再报名该场次，已有报名不受影响。" onConfirm={() => void closeSession(row)}><Button type="link">关闭</Button></Popconfirm> : null}{Number(row.quotaUsed || 0) > 0 ? <Button type="link" danger disabled title="已有报名的场次不能删除，可改为关闭">删除</Button> : <Popconfirm title="确认删除这个场次？删除后无法恢复。" onConfirm={() => void removeSession(row)}><Button type="link" danger>删除</Button></Popconfirm>}</Space> : <span className="cell-muted">活动已结束</span> },
         ]} />
       </section> : null}
       {tab === 'enrollments' ? <section className="work-card">
@@ -216,6 +257,12 @@ function SessionModal(props: { open: boolean; edit: CampaignSession | null | und
           message.warning('结束时间必须晚于开始时间')
           return
         }
+        const quota = Number(values.quotaTotal || 0)
+        const used = Number(props.edit?.quotaUsed || 0)
+        if (quota > 0 && quota < used) {
+          message.warning(`场次名额不能少于已报名人数 ${used}`)
+          return
+        }
         await postJson(`/marketing/campaigns/${props.campaignId}/sessions?campusId=${props.campusId}`, {
           ...(props.edit?.id ? { id: props.edit.id } : {}), ...values,
           startTime: `${String(values.startTime || '')}:00`, endTime: `${String(values.endTime || '')}:00`,
@@ -226,7 +273,7 @@ function SessionModal(props: { open: boolean; edit: CampaignSession | null | und
       } catch (error) { message.error(tell(error, '场次保存失败')) }
     }}>
       <div className="form-grid form-grid-3">
-        <Form.Item name="sessionDate" label="日期" rules={[{ required: true }]}><Input type="date" /></Form.Item>
+        <Form.Item name="sessionDate" label="日期" rules={[{ required: true }]}><BusinessDatePicker /></Form.Item>
         <Form.Item name="startTime" label="开始时间" rules={[{ required: true }]}><Input type="time" /></Form.Item>
         <Form.Item name="endTime" label="结束时间" rules={[{ required: true }]}><Input type="time" /></Form.Item>
       </div>
@@ -235,8 +282,8 @@ function SessionModal(props: { open: boolean; edit: CampaignSession | null | und
         <Form.Item name="coachNameText" label="授课老师" rules={[{ max: 20 }]}><Input /></Form.Item>
       </div>
       <div className="form-grid form-grid-3">
-        <Form.Item name="quotaTotal" label="名额（0 表示不限）"><InputNumber min={0} precision={0} style={{ width: '100%' }} /></Form.Item>
-        <Form.Item name="status" label="状态"><Select options={[{ value: 'OPEN', label: '开放' }, { value: 'CLOSED', label: '关闭' }]} /></Form.Item>
+        <Form.Item name="quotaTotal" label="名额（0 表示不限）" extra={Number(props.edit?.quotaUsed || 0) > 0 ? `已有 ${props.edit?.quotaUsed} 人报名；名额不能低于已报名人数，0 仍表示不限。` : undefined}><InputNumber min={0} precision={0} style={{ width: '100%' }} /></Form.Item>
+        <Form.Item name="status" label="状态" rules={[{ required: true }]}><Select options={[{ value: 'OPEN', label: '开放' }, { value: 'CLOSED', label: '关闭' }]} /></Form.Item>
         <Form.Item name="sortOrder" label="排序"><InputNumber min={0} precision={0} style={{ width: '100%' }} /></Form.Item>
       </div>
     </Form>

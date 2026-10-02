@@ -28,7 +28,7 @@ export function MetricBars(props: {
           <button
             key={item.key}
             type="button"
-            className={hidden[item.key] ? 'is-off' : ''}
+            className={hidden[item.key] ? 'is-hidden' : ''}
             onClick={() => setHidden({ ...hidden, [item.key]: !hidden[item.key] })}
           >
             <i className={`tone-${item.tone}`} />
@@ -37,7 +37,7 @@ export function MetricBars(props: {
           </button>
         ))}
       </div>
-      <div className="profit-chart-scroll">
+      <div className={props.groups.length <= 4 ? 'profit-chart-scroll is-sparse' : 'profit-chart-scroll'}>
         {props.groups.map((group) => (
           <button
             key={group.id}

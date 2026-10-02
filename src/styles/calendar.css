@@ -1,0 +1,396 @@
+/* One spacious, product-grade calendar language for every business date field. */
+.business-date-picker,
+.business-date-range-picker {
+  min-height: var(--control-md);
+  border-color: var(--line);
+  border-radius: var(--radius-control);
+  background: var(--card);
+  box-shadow: 0 1px 2px rgba(28, 45, 82, 0.025);
+}
+
+.business-date-picker:hover,
+.business-date-range-picker:hover {
+  border-color: #aebfe8;
+}
+
+.business-date-picker.ant-picker-focused,
+.business-date-range-picker.ant-picker-focused {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(49, 95, 244, 0.11);
+}
+
+.business-date-picker .ant-picker-input > input,
+.business-date-range-picker .ant-picker-input > input {
+  color: var(--ink);
+  font-size: var(--text-body);
+  font-weight: 560;
+}
+
+.business-date-picker .ant-picker-suffix,
+.business-date-range-picker .ant-picker-suffix {
+  color: #72809a;
+  font-size: 15px;
+}
+
+.business-calendar-popup {
+  --calendar-cell-size: 40px;
+  font-family: var(--font);
+}
+
+.business-calendar-popup .ant-picker-panel-container {
+  overflow: hidden;
+  border: 1px solid rgba(211, 221, 238, 0.94);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.985);
+  box-shadow: 0 28px 80px rgba(18, 34, 70, 0.2), 0 4px 14px rgba(18, 34, 70, 0.07);
+  backdrop-filter: blur(16px);
+}
+
+.business-calendar-popup .ant-picker-panel {
+  border: 0;
+}
+
+.business-calendar-popup .ant-picker-date-panel,
+.business-calendar-popup .ant-picker-month-panel,
+.business-calendar-popup .ant-picker-year-panel,
+.business-calendar-popup .ant-picker-decade-panel {
+  width: 390px;
+}
+
+.business-calendar-popup .ant-picker-header {
+  min-height: 62px;
+  padding: 9px 16px;
+  border-bottom-color: var(--line-soft);
+  background:
+    radial-gradient(circle at 92% 0, rgba(49, 95, 244, 0.1), transparent 42%),
+    linear-gradient(180deg, #fff, #f8faff);
+}
+
+.business-calendar-popup .ant-picker-header-view {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  color: var(--ink);
+  font-size: 16px;
+  font-weight: 730;
+  white-space: nowrap;
+}
+
+.business-calendar-popup .ant-picker-header-view button {
+  min-width: 52px;
+  white-space: nowrap;
+}
+
+.business-calendar-popup .ant-picker-header-view button:hover {
+  color: var(--primary);
+}
+
+.business-calendar-popup .ant-picker-header button {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  color: #687791;
+  font-size: 15px;
+}
+
+.business-calendar-popup .ant-picker-header button:hover {
+  color: var(--primary);
+  background: var(--primary-soft);
+}
+
+.business-calendar-popup .ant-picker-body {
+  padding: 12px 18px 16px;
+}
+
+.business-calendar-popup .ant-picker-content {
+  width: 100%;
+  table-layout: fixed;
+}
+
+.business-calendar-popup .ant-picker-content th {
+  height: 34px;
+  color: #78859b;
+  font-size: var(--text-sm);
+  font-weight: 650;
+}
+
+.business-calendar-popup .ant-picker-cell {
+  min-width: var(--calendar-cell-size);
+  height: 44px;
+  padding: 2px 0;
+  color: #a2abba;
+  font-size: var(--text-body);
+}
+
+.business-calendar-popup .ant-picker-cell-in-view {
+  color: var(--ink-2);
+}
+
+.business-calendar-popup .ant-picker-cell .ant-picker-cell-inner {
+  width: var(--calendar-cell-size);
+  height: var(--calendar-cell-size);
+  border-radius: 11px;
+  line-height: var(--calendar-cell-size);
+  transition: color 0.16s var(--ease), background 0.16s var(--ease), box-shadow 0.16s var(--ease), transform 0.16s var(--ease);
+}
+
+.business-calendar-popup .ant-picker-cell-in-view:not(.ant-picker-cell-disabled):hover .ant-picker-cell-inner {
+  color: var(--primary);
+  background: var(--primary-soft);
+  transform: translateY(-1px);
+}
+
+.business-calendar-popup .ant-picker-cell-in-view.ant-picker-cell-today .ant-picker-cell-inner::before {
+  border: 1.5px solid #91a8f4;
+  border-radius: 11px;
+}
+
+.business-calendar-popup .ant-picker-cell-in-view.ant-picker-cell-selected .ant-picker-cell-inner,
+.business-calendar-popup .ant-picker-cell-in-view.ant-picker-cell-range-start .ant-picker-cell-inner,
+.business-calendar-popup .ant-picker-cell-in-view.ant-picker-cell-range-end .ant-picker-cell-inner {
+  color: #fff;
+  background: linear-gradient(145deg, #4a73fa, #2856e9);
+  box-shadow: 0 7px 16px rgba(49, 95, 244, 0.25);
+  font-weight: 720;
+}
+
+.business-calendar-popup .ant-picker-cell-in-view.ant-picker-cell-in-range::before,
+.business-calendar-popup .ant-picker-cell-in-view.ant-picker-cell-range-hover::before {
+  background: #edf2ff;
+}
+
+.business-calendar-popup .ant-picker-cell-disabled::before {
+  background: #f7f8fb;
+}
+
+.business-calendar-popup .ant-picker-cell-disabled .ant-picker-cell-inner {
+  color: #c6ccd6;
+}
+
+.business-calendar-cell-state {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.business-calendar-cell-state.is-used > i {
+  position: absolute;
+  right: 3px;
+  bottom: 3px;
+  width: 5px;
+  height: 5px;
+  border: 1px solid #fff;
+  border-radius: 50%;
+  background: var(--orange);
+  box-shadow: 0 1px 3px rgba(233, 139, 54, 0.36);
+}
+
+.business-calendar-multiple-popup .ant-picker-footer-extra {
+  padding: 9px 18px;
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+
+.business-multi-date-picker {
+  min-height: 44px;
+  padding-block: 4px;
+  background: var(--surface-subtle);
+}
+
+.business-multi-date-picker .ant-picker-selection-overflow {
+  gap: 4px;
+}
+
+.business-multi-date-picker .ant-picker-selection-item {
+  height: 28px;
+  padding-inline: 9px 5px;
+  border: 1px solid #d5e0ff;
+  border-radius: 8px;
+  color: #294ca9;
+  background: #edf2ff;
+  font-size: var(--text-sm);
+  font-weight: 650;
+  line-height: 26px;
+}
+
+.business-calendar-popup .ant-picker-footer {
+  border-top-color: var(--line-soft);
+  background: var(--surface-subtle);
+}
+
+.business-calendar-popup .ant-picker-today-btn,
+.business-calendar-popup .ant-picker-now-btn,
+.business-calendar-popup .ant-picker-ok .ant-btn {
+  font-weight: 680;
+}
+
+.business-calendar-range-popup .ant-picker-panels {
+  gap: 1px;
+  background: var(--line-soft);
+}
+
+.business-calendar-range-popup .ant-picker-panel {
+  background: var(--card);
+}
+
+.business-calendar-range-popup .ant-picker-presets {
+  min-width: 112px;
+  padding: 14px 10px;
+  border-inline-end-color: var(--line-soft);
+  background: var(--surface-subtle);
+}
+
+.business-calendar-range-popup .ant-picker-presets li {
+  margin-bottom: 4px;
+  padding: 8px 10px;
+  border-radius: 9px;
+  color: var(--ink-2);
+  font-weight: 600;
+}
+
+.business-calendar-range-popup .ant-picker-presets li:hover {
+  color: var(--primary);
+  background: var(--primary-soft);
+}
+
+.business-calendar-time-popup .ant-picker-time-panel {
+  width: 172px;
+  border-inline-start-color: var(--line-soft);
+}
+
+.business-calendar-time-popup.ant-picker-dropdown-placement-topLeft {
+  margin-top: 12px;
+}
+
+.business-calendar-time-popup .ant-picker-time-panel-column > li.ant-picker-time-panel-cell .ant-picker-time-panel-cell-inner {
+  height: 36px;
+  border-radius: 8px;
+  line-height: 36px;
+}
+
+@media (max-width: 760px) {
+  .business-calendar-popup {
+    --calendar-cell-size: 36px;
+  }
+
+  .business-calendar-popup .ant-picker-date-panel,
+  .business-calendar-popup .ant-picker-month-panel,
+  .business-calendar-popup .ant-picker-year-panel,
+  .business-calendar-popup .ant-picker-decade-panel {
+    width: min(368px, calc(100vw - 24px));
+  }
+
+  .business-calendar-range-popup .ant-picker-presets {
+    display: none;
+  }
+}
+
+/* The check-in calendar mirrors the Mini Program's single/batch workflow. */
+.quick-checkin-date-item.ant-form-item {
+  margin-bottom: 0;
+}
+
+.quick-checkin-batch-switch {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 9px 7px 12px;
+  border: 1px solid #dce5f7;
+  border-radius: 11px;
+  background: linear-gradient(145deg, #f8faff, #f2f6ff);
+}
+
+.quick-checkin-batch-switch > span {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.quick-checkin-batch-switch b {
+  color: var(--ink-2);
+  font-size: 12px;
+  line-height: 1.3;
+}
+
+.quick-checkin-batch-switch small {
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.3;
+}
+
+.quick-checkin-calendar-control {
+  display: grid;
+  grid-template-columns: minmax(170px, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.quick-checkin-date-field {
+  min-width: 0;
+  position: relative;
+}
+
+.quick-checkin-date-field .business-date-picker {
+  min-height: 42px;
+}
+
+.quick-checkin-date-used-badge {
+  position: absolute;
+  top: 50%;
+  left: 106px;
+  z-index: 2;
+  color: #a86522;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  pointer-events: none;
+  transform: translateY(-50%);
+  white-space: nowrap;
+}
+
+.quick-checkin-date-presets {
+  display: flex;
+  flex: none;
+  gap: 5px;
+}
+
+.quick-checkin-date-presets .ant-btn {
+  min-width: 48px;
+  height: 42px;
+  padding-inline: 9px;
+  border-radius: 10px;
+  color: #5e6c85;
+  background: #f8f9fc;
+  white-space: nowrap;
+}
+
+.quick-checkin-date-presets .ant-btn.is-active {
+  border-color: #a9bbf7;
+  color: var(--primary);
+  background: var(--primary-soft);
+  box-shadow: inset 0 0 0 1px rgba(49, 95, 244, 0.06);
+}
+
+.quick-checkin-date-item .ant-form-item-extra {
+  min-height: 0;
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+@media (max-width: 680px) {
+  .quick-checkin-section-heading {
+    align-items: flex-start;
+  }
+
+  .quick-checkin-batch-switch > span {
+    display: none;
+  }
+
+  .quick-checkin-calendar-control {
+    grid-template-columns: 1fr;
+  }
+}

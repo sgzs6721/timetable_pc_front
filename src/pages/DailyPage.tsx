@@ -2,6 +2,7 @@ import { Button, Form, Input, InputNumber, Modal, Popconfirm, Select, Table, Tab
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { delJson, getJson, postJson, putJson } from '../api/biz'
+import { BusinessDatePicker } from '../components/BusinessDatePicker'
 import { NeedCampus, PageHead, clampDecimalInput, money, todayIso, tell, useShell } from './kit'
 
 export function DailyPage() {
@@ -128,7 +129,7 @@ export function DailyPage() {
               recordForm.setFieldsValue({ actualAmount: Number(item?.defaultAmount || 0) || undefined })
             }} />
           </Form.Item>
-          <Form.Item name="occurDate" label="发生日期" rules={[{ required: true, message: '请选择发生日期' }]}><Input type="date" /></Form.Item>
+          <Form.Item name="occurDate" label="发生日期" rules={[{ required: true, message: '请选择发生日期' }]}><BusinessDatePicker /></Form.Item>
           <Form.Item name="actualAmount" label="实际金额" rules={[{ required: true, message: '请输入正确金额' }]} getValueFromEvent={(value) => clampDecimalInput(value)}><InputNumber style={{ width: '100%' }} placeholder="请输入实际金额" min={0.01} /></Form.Item>
           <Form.Item name="remark" label="备注"><Input.TextArea placeholder="选填，用于说明本次奖惩原因" autoSize={{ minRows: 3, maxRows: 5 }} maxLength={120} showCount /></Form.Item>
           <div className="staff-form-actions">
@@ -162,7 +163,7 @@ export function DailyPage() {
               }
             }}
           >
-            <Form.Item name="occurDate" label="日期"><Input type="date" /></Form.Item>
+            <Form.Item name="occurDate" label="日期"><BusinessDatePicker /></Form.Item>
             <Form.Item name="actualAmount" label="实际金额" rules={[{ required: true }]} getValueFromEvent={(value) => clampDecimalInput(value)}><InputNumber style={{ width: '100%' }} min={0.01} /></Form.Item>
             <Form.Item name="remark" label="备注"><Input maxLength={120} placeholder="选填，用于说明本次奖惩原因" /></Form.Item>
             <Button type="primary" htmlType="submit">保存</Button>

@@ -1,12 +1,11 @@
+import { BankOutlined, BarChartOutlined, CheckCircleFilled, LockOutlined, PlusOutlined, SafetyCertificateOutlined, UserOutlined } from '@ant-design/icons'
 import { Button, Form, Input, Modal, Space, message } from 'antd'
-import { BankOutlined, CameraOutlined, CheckCircleFilled, LockOutlined, SafetyCertificateOutlined, SwapOutlined, UserOutlined } from '@ant-design/icons'
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { updateUserInfo, updateWebPassword, uploadAvatar } from '../api/auth'
+import { updateWebPassword } from '../api/auth'
 import { getJson, postJson } from '../api/biz'
-import { setCurrentOrganization } from '../api/home'
-import { PageHead, tell, useShell } from './kit'
 import { setCampusId, setOrgId } from '../session'
+import { PageHead, tell, useShell } from './kit'
 import { OrganizationCreateModal, type OrganizationCreateValues } from './organization-create-modal'
 import './AccountPage.css'
 
@@ -15,8 +14,7 @@ interface Affiliation {
   name: string
   ownerId?: number
   organizationRole?: string
-  isCurrent?: number
-  campuses?: Array<{ id: number; name: string }>
+  campuses?: Array<{ id: number; name?: string; displayName?: string; positionName?: string }>
 }
 
 export function AccountPage() {
@@ -26,25 +24,31 @@ export function AccountPage() {
   const [mine, setMine] = useState<Affiliation[]>([])
   const [links, setLinks] = useState<Affiliation[]>([])
   const [creatingOrg, setCreatingOrg] = useState(false)
-  const [switchingOrgId, setSwitchingOrgId] = useState<number | null>(null)
+
+  const loadOrganizations = useCallback(async () => {
+    const [ownedRows, linkedRows] = await Promise.all([
+      getJson<Affiliation[]>('/organizations/list').catch(() => []),
+      getJson<Affiliation[]>('/organizations/affiliations').catch(() => []),
+    ])
+    setMine(ownedRows)
+    setLinks(linkedRows)
+  }, [])
 
   useEffect(() => {
-    getJson<Affiliation[]>('/organizations/list').then(setMine).catch(() => setMine([]))
-    getJson<Affiliation[]>('/organizations/affiliations').then(setLinks).catch(() => setLinks([]))
-  }, [shell.currentOrgId])
+    void loadOrganizations()
+  }, [loadOrganizations])
 
-  const name = user?.realName || user?.nickname || user?.nickName || '未命名'
   const organizations = useMemo(() => {
     const rows = new Map<number, Affiliation>()
     mine.forEach((item) => rows.set(item.id, item))
     links.forEach((item) => rows.set(item.id, { ...rows.get(item.id), ...item }))
     return Array.from(rows.values()).sort((left, right) => {
-      const leftCurrent = Number(left.id) === Number(shell.currentOrgId)
-      const rightCurrent = Number(right.id) === Number(shell.currentOrgId)
-      if (leftCurrent !== rightCurrent) return leftCurrent ? -1 : 1
+      const leftOwned = isOwnedOrganization(left, user?.id)
+      const rightOwned = isOwnedOrganization(right, user?.id)
+      if (leftOwned !== rightOwned) return leftOwned ? -1 : 1
       return left.name.localeCompare(right.name, 'zh-CN')
     })
-  }, [links, mine, shell.currentOrgId])
+  }, [links, mine, user?.id])
 
   async function createOrganization(values: OrganizationCreateValues) {
     const phone = String(user?.phone || '').trim()
@@ -56,7 +60,8 @@ export function AccountPage() {
       campusAdminManageSalary: values.campusAdminManageSalary ? 1 : 0,
     })
     if (!created?.id) throw new Error('机构创建成功，但未返回机构编号，请刷新后重试')
-    await setCurrentOrganization(created.id)
+
+    // 创建接口会将新机构设为当前机构，同步本地会话以便后续添加协同管理员。
     setOrgId(created.id)
     setCampusId(null)
     let collaboratorError = ''
@@ -69,100 +74,115 @@ export function AccountPage() {
     }
     setCreatingOrg(false)
     if (collaboratorError) message.warning(`机构已创建；${collaboratorError}`)
-    else message.success('机构已创建，已切换到新机构')
+    else message.success('机构已创建')
+    await loadOrganizations()
     shell.reload()
-    navigate('/home')
   }
 
   return (
     <section className="account-page">
-      <PageHead title="个人中心" extra="昵称、头像、当前职位，以及我的机构和关联机构。">
-        <Button type="primary" onClick={() => setCreatingOrg(true)}>创建新机构</Button>
-      </PageHead>
-      <div className="account-primary-grid">
-      <section className="work-card account-profile-card">
-        <header className="account-card-heading">
-          <span className="account-card-icon"><UserOutlined /></span>
-          <div><h2>个人资料</h2><p>维护你的公开名称与头像</p></div>
-        </header>
-        <div className="profile-hero">
-          <ProfileAvatar url={user?.avatarUrl} name={name} />
-          <div>
-            <h2>{name}</h2>
-            <p>{user?.phone || '未绑定手机号'}</p>
-            <span className="account-position">{[user?.positionCampusName, user?.positionName].filter(Boolean).join(' · ') || '暂无职位信息'}</span>
-          </div>
-        </div>
-        <SpaceProfile user={user} onSaved={shell.reload} />
-        <Button className="account-membership-button" onClick={() => navigate('/membership')}>会员续费与升级</Button>
-      </section>
+      <PageHead title="账号设置" extra="管理 Web 端登录密码，并查看你创建或关联的机构。" />
+
+      {user?.platformAdmin ? (
+        <section className="work-card account-platform-entry">
+          <span className="account-card-icon"><BarChartOutlined /></span>
+          <div><h2>平台运营中心</h2><p>查看全平台用户、机构、订单、反馈、套餐与营销结算。</p></div>
+          <Button type="primary" onClick={() => navigate('/platform')}>进入运营中心</Button>
+        </section>
+      ) : null}
+
       <section className="work-card account-security-card">
         <header className="account-card-heading">
           <span className="account-card-icon is-green"><SafetyCertificateOutlined /></span>
-          <div><h2>账户安全</h2><p>设置网页登录密码，保护账户安全</p></div>
+          <div className="account-card-heading-copy">
+            <h2>账户与安全</h2>
+            <p>集中管理 Web 端登录密码与找回流程</p>
+          </div>
+          <span className={`account-password-state${user?.webPasswordSet ? ' is-set' : ''}`}>
+            {user?.webPasswordSet ? <CheckCircleFilled /> : <LockOutlined />}
+            {user?.webPasswordSet ? '密码已设置' : '密码未设置'}
+          </span>
         </header>
-        <PasswordForm phone={user?.phone} alreadySet={!!user?.webPasswordSet} onSaved={shell.reload} />
-      </section>
-      </div>
-      <div className="account-organizations-heading">
-        <div><h2>机构与权限</h2><p>机构、身份与可访问校区统一展示，避免重复</p></div>
-      </div>
-      <section className="work-card account-org-card account-org-card-unified">
-        <header className="account-card-heading is-compact">
-          <span className="account-card-icon"><BankOutlined /></span>
-          <div><h2>可访问机构 <em>{organizations.length}</em></h2><p>切换后，工作台和校区数据会同步更新</p></div>
-        </header>
-        <div className="account-org-list">
-          {organizations.map((row) => {
-            const current = Number(row.id) === Number(shell.currentOrgId)
-            const owned = isOwnedOrganization(row, user?.id)
-            const campuses = row.campuses || []
-            return (
-              <article key={row.id} className={`account-org-item${current ? ' is-current' : ''}`}>
-                <header className="account-org-item-head">
-                  <span className="account-org-mark"><BankOutlined /></span>
-                  <div className="account-org-identity">
-                    <strong>{row.name || '未命名机构'}</strong>
-                    <div className="account-org-badges">
-                      <span className={owned ? 'is-owned' : 'is-linked'}>{owned ? '我的机构' : '关联机构'}</span>
-                      {current ? <span className="is-current"><CheckCircleFilled /> 当前机构</span> : null}
-                    </div>
-                  </div>
-                </header>
-                <div className="account-org-details">
-                  <div><small>我的身份</small><strong>{row.organizationRole || (owned ? '机构负责人' : '机构成员')}</strong></div>
-                  <div>
-                    <small>可访问校区</small>
-                    {campuses.length ? <div className="account-campus-tags">{campuses.map((item) => <span key={item.id}>{item.name}</span>)}</div> : <span className="account-empty-value">暂未分配校区</span>}
-                  </div>
-                </div>
-                <footer className="account-org-item-actions">
-                  <span>{campuses.length ? `可访问 ${campuses.length} 个校区` : '暂无可访问校区'}</span>
-                  {current ? (
-                    <Button icon={<CheckCircleFilled />} disabled>正在使用</Button>
-                  ) : (
-                    <Button
-                      type="primary"
-                      ghost
-                      icon={<SwapOutlined />}
-                      loading={switchingOrgId === row.id}
-                      disabled={switchingOrgId != null}
-                      onClick={async () => {
-                        setSwitchingOrgId(row.id)
-                        try {
-                          await switchOrg(row.id, shell.reload, navigate)
-                        } finally {
-                          setSwitchingOrgId(null)
-                        }
-                      }}
-                    >切换到此机构</Button>
-                  )}
-                </footer>
-              </article>
-            )
-          })}
+
+        <div className="account-security-layout">
+          <aside className="account-login-summary">
+            <span className="account-login-summary-icon"><UserOutlined /></span>
+            <small>Web 端登录账号</small>
+            <strong>{user?.phone || '尚未绑定手机号'}</strong>
+            <p>手机号作为登录账号使用。如需修改绑定手机号，请在微信小程序内完成。</p>
+          </aside>
+          <div className="account-password-panel">
+            <div className="account-password-panel-title">
+              <h3>{user?.webPasswordSet ? '修改 Web 端密码' : '设置 Web 端密码'}</h3>
+              <p>建议定期更新密码，并避免与其他平台使用相同密码。</p>
+            </div>
+            <PasswordForm phone={user?.phone} alreadySet={!!user?.webPasswordSet} onSaved={shell.reload} />
+          </div>
         </div>
       </section>
+
+      <section className="work-card account-org-card account-org-card-unified">
+        <header className="account-card-heading account-org-heading">
+          <span className="account-card-icon"><BankOutlined /></span>
+          <div className="account-card-heading-copy">
+            <h2>机构与权限 <em>{organizations.length}</em></h2>
+            <p>这里仅展示你创建或关联的机构，以及对应身份和可访问校区</p>
+          </div>
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreatingOrg(true)}>创建机构</Button>
+        </header>
+
+        {organizations.length ? (
+          <div className="account-org-list">
+            {organizations.map((row) => {
+              const owned = isOwnedOrganization(row, user?.id)
+              const campuses = row.campuses || []
+              return (
+                <article key={row.id} className="account-org-item">
+                  <header className="account-org-item-head">
+                    <span className="account-org-mark"><BankOutlined /></span>
+                    <div className="account-org-identity">
+                      <strong>{row.name || '未命名机构'}</strong>
+                      <div className="account-org-badges">
+                        <span className={owned ? 'is-owned' : 'is-linked'}>{owned ? '我的机构' : '关联机构'}</span>
+                      </div>
+                    </div>
+                  </header>
+                  <div className="account-org-details">
+                    <div>
+                      <small>我的身份</small>
+                      <strong>{row.organizationRole || (owned ? '机构负责人' : '机构成员')}</strong>
+                    </div>
+                    <div>
+                      <small>可访问校区</small>
+                      {campuses.length ? (
+                        <div className="account-campus-tags">
+                          {campuses.map((item) => (
+                            <span key={item.id}>
+                              {item.displayName || item.name || '未命名校区'}
+                              {item.positionName ? <small>{item.positionName}</small> : null}
+                            </span>
+                          ))}
+                        </div>
+                      ) : <span className="account-empty-value">暂未分配校区</span>}
+                    </div>
+                  </div>
+                  <footer className="account-org-item-summary">
+                    {campuses.length ? `可访问 ${campuses.length} 个校区` : '暂无可访问校区'}
+                  </footer>
+                </article>
+              )
+            })}
+          </div>
+        ) : (
+          <div className="account-org-empty">
+            <span><BankOutlined /></span>
+            <h3>暂时还没有关联机构</h3>
+            <p>创建机构后，你可以继续添加校区和协同管理员。</p>
+            <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreatingOrg(true)}>创建第一个机构</Button>
+          </div>
+        )}
+      </section>
+
       <OrganizationCreateModal
         open={creatingOrg}
         phone={user?.phone}
@@ -178,58 +198,11 @@ function isOwnedOrganization(row: Affiliation, userId?: number): boolean {
   return Number(userId || 0) > 0 && Number(row.ownerId || 0) === Number(userId)
 }
 
-function ProfileAvatar(props: { url?: string; name: string }) {
-  const [broken, setBroken] = useState(false)
-  if (!props.url || broken) return <span className="avatar-fallback">{props.name.slice(0, 1) || '我'}</span>
-  return <img className="avatar-photo" src={props.url} alt="" onError={() => setBroken(true)} />
-}
-
-function SpaceProfile(props: { user: ReturnType<typeof useShell>['user']; onSaved: () => void }) {
-  return (
-    <div className="account-profile-editor">
-      <Form
-        layout="vertical"
-        className="account-nickname-form"
-        initialValues={{ nickname: props.user?.nickname || props.user?.nickName || props.user?.realName }}
-        onFinish={async (values: { nickname: string }) => {
-          try {
-            await updateUserInfo({ nickname: values.nickname, nickName: values.nickname })
-            message.success('资料已保存')
-            props.onSaved()
-          } catch (error) {
-            message.error(tell(error, '保存失败'))
-          }
-        }}
-      >
-        <Form.Item name="nickname" label="昵称" rules={[{ required: true }]}><Input prefix={<UserOutlined />} placeholder="请输入昵称" /></Form.Item>
-        <Button type="primary" htmlType="submit">保存资料</Button>
-      </Form>
-      <label className="account-avatar-upload">
-        <span><CameraOutlined /> 更换头像</span>
-        <small>支持常用图片格式</small>
-        <input
-          type="file"
-          accept="image/*"
-          onChange={async (event) => {
-            const file = event.target.files?.[0]
-            if (!file) return
-            try {
-              await uploadAvatar(file)
-              message.success('头像已更新')
-              props.onSaved()
-            } catch (error) {
-              message.error(tell(error, '头像上传失败'))
-            }
-          }}
-        />
-      </label>
-    </div>
-  )
-}
-
 function PasswordForm(props: { phone?: string; alreadySet: boolean; onSaved: () => void }) {
   const [resetting, setResetting] = useState(false)
-  if (!props.phone) return <p>请先绑定手机号后再设置网页登录密码。</p>
+  if (!props.phone) {
+    return <div className="account-password-unavailable">请先在微信小程序内绑定手机号，再设置 Web 端登录密码。</div>
+  }
   return (
     <Form
       layout="vertical"
@@ -258,7 +231,7 @@ function PasswordForm(props: { phone?: string; alreadySet: boolean; onSaved: () 
             newPassword: next,
             reset: resetting || undefined,
           })
-          message.success(resetting ? '网页登录密码已重置' : '网页登录密码已保存')
+          message.success(resetting ? 'Web 端密码已重置' : 'Web 端密码已保存')
           setResetting(false)
           props.onSaved()
         } catch (error) {
@@ -267,41 +240,30 @@ function PasswordForm(props: { phone?: string; alreadySet: boolean; onSaved: () 
       }}
     >
       <div className="account-security-note"><LockOutlined /><span>密码需为 8–32 位，并同时包含字母和数字。</span></div>
-      {props.alreadySet && !resetting ? <Form.Item className="is-wide" name="oldPassword" label="原密码"><Input.Password /></Form.Item> : null}
-      {resetting ? <p className="account-reset-note">你已登录，可以直接设置新密码。保存后原密码会立即失效。</p> : null}
+      {props.alreadySet && !resetting ? (
+        <Form.Item className="is-wide" name="oldPassword" label="原密码"><Input.Password /></Form.Item>
+      ) : null}
+      {resetting ? <p className="account-reset-note">已进入找回密码模式。设置新密码后，原密码会立即失效。</p> : null}
       <Form.Item name="newPassword" label="新密码" rules={[{ required: true, message: '请输入新密码' }]}><Input.Password /></Form.Item>
       <Form.Item name="confirm" label="确认密码" rules={[{ required: true, message: '请再次输入新密码' }]}><Input.Password /></Form.Item>
       <Space className="account-security-actions">
-        <Button type="primary" htmlType="submit">{props.alreadySet ? '修改密码' : '设置密码'}</Button>
+        <Button type="primary" htmlType="submit">{resetting ? '重置密码' : props.alreadySet ? '修改密码' : '设置密码'}</Button>
         {props.alreadySet && !resetting ? (
           <Button
             htmlType="button"
             onClick={() => {
               Modal.confirm({
-                title: '重置网页登录密码',
-                content: '你已登录，可以直接设置新密码。原密码会立即失效。',
-                okText: '继续重置',
+                title: '找回 Web 端密码',
+                content: '确认进入找回密码流程吗？设置并保存新密码后，原密码会立即失效。',
+                okText: '继续找回',
                 cancelText: '取消',
                 onOk: () => setResetting(true),
               })
             }}
           >忘记原密码</Button>
         ) : null}
-        {resetting ? <Button htmlType="button" onClick={() => setResetting(false)}>取消重置</Button> : null}
+        {resetting ? <Button htmlType="button" onClick={() => setResetting(false)}>返回修改密码</Button> : null}
       </Space>
     </Form>
   )
-}
-
-async function switchOrg(orgId: number, reload: () => void, navigate: (path: string) => void) {
-  try {
-    await setCurrentOrganization(orgId)
-    setOrgId(orgId)
-    setCampusId(null)
-    message.success('已切换机构')
-    reload()
-    navigate('/home')
-  } catch (error) {
-    message.error(tell(error, '切换失败'))
-  }
 }

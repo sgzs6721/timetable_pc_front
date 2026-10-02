@@ -1,6 +1,10 @@
 @import './work-base.css';
 @import './work-schedule-board.css';
 @import './work-students.css';
+@import './work-student-detail.css';
+@import './work-student-detail-modals.css';
+@import './work-student-records.css';
+@import './work-student-checkin.css';
 @import './work-schedule-detail.css';
 @import './work-finance.css';
 @import './work-schedule-sheet.css';

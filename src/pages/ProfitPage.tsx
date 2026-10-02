@@ -2,6 +2,7 @@ import { Button, Select, Table, Tabs, message } from 'antd'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getJson } from '../api/biz'
+import { BusinessDateRangePicker } from '../components/BusinessDatePicker'
 import { MetricBars } from './bars'
 import { NeedOrg, PageHead, genderText, money, monthKey, periodChoices, type PeriodOption, shiftPeriod, tell, todayIso, useShell } from './kit'
 
@@ -30,6 +31,7 @@ export function ProfitPage() {
   const [costDetail, setCostDetail] = useState<Record<string, unknown> | null>(null)
   const [revenueDetail, setRevenueDetail] = useState<Record<string, unknown> | null>(null)
   const [expenseDetail, setExpenseDetail] = useState<Record<string, unknown> | null>(null)
+  const dailyItems = visibleDailyItems((daily?.items as DailyItem[]) || [])
 
   async function load() {
     if (!shell.currentOrgId) return
@@ -104,7 +106,14 @@ export function ProfitPage() {
           <Select
             style={{ width: 140 }}
             value={mode}
-            onChange={setMode}
+            onChange={(value) => {
+              if (value === 'custom_range') {
+                const today = todayIso()
+                setCustomStart(today)
+                setCustomEnd(today)
+              }
+              setMode(value)
+            }}
             options={[
               { value: 'today', label: '今日' },
               { value: 'this_week', label: '本周' },
@@ -121,10 +130,11 @@ export function ProfitPage() {
             </>
           ) : null}
           {mode === 'custom_range' ? (
-            <>
-              <input type="date" value={customStart} onChange={(event) => setCustomStart(event.target.value)} />
-              <input type="date" value={customEnd} onChange={(event) => setCustomEnd(event.target.value)} />
-            </>
+            <BusinessDateRangePicker
+              value={[customStart, customEnd]}
+              onChange={([start, end]) => { setCustomStart(start); setCustomEnd(end) }}
+              style={{ width: 286 }}
+            />
           ) : <span className="range-label">{startDate} ~ {endDate}</span>}
           <Button onClick={() => load()}>刷新</Button>
         </div>
@@ -167,7 +177,7 @@ export function ProfitPage() {
         <h2>每日趋势</h2>
         <MetricBars
           metrics={BAR_METRICS}
-          groups={((daily?.items as DailyItem[]) || []).map((row) => ({
+          groups={dailyItems.map((row) => ({
             id: String(row.date),
             label: String(row.date || '').slice(5),
             sub: weekdayLabel(String(row.date || '')),
@@ -180,10 +190,10 @@ export function ProfitPage() {
           }))}
           onSelect={(id) => openDay(id, false)}
         />
-        {picked ? <DaySummary date={picked} items={(daily?.items as DailyItem[]) || []} costDetail={costDetail} revenueDetail={revenueDetail} expenseDetail={expenseDetail} onOpen={() => setView('detail')} onStudent={(id) => navigate(`/students?studentId=${id}`)} /> : null}
+        {picked ? <DaySummary date={picked} items={dailyItems} costDetail={costDetail} revenueDetail={revenueDetail} expenseDetail={expenseDetail} onOpen={() => setView('detail')} onStudent={(id) => navigate(`/students?studentId=${id}`)} /> : null}
         <Table
           rowKey="date"
-          dataSource={(daily?.items as DailyItem[]) || []}
+          dataSource={dailyItems}
           pagination={false}
           columns={[
             { title: '日期', dataIndex: 'date' },
@@ -196,7 +206,7 @@ export function ProfitPage() {
         />
       </section>
         ) },
-        { key: 'detail', label: '当日明细', children: picked ? (
+        { key: 'detail', label: picked.includes('~') ? '范围明细' : '当日明细', children: picked ? (
         <section className="work-card">
           <h2>{picked} 明细</h2>
           <p>1. 固定工资按记薪周期天数分摊到当天。2. 销课课时成本 = 当天销课课时 × 当前老师课时单价。</p>
@@ -339,6 +349,11 @@ function payText(value: unknown): string {
 function numberOf(value: unknown): number {
   const amount = Number(value || 0)
   return Number.isFinite(amount) ? amount : 0
+}
+
+function visibleDailyItems(items: DailyItem[]): DailyItem[] {
+  const today = todayIso()
+  return items.filter((item) => !!item.date && String(item.date).slice(0, 10) <= today)
 }
 
 function weekdayLabel(iso: string): string {

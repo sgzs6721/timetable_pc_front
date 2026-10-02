@@ -131,7 +131,7 @@
 
 .nav-scroll {
   flex: 1;
-  padding: 14px 12px 12px;
+  padding: 11px 12px 10px;
   overflow: auto;
   scrollbar-width: none;
 }
@@ -141,11 +141,11 @@
 }
 
 .nav-group + .nav-group {
-  margin-top: 17px;
+  margin-top: 13px;
 }
 
 .nav-caption {
-  padding: 0 12px 6px;
+  padding: 0 10px 4px;
   color: #66769b;
   font-size: 10px;
   font-weight: 750;
@@ -155,13 +155,13 @@
 .nav-item {
   position: relative;
   width: 100%;
-  min-height: 41px;
+  min-height: 37px;
   display: flex;
   align-items: center;
-  gap: 11px;
-  padding: 5px 10px;
+  gap: 9px;
+  padding: 4px 9px;
   border: 0;
-  border-radius: 12px;
+  border-radius: 10px;
   color: #9ba9c5;
   background: transparent;
   cursor: pointer;
@@ -170,7 +170,7 @@
 }
 
 .nav-item + .nav-item {
-  margin-top: 1px;
+  margin-top: 0;
 }
 
 .nav-item:hover {
@@ -195,15 +195,15 @@
 }
 
 .nav-icon {
-  width: 28px;
-  height: 28px;
+  width: 26px;
+  height: 26px;
   display: grid;
   place-items: center;
   flex: none;
   border-radius: 9px;
   color: #8393b4;
   background: rgba(255, 255, 255, 0.04);
-  font-size: 16px;
+  font-size: 14px;
   transition: color 0.2s var(--ease), background 0.2s var(--ease), transform 0.2s var(--ease);
 }
 
@@ -525,7 +525,9 @@
 
 .profile {
   display: flex;
+  flex: none;
   align-items: center;
+  justify-content: flex-end;
   border: 0;
   background: transparent;
   cursor: pointer;
@@ -557,17 +559,20 @@
 }
 
 .profile-copy {
-  text-align: left;
+  min-width: max-content;
+  text-align: right;
 }
 
 .profile-copy strong {
   display: block;
-  max-width: 108px;
-  overflow: hidden;
+  width: max-content;
+  max-width: none;
+  margin-left: auto;
+  overflow: visible;
   color: var(--ink);
   font-size: 12px;
   font-weight: 680;
-  text-overflow: ellipsis;
+  text-overflow: clip;
   white-space: nowrap;
 }
 
@@ -576,6 +581,7 @@
   margin-top: 1px;
   color: var(--muted);
   font-size: 10px;
+  white-space: nowrap;
 }
 
 .app-content.ant-layout-content {

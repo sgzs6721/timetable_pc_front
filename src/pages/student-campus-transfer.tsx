@@ -1,6 +1,7 @@
 import { Button, Checkbox, Input, InputNumber, Modal, Select, Space, Tabs, message } from 'antd'
 import { useEffect, useState } from 'react'
 import { getJson, postJson } from '../api/biz'
+import { BusinessDatePicker } from '../components/BusinessDatePicker'
 import { money, tell, todayIso } from './kit'
 import type { Student, Card, Named, PayRecord } from './students-model'
 import { serviceOriginalPrice, sliceDecimal, syncTransferDiscount, syncTransferPrice } from './student-card-desk'
@@ -134,7 +135,7 @@ export function CampusTransfer(props: { student: Student; campuses: Named[]; onD
         message.warning('转移课时不能超过当前卡剩余课时')
         return
       }
-      const suggested = suggestedTransferAmount(card, payments, hours)
+      const suggested = suggestedTransferAmount(card, payments, hours, cards.length === 1)
       const amount = !draft.amountEdited
         ? (category === 'STORED_VALUE' ? 0 : suggested)
         : draft.amount == null
@@ -228,7 +229,7 @@ export function CampusTransfer(props: { student: Student; campuses: Named[]; onD
             onChange={setTargetCampusId}
             options={props.campuses.filter((item) => item.id !== props.student.campusId).map((item) => ({ value: item.id, label: personName(item) }))}
           />
-          <Input type="date" value={transferDate} onChange={(event) => setTransferDate(event.target.value)} />
+          <BusinessDatePicker value={transferDate} onChange={setTransferDate} allowClear={false} />
           <Input placeholder="备注" value={remark} onChange={(event) => setRemark(event.target.value)} />
           {cards.length ? <Tabs onChange={(key) => {
             const id = Number(key)
@@ -247,7 +248,7 @@ export function CampusTransfer(props: { student: Student; campuses: Named[]; onD
             const category = String(card.cardCategory || '').toUpperCase()
             const disabled = !periodTransferable(card, payments)
             const moving = category === 'HOURS' ? Number(draft.hours || 0) > 0 || Number(draft.amount || 0) > 0 : category === 'STORED_VALUE' ? Number(draft.amount || 0) > 0 : true
-            const suggested = suggestedTransferAmount(card, payments, category === 'HOURS' ? Number(draft.hours || 0) : undefined)
+            const suggested = suggestedTransferAmount(card, payments, category === 'HOURS' ? Number(draft.hours || 0) : undefined, cards.length === 1)
             return {
               key: String(card.id),
               label: card.cardName || card.studentGroupName || cardCategoryText(card.cardCategory),
@@ -283,7 +284,7 @@ export function CampusTransfer(props: { student: Student; campuses: Named[]; onD
                         onChange={(value) => {
                           const maxHours = Number(card.remainingHours || 0)
                           const hours = Math.min(maxHours, Math.max(0, Number(value || 0)))
-                          const cap = suggestedTransferAmount(card, payments, hours)
+                          const cap = suggestedTransferAmount(card, payments, hours, cards.length === 1)
                           patch(card.id!, {
                             hours,
                             amount: draft.amountEdited ? clampTransferAmount(draft.amount ?? null, cap) : draft.amount,
@@ -431,9 +432,9 @@ export function periodTransferable(card: Card, payments: PayRecord[]): boolean {
   )) || (!payments.length && !!card.validEndDate && card.validEndDate >= today)
 }
 
-export function suggestedTransferAmount(card: Card, payments: PayRecord[], hours?: number): number {
+export function suggestedTransferAmount(card: Card, payments: PayRecord[], hours?: number, includeUnscoped = true): number {
   const category = String(card.cardCategory || '').toUpperCase()
-  const scoped = payments.filter((record) => !record.studentCardId || record.studentCardId === card.id)
+  const scoped = payments.filter((record) => record.studentCardId === card.id || (includeUnscoped && !record.studentCardId))
   const funding = scoped.filter((record) => record.type === 'new' || record.type === 'renew' || (record.type === 'adjustment' && record.adjustmentReason === 'transfer'))
   if (category === 'STORED_VALUE') return Number(card.remainingAmount || 0)
   if (category === 'PERIOD') {
@@ -441,10 +442,15 @@ export function suggestedTransferAmount(card: Card, payments: PayRecord[], hours
     const record = [...funding].reverse().find((item) => item.validEndDate && item.validEndDate >= today)
     return Number(record?.amount || 0)
   }
+  const maxHours = Number(card.remainingHours || 0)
+  const remainingLotAmount = scoped.reduce((total, record) => (
+    total + Math.max(0, Number(record.remainingHours || 0)) * Math.max(0, Number(record.unitPrice || 0))
+  ), 0)
   const paidAmount = funding.reduce((total, record) => total + Math.max(0, Number(record.amount || 0)), 0)
   const paidHours = funding.reduce((total, record) => total + Math.max(0, Number(record.hours || 0)) + Math.max(0, Number(record.giftHours || 0)), 0)
-  const maxHours = Number(card.remainingHours || 0)
-  const full = paidHours > 0 ? (paidAmount / paidHours) * maxHours : 0
+  const full = remainingLotAmount > 0
+    ? remainingLotAmount
+    : paidHours > 0 ? (paidAmount / paidHours) * maxHours : 0
   if (hours == null || maxHours <= 0) return Number(full.toFixed(2))
   return Number(((full * hours) / maxHours).toFixed(2))
 }

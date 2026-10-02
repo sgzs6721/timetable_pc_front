@@ -1,10 +1,11 @@
 import { Button, Checkbox, Form, Input, InputNumber, Modal, Select, Space, Switch, message } from 'antd'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { getJson, postJson } from '../api/biz'
+import { BusinessDatePicker } from '../components/BusinessDatePicker'
 import { PhoneCopyButton, copyPlainText, money, tell } from './kit'
 import type { Student, Card, ServiceRight, Named } from './students-model'
 import { CoachMultiSelect, CourseField, PERIOD_OPTIONS, ServiceMultiSelect, courseUnitPriceConfigured, serviceOriginalPrice } from './student-card-desk'
-import { ChoiceTabs, CoachHint, personName } from './students-domain'
+import { ChoiceTabs, personName } from './students-domain'
 
 export function AddStudent(props: { open: boolean; coaches: Named[]; groups: Named[]; services: Named[]; campusId: number | null; onClose: () => void; onSaved: () => void }) {
   return (
@@ -68,7 +69,7 @@ export function AddStudent(props: { open: boolean; coaches: Named[]; groups: Nam
         <Form.Item name="name" label="姓名" rules={[{ required: true, whitespace: true, message: '请输入学员姓名' }, { max: 6, message: '学员姓名不能超过6个字' }]}><Input maxLength={6} /></Form.Item>
         <Form.Item name="gender" label="性别" rules={[{ required: true, message: '请选择性别' }]}><Select options={[{ value: 1, label: '男' }, { value: 2, label: '女' }]} /></Form.Item>
         <Form.Item name="phone" label="电话" rules={[{ pattern: /^$|^1[3-9]\d{9}$/, message: '请输入11位正确手机号' }]}><Input maxLength={11} /></Form.Item>
-        <Form.Item name="birthDate" label="出生日期" rules={[{ validator: validateBirthDate }]}><Input type="date" max={birthDateMax()} /></Form.Item>
+        <Form.Item name="birthDate" label="出生日期" rules={[{ validator: validateBirthDate }]}><BusinessDatePicker maxDate={birthDateMax()} /></Form.Item>
         <Form.List name="cards">
           {(fields, { add, remove }) => (
             <Space direction="vertical" style={{ width: '100%' }}>
@@ -99,6 +100,7 @@ export interface CardFormValues {
 }
 
 export function CardDraft(props: { fieldName: number; index: number; coaches: Named[]; groups: Named[]; services: Named[]; onRemove?: () => void }) {
+  const form = Form.useFormInstance()
   const categoryValue = Form.useWatch(['cards', props.fieldName, 'cardCategory'])
   const courseFlag = Form.useWatch(['cards', props.fieldName, 'courseCategory'])
   const drafts = Form.useWatch('cards') as Array<{ cardCategory?: string }> | undefined
@@ -108,6 +110,8 @@ export function CardDraft(props: { fieldName: number; index: number; coaches: Na
   const sameCategory = (drafts || []).map((item) => String(item?.cardCategory || 'HOURS').toUpperCase())
   const typeCount = sameCategory.filter((item) => item === category).length
   const typeIndex = sameCategory.slice(0, props.index + 1).filter((item) => item === category).length
+  const categoryRef = useRef(category)
+  categoryRef.current = category
   return (
     <div className="panel-block">
       <Space style={{ width: '100%', justifyContent: 'space-between' }}>
@@ -115,12 +119,26 @@ export function CardDraft(props: { fieldName: number; index: number; coaches: Na
         {props.onRemove ? <Button size="small" onClick={props.onRemove}>移除</Button> : null}
       </Space>
       <Form.Item name={[props.fieldName, 'cardCategory']} label="卡类型" rules={[{ required: true, message: '请选择卡类型' }]}>
-        <ChoiceTabs options={[{ value: 'HOURS', label: '课时卡' }, { value: 'PERIOD', label: '时段卡' }, { value: 'STORED_VALUE', label: '储值卡' }]} />
+        <ChoiceTabs
+          options={[{ value: 'HOURS', label: '课时卡' }, { value: 'PERIOD', label: '时段卡' }, { value: 'STORED_VALUE', label: '储值卡' }]}
+          onPick={(value) => {
+            const previous = categoryRef.current
+            categoryRef.current = value
+            if (value === 'HOURS') {
+              form.setFieldValue(['cards', props.fieldName, 'courseCategory'], true)
+              form.setFieldValue(['cards', props.fieldName, 'serviceItemIds'], [])
+            } else if (previous === 'HOURS') {
+              form.setFieldValue(['cards', props.fieldName, 'courseCategory'], false)
+              form.setFieldValue(['cards', props.fieldName, 'studentGroupId'], undefined)
+              form.setFieldValue(['cards', props.fieldName, 'coachMemberIds'], [])
+            }
+          }}
+        />
       </Form.Item>
       {category === 'PERIOD' ? <Form.Item name={[props.fieldName, 'periodType']} label="时段" initialValue="MONTH"><Select options={PERIOD_OPTIONS} /></Form.Item> : null}
       {category !== 'HOURS' ? <Form.Item name={[props.fieldName, 'courseCategory']} label="包含课程" valuePropName="checked" initialValue><Switch /></Form.Item> : null}
       {course ? <CourseField groups={props.groups} category={category} name={[props.fieldName, 'studentGroupId']} storeName={['cards', props.fieldName, 'studentGroupId']} coachField={['cards', props.fieldName, 'coachMemberIds']} courseFlag={['cards', props.fieldName, 'courseCategory']} /> : null}
-      {course ? <Form.Item name={[props.fieldName, 'coachMemberIds']} label="选择老师" extra={<CoachHint />}><CoachMultiSelect coaches={props.coaches} /></Form.Item> : null}
+      {course ? <Form.Item name={[props.fieldName, 'coachMemberIds']} label="选择老师"><CoachMultiSelect coaches={props.coaches} /></Form.Item> : null}
       {category !== 'HOURS' ? <Form.Item name={[props.fieldName, 'serviceItemIds']} label={course ? '适用服务（多选）' : '适用服务（多选） *'}><ServiceMultiSelect services={props.services.filter((item) => item.enabled !== 0 && item.enabled !== false)} /></Form.Item> : null}
       {category === 'STORED_VALUE' ? <StoredRights services={props.services} listName={props.fieldName} /> : null}
     </div>
@@ -156,8 +174,7 @@ export function StoredRights(props: { services: Named[]; listName?: number }) {
                     return
                   }
                   if (original <= 0) {
-                    form.setFieldValue(discountPath, 100)
-                    form.setFieldValue(pricePath, 0)
+                    form.setFieldValue(discountPath, undefined)
                     return
                   }
                   form.setFieldValue(discountPath, Math.min(100, Number(((Number(value) / original) * 100).toFixed(2))))
@@ -310,10 +327,10 @@ export function rightFields(rights?: ServiceRight[]) {
 }
 
 export function detailTabKey(tab?: string): string {
-  if (tab === 'lessons') return 'lessons'
+  if (tab === 'lessons') return 'check'
   if (tab === 'course' || tab === 'check') return 'check'
   if (tab === 'payment' || tab === 'pay') return 'pay'
-  if (tab === 'parent') return 'parent'
+  if (tab === 'parent') return 'base'
   return 'base'
 }
 
@@ -363,7 +380,7 @@ export function BirthDateItem() {
   const age = ageText(birthDate)
   return (
     <Form.Item name="birthDate" label="出生日期" extra={age || undefined} rules={[{ validator: validateBirthDate }]}>
-      <Input type="date" max={birthDateMax()} />
+      <BusinessDatePicker maxDate={birthDateMax()} />
     </Form.Item>
   )
 }
@@ -498,8 +515,8 @@ export function CoachTransfer(props: { open: boolean; coaches: Named[]; campusId
             <span>已选 {picked.length} 位学员</span>
           </div>
           {!visible.length ? <p>没有匹配的学员</p> : (
-            <Checkbox.Group value={picked} onChange={(values) => setPicked(values.map(Number))} style={{ display: 'grid', gap: 8 }}>
-              {visible.map((item) => <Checkbox key={item.id} value={item.id}>{item.name}{item.phone ? ` ${item.phone}` : ''}</Checkbox>)}
+            <Checkbox.Group className="coach-transfer-student-grid" value={picked} onChange={(values) => setPicked(values.map(Number))}>
+              {visible.map((item) => <Checkbox key={item.id} value={item.id} title={[item.name, item.phone].filter(Boolean).join(' ')}>{item.name}{item.phone ? ` ${item.phone}` : ''}</Checkbox>)}
             </Checkbox.Group>
           )}
         </>

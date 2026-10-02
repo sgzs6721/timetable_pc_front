@@ -280,7 +280,7 @@
 .marketing-preview-body h3 { margin: 0 0 8px; font-size: 13px; }
 .marketing-preview-body p { margin: 0; color: var(--ink-2); font-size: 12px; line-height: 1.75; white-space: pre-line; }
 .marketing-preview-points { display: flex; flex-wrap: wrap; gap: 8px; }
-.marketing-preview-points span { padding: 5px 10px; border-radius: 999px; color: #4255b6; background: #edf0ff; font-size: 11px; }
+.marketing-preview-points span { padding: 5px 10px; border-radius: var(--radius-tag); color: #4255b6; background: #edf0ff; font-size: 11px; }
 
 .marketing-settlement-summary,
 .marketing-detail-stats {

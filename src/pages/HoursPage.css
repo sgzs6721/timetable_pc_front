@@ -1,37 +1,3 @@
-.hours-section-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 20px;
-  margin-bottom: 14px;
-}
-
-.hours-section-head h2 {
-  margin: 0;
-}
-
-.hours-section-head p {
-  margin: 5px 0 0;
-  color: #8a98af;
-  font-size: 12px;
-}
-
-.hours-campus-trigger.ant-btn {
-  height: 36px;
-  padding: 0 13px;
-  border-color: #dbe4f2;
-  border-radius: 10px;
-  color: #4d6384;
-  box-shadow: none;
-}
-
-.hours-campus-trigger.ant-btn:hover,
-.hours-campus-trigger.ant-btn.is-open {
-  border-color: #9bb7ff;
-  color: #3267f6;
-  background: #f1f5ff;
-}
-
 .hours-overview-bar {
   display: flex;
   align-items: center;
@@ -53,7 +19,7 @@
 
 .hours-overview-stats.stat-line > span {
   min-width: 0;
-  height: 36px;
+  height: var(--control-md);
   display: flex;
   align-items: center;
   gap: 7px;

@@ -5,7 +5,7 @@ import { AppIcon, NeedCampus, PageHead, tell, todayIso } from './kit'
 import {
   DAY_LABELS, addDays, boardHoursText, cancelledTemplates, clockText,
   compareDetail, formatTimetableTime, freeUntil, fromMinutes,
-  ownerGenderIcon, templateEchoForCell, timetableMeta,
+  ownerGenderIcon, scheduleInstanceKey, templateEchoForCell, timetableMeta,
   timetableWeeks, toMinutes,
   weekChipLabel,
 } from './schedule-board-helpers'
@@ -20,7 +20,7 @@ import { ScheduleDialogs } from './schedule-dialogs'
 
 export function SchedulePage() {
   const vm = useScheduleController()
-  const { groups, groupsLoading, archived, setArchived, dayBand, setDayBand, selecting, setSelecting, current, setCurrent, weekStart, setWeekStart, mode, schedules, templateSchedules, setCreating, setCell, placement, setPlacement, batch, setBatch, deleting, setDeleting, deleteIds, setDeleteIds, compare, compareOn, setCampusFilter, setDragAction, dragHover, setDragHover, dragGuard, dragLessonId, campusId, canCreate, days, splitWeekend, templateMode, boardSchedules, campusLegend, activeCampusId, boardDays, splitHead, slots, limits, loadGroups, loadWeek, switchBoardMode, removeSchedule, openOverview, onTimetableMenu, openDay, choosePlacement } = vm
+  const { groups, groupsLoading, archived, setArchived, dayBand, setDayBand, selecting, setSelecting, current, setCurrent, weekStart, setWeekStart, mode, schedules, templateSchedules, setCreating, setCell, placement, setPlacement, batch, setBatch, deleting, setDeleting, deleteIds, setDeleteIds, compare, compareOn, setCampusFilter, setDragAction, dragHover, setDragHover, dragGuard, dragLessonKey, campusId, canCreate, days, splitWeekend, templateMode, boardSchedules, campusLegend, activeCampusId, boardDays, splitHead, slots, limits, loadGroups, loadWeek, switchBoardMode, removeSchedule, moveSchedule, copySchedule, openOverview, onTimetableMenu, openDay, choosePlacement } = vm
   const visibleGroups = groups.filter((group) => ((archived ? group.archivedTimetables : group.activeTimetables) || []).length > 0)
 
   return (
@@ -254,7 +254,7 @@ export function SchedulePage() {
                   <button type="button" onClick={() => setPlacement(null)}>{placement.kind === 'move' ? '取消移动' : '取消复制'}</button>
                   <button
                     type="button"
-                    className={placement.targets.length ? '' : 'is-off'}
+                    disabled={!placement.schedule.id || !placement.targets.length}
                     onClick={async () => {
                       if (!placement.schedule.id || !placement.targets.length) {
                         message.info(placement.kind === 'move' ? '请选择要移动到的时间段' : '请选择目标位置')
@@ -263,22 +263,10 @@ export function SchedulePage() {
                       try {
                         if (placement.kind === 'move') {
                           const target = placement.targets[0]
-                          await postJson(`/schedules/${placement.schedule.id}/move`, {
-                            scheduleDate: mode === 'template' ? undefined : target.date,
-                            startTime: target.start,
-                            endTime: target.end,
-                            dayOfWeek: target.day,
-                          })
+                          await moveSchedule(placement.schedule, { ...target, date: mode === 'template' ? '' : target.date })
                           message.success(`已移动到周${DAY_LABELS[target.day - 1]} ${target.start}-${target.end}`)
                         } else {
-                          await postJson(`/schedules/${placement.schedule.id}/copy`, {
-                            targets: placement.targets.map((target) => ({
-                              scheduleDate: mode === 'template' ? undefined : target.date,
-                              startTime: target.start,
-                              endTime: target.end,
-                              dayOfWeek: target.day,
-                            })),
-                          })
+                          await copySchedule(placement.schedule, placement.targets.map((target) => ({ ...target, date: mode === 'template' ? '' : target.date })))
                           message.success(`已复制 ${placement.targets.length} 处`)
                         }
                         setPlacement(null)
@@ -346,10 +334,10 @@ export function SchedulePage() {
                               onDragOver={(event) => {
                                 if (archived || Number(current.status) === 2) return
                                 event.preventDefault()
-                                const lesson = schedules.find((item) => item.id === dragLessonId.current)
+                                const lesson = boardSchedules.find((item) => scheduleInstanceKey(item) === dragLessonKey.current)
                                 if (!lesson) return
                                 const start = pointerStart(event.clientY, event.currentTarget, slot)
-                                const next = dragPlacement(lesson, { day, date, start, end: slot.end }, slots, schedules)
+                                const next = dragPlacement(lesson, { day, date, start, end: slot.end }, slots, boardSchedules)
                                 if (next.problem) {
                                   setDragHover(null)
                                   return
@@ -366,22 +354,22 @@ export function SchedulePage() {
                                   message.warning('归档课表不能修改排课')
                                   return
                                 }
-                                const id = Number(event.dataTransfer.getData('text/plain') || dragLessonId.current || 0)
-                                const lesson = schedules.find((item) => item.id === id)
+                                const lessonKey = event.dataTransfer.getData('text/plain') || dragLessonKey.current
+                                const lesson = boardSchedules.find((item) => scheduleInstanceKey(item) === lessonKey)
                                 if (!lesson?.id) return
                                 const start = pointerStart(event.clientY, event.currentTarget, slot)
-                                const dropped = dragPlacement(lesson, { day, date, start, end: slot.end }, slots, schedules)
+                                const dropped = dragPlacement(lesson, { day, date, start, end: slot.end }, slots, boardSchedules)
                                 if (dropped.problem) {
                                   message.warning(dropped.problem)
                                   return
                                 }
                                 setDragAction({
-                                  scheduleId: lesson.id,
+                                  schedule: lesson,
                                   name: lesson.displayName || lesson.courseName || '该排课',
                                   sourceLabel: `周${DAY_LABELS[(lesson.dayOfWeek || day) - 1] || ''} ${clockText(lesson.startTime)}-${clockText(lesson.endTime)}`,
                                   targetLabel: `周${DAY_LABELS[day - 1]} ${start}-${dropped.endTime}`,
                                   canCopy: dropped.canCopy,
-                                  target: { scheduleDate: date, startTime: start, endTime: dropped.endTime, dayOfWeek: day },
+                                  target: { date, start, end: dropped.endTime, day },
                                 })
                               }}
                               onClick={() => {
@@ -553,9 +541,9 @@ export function SchedulePage() {
                           const span = Math.max(lessonEnd - lessonStart, 1)
                           return (
                             <button
-                              key={lesson.id}
+                              key={scheduleInstanceKey(lesson)}
                               type="button"
-                              className={lessonClass(lesson, `${deleting && lesson.id != null && deleteIds.includes(lesson.id) ? ' is-picked' : ''}${placement?.schedule.id === lesson.id ? ' is-source' : ''}${!partial && detail.mark ? ` is-${detail.mark}` : ''}`)}
+                              className={lessonClass(lesson, `${deleting && deleteIds.includes(scheduleInstanceKey(lesson)) ? ' is-picked' : ''}${placement?.schedule && scheduleInstanceKey(placement.schedule) === scheduleInstanceKey(lesson) ? ' is-source' : ''}${!partial && detail.mark ? ` is-${detail.mark}` : ''}`)}
                               style={{ top: frame.top, height: frame.height }}
                               draggable={!archived && Number(current.status) !== 2 && lesson.uiChangeStatus !== 4}
                               onDragStart={(event) => {
@@ -564,12 +552,12 @@ export function SchedulePage() {
                                   return
                                 }
                                 dragGuard.current = true
-                                dragLessonId.current = Number(lesson.id)
-                                event.dataTransfer.setData('text/plain', String(lesson.id))
+                                dragLessonKey.current = scheduleInstanceKey(lesson)
+                                event.dataTransfer.setData('text/plain', dragLessonKey.current)
                                 event.dataTransfer.effectAllowed = 'copyMove'
                               }}
                               onDragEnd={() => {
-                                dragLessonId.current = 0
+                                dragLessonKey.current = ''
                                 setDragHover(null)
                                 window.setTimeout(() => { dragGuard.current = false }, 0)
                               }}
@@ -600,7 +588,8 @@ export function SchedulePage() {
                                   return
                                 }
                                 if (deleting && lesson.id != null) {
-                                  setDeleteIds(deleteIds.includes(lesson.id) ? deleteIds.filter((id) => id !== lesson.id) : [...deleteIds, lesson.id])
+                                  const key = scheduleInstanceKey(lesson)
+                                  setDeleteIds(deleteIds.includes(key) ? deleteIds.filter((id) => id !== key) : [...deleteIds, key])
                                   return
                                 }
                                 if (archived || Number(current.status) === 2) {
@@ -654,7 +643,7 @@ export function SchedulePage() {
                     onConfirm={async () => {
                       try {
                         for (const id of deleteIds) {
-                          const schedule = boardSchedules.find((item) => item.id === id)
+                          const schedule = boardSchedules.find((item) => scheduleInstanceKey(item) === id)
                           if (schedule) await removeSchedule(schedule)
                         }
                         message.success(`已删除 ${deleteIds.length} 节课`)

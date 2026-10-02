@@ -23,6 +23,23 @@ const ProfitPage = lazy(() => import('./pages/ProfitPage').then((module) => ({ d
 const SalaryPage = lazy(() => import('./pages/SalaryPage').then((module) => ({ default: module.SalaryPage })))
 const SchedulePage = lazy(() => import('./pages/SchedulePage').then((module) => ({ default: module.SchedulePage })))
 const StudentsPage = lazy(() => import('./pages/StudentsPage').then((module) => ({ default: module.StudentsPage })))
+const ParentLayout = lazy(() => import('./parent/ParentLayout').then((module) => ({ default: module.ParentLayout })))
+const ParentHomePage = lazy(() => import('./parent/ParentHomePage').then((module) => ({ default: module.ParentHomePage })))
+const ParentChildrenPage = lazy(() => import('./parent/ParentChildrenPage').then((module) => ({ default: module.ParentChildrenPage })))
+const ParentTimetablePage = lazy(() => import('./parent/ParentTimetablePage').then((module) => ({ default: module.ParentTimetablePage })))
+const ParentCoursesPage = lazy(() => import('./parent/ParentCoursesPage').then((module) => ({ default: module.ParentCoursesPage })))
+const ParentMinePage = lazy(() => import('./parent/ParentMinePage').then((module) => ({ default: module.ParentMinePage })))
+const ParentActivitiesPage = lazy(() => import('./parent/ParentActivitiesPage').then((module) => ({ default: module.ParentActivitiesPage })))
+const ParentRecordsPage = lazy(() => import('./parent/ParentRecordsPage').then((module) => ({ default: module.ParentRecordsPage })))
+const ParentStatsPage = lazy(() => import('./parent/ParentStatsPage').then((module) => ({ default: module.ParentStatsPage })))
+const ParentCoursePage = lazy(() => import('./parent/ParentCoursePage').then((module) => ({ default: module.ParentCoursePage })))
+const ParentPayPage = lazy(() => import('./parent/ParentPayPage').then((module) => ({ default: module.ParentPayPage })))
+const SharedTimetablePage = lazy(() => import('./parent/ParentSharedPages').then((module) => ({ default: module.SharedTimetablePage })))
+const SharedCourseStatsPage = lazy(() => import('./parent/ParentSharedPages').then((module) => ({ default: module.SharedCourseStatsPage })))
+const PlatformConsolePage = lazy(() => import('./platform/PlatformConsolePage').then((module) => ({ default: module.PlatformConsolePage })))
+const MarketingLandingPage = lazy(() => import('./marketing-public/MarketingLandingPage').then((module) => ({ default: module.MarketingLandingPage })))
+const MarketingEnrollmentsPage = lazy(() => import('./marketing-public/MarketingMyPages').then((module) => ({ default: module.MarketingEnrollmentsPage })))
+const MarketingReferralPage = lazy(() => import('./marketing-public/MarketingMyPages').then((module) => ({ default: module.MarketingReferralPage })))
 
 function RequireAuth() {
   if (!getToken()) {
@@ -47,6 +64,25 @@ export function App() {
       <Route path="/login/wechat" element={<WechatCallbackPage />} />
       <Route path="/legal/:doc" element={<LegalPage />} />
       <Route element={<RequireAuth />}>
+        <Route element={<Suspense fallback={<div className="route-loading">正在加载家长学习空间…</div>}><ParentLayout /></Suspense>}>
+          <Route path="/parent" element={<Navigate to="/parent/home" replace />} />
+          <Route path="/parent/home" element={<ParentHomePage />} />
+          <Route path="/parent/children" element={<ParentChildrenPage />} />
+          <Route path="/parent/timetable" element={<ParentTimetablePage />} />
+          <Route path="/parent/courses" element={<ParentCoursesPage />} />
+          <Route path="/parent/mine" element={<ParentMinePage />} />
+          <Route path="/parent/activities" element={<ParentActivitiesPage />} />
+          <Route path="/parent/records" element={<ParentRecordsPage />} />
+          <Route path="/parent/course-stats" element={<ParentStatsPage />} />
+          <Route path="/parent/course/:courseId" element={<ParentCoursePage />} />
+          <Route path="/parent/pay" element={<ParentPayPage />} />
+        </Route>
+        <Route path="/parent/share/timetable/:shareCode" element={<Suspense fallback={<div className="route-loading">正在打开分享课表…</div>}><SharedTimetablePage /></Suspense>} />
+        <Route path="/parent/share/course-stats/:shareCode" element={<Suspense fallback={<div className="route-loading">正在打开课程统计…</div>}><SharedCourseStatsPage /></Suspense>} />
+        <Route path="/platform" element={<Suspense fallback={<div className="route-loading">正在验证平台运营权限…</div>}><PlatformConsolePage /></Suspense>} />
+        <Route path="/campaign/:shareCode" element={<Suspense fallback={<div className="route-loading">正在打开活动…</div>}><MarketingLandingPage /></Suspense>} />
+        <Route path="/my-enrollments" element={<Suspense fallback={<div className="route-loading">正在加载报名记录…</div>}><MarketingEnrollmentsPage /></Suspense>} />
+        <Route path="/my-referral/:shareCode" element={<Suspense fallback={<div className="route-loading">正在加载推广数据…</div>}><MarketingReferralPage /></Suspense>} />
         <Route element={<AppShell />}>
         <Route element={<SuspendedShellOutlet />}>
         <Route path="/home" element={<HomePage />} />

@@ -17,6 +17,10 @@
   --primary-light: #5f80ff;
   --primary-soft: #edf2ff;
   --primary-faint: #f6f8ff;
+  --button-disabled-bg: #f1f3f7;
+  --button-disabled-border: #dfe4ec;
+  --button-disabled-text: #98a3b6;
+  --button-focus-ring: rgba(49, 95, 244, 0.2);
   --cyan: #12a7c7;
   --cyan-soft: #e7f8fc;
   --green: #0c9b6c;
@@ -27,6 +31,38 @@
   --red-soft: #fff0f2;
   --purple: #7c5ce4;
   --purple-soft: #f2efff;
+  --surface-soft: #f8faff;
+  --surface-subtle: #fbfcff;
+  --line-soft: #edf1f6;
+  --text-xs: 11px;
+  --text-sm: 12px;
+  --text-body: 13px;
+  --text-md: 14px;
+  --text-title: 15px;
+  --text-section: 18px;
+  --text-page: 27px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-section: 16px;
+  --form-item-gap: 18px;
+  --control-sm: 32px;
+  --control-md: 38px;
+  --control-lg: 44px;
+  --radius-sm: 8px;
+  --radius-tag: 5px;
+  --radius-control: 10px;
+  --radius-tab: 8px;
+  --radius-panel: 13px;
+  --radius-card: 16px;
+  --radius-dialog: 20px;
+  --tab-height: 32px;
+  --tab-padding-inline: 15px;
+  --tab-gap: 4px;
   --shadow-xs: 0 1px 2px rgba(23, 35, 61, 0.035);
   --shadow-sm: 0 1px 2px rgba(23, 35, 61, 0.035), 0 8px 24px rgba(38, 59, 108, 0.055);
   --shadow-md: 0 16px 46px rgba(30, 45, 82, 0.11);
@@ -69,7 +105,7 @@ body {
     radial-gradient(circle at 82% -10%, rgba(84, 128, 255, 0.08), transparent 28%),
     var(--page);
   font-family: var(--font);
-  font-size: 13px;
+  font-size: var(--text-body);
   line-height: 1.55;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -166,7 +202,7 @@ a:hover {
   display: grid;
   place-items: center;
   color: var(--muted);
-  font-size: 13px;
+  font-size: var(--text-body);
 }
 
 .route-loading::before {

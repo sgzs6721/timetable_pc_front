@@ -1,4 +1,4 @@
-import { Button, Modal, Popconfirm, Tabs, message } from 'antd'
+import { Button, Modal, Popconfirm, message } from 'antd'
 import { createContext, useEffect, useState } from 'react'
 import { putJson } from '../api/biz'
 import { AppIcon, money, tell, todayIso } from './kit'
@@ -25,10 +25,6 @@ export function courseCoachCount(student: Student, card: Card | undefined, group
   const group = groups.find((item) => item.id === groupId)
   const coachIds = group?.coachIds?.length ? group.coachIds : (group?.coachId ? [group.coachId] : [])
   return coachIds.length
-}
-
-export function CoachHint() {
-  return <Button type="link" size="small" htmlType="button" onClick={() => Modal.info({ title: '多选老师说明', content: '多选老师表示可为该学员设置备选老师，并不代表多位老师会同时上课。仅当所选课程本身配置了多位老师时，才会按课程安排共同授课。', okText: '我知道了' })}>说明</Button>
 }
 
 export type CatalogStatus = 'loading' | 'ready' | 'failed'
@@ -73,41 +69,52 @@ export function removedCard(card: Card): boolean {
   return Number(card.deleted) === 1 || Number(card.status ?? 1) === 0
 }
 
-export function CardRecordTabs<T extends { studentCardId?: number }>(props: { cards?: Card[]; rows: T[]; focusId?: number; children: (rows: T[], card?: Card) => JSX.Element }) {
+export function CardRecordTabs<T extends { studentCardId?: number }>(props: { cards?: Card[]; rows: T[]; focusId?: number; onCardChange?: (cardId?: number) => void; children: (rows: T[], card?: Card) => JSX.Element }) {
   const cards = orderedStudentCards(props.cards || [])
   const activeCards = cards.filter((card) => !removedCard(card))
   const archivedCards = cards.filter((card) => removedCard(card))
   const foldable = activeCards.length > 0 && archivedCards.length > 0
   const [showArchived, setShowArchived] = useState(false)
   const visible = foldable && !showArchived ? activeCards : cards
-  const [tab, setTab] = useState(props.focusId ? String(props.focusId) : 'all')
+  const [tab, setTab] = useState(props.focusId ? String(props.focusId) : String(activeCards[0]?.id || cards[0]?.id || ''))
   useEffect(() => {
     if (!props.focusId || !cards.some((card) => card.id === props.focusId)) return
     if (archivedCards.some((card) => card.id === props.focusId)) setShowArchived(true)
     setTab(String(props.focusId))
   }, [props.focusId, cards.map((card) => card.id).join('|')])
-  if (!foldable && visible.length < 2) return props.children(props.rows, visible[0])
-  const activeKey = visible.some((card) => String(card.id) === tab) || tab === 'all' ? tab : 'all'
+  if (!visible.length) return props.children(props.rows)
+  const activeKey = visible.some((card) => String(card.id) === tab) ? tab : String(visible[0]?.id || '')
+  const activeCard = visible.find((card) => String(card.id) === activeKey) || visible[0]
+  const fallbackCardId = cards[0]?.id
+  const scopedRows = props.rows.filter((row) => row.studentCardId
+    ? row.studentCardId === activeCard?.id
+    : activeCard?.id === fallbackCardId)
+  if (!foldable && visible.length < 2) return props.children(scopedRows, activeCard)
   return (
-    <Tabs
-      activeKey={activeKey}
-      onChange={setTab}
-      tabBarExtraContent={foldable ? (
-        <Button type="link" onClick={() => {
+    <div className="student-record-card-pages">
+      <div className="student-record-card-tabs" role="tablist" aria-label="切换记录卡片">
+        {visible.map((card) => {
+          const key = String(card.id)
+          const selected = key === activeKey
+          const tag = cardBalanceView(card).tag
+          const name = String(card.cardName || card.studentGroupName || '').trim()
+          return <button key={key} type="button" role="tab" aria-selected={selected} className={[selected ? 'is-active' : '', removedCard(card) ? 'is-archived' : ''].filter(Boolean).join(' ')} onClick={() => {
+            setTab(key)
+            props.onCardChange?.(Number(key))
+          }}><span>{tag}</span>{name && name !== tag ? <small>{name}</small> : null}</button>
+        })}
+        {foldable ? <button className="student-record-card-more" type="button" onClick={() => {
           const next = !showArchived
           setShowArchived(next)
-          if (!next && archivedCards.some((card) => String(card.id) === tab)) setTab('all')
-        }}>{showArchived ? '收起' : '更多'}</Button>
-      ) : null}
-      items={[
-        { key: 'all', label: '全部', children: props.children(props.rows) },
-        ...visible.map((card) => ({
-          key: String(card.id),
-          label: <span className={removedCard(card) ? 'tab-archived' : undefined}>{card.cardName || card.studentGroupName || cardCategoryText(card.cardCategory)}</span>,
-          children: props.children(props.rows.filter((row) => !row.studentCardId || row.studentCardId === card.id), card),
-        })),
-      ]}
-    />
+          if (!next && archivedCards.some((card) => String(card.id) === tab)) {
+            const nextId = activeCards[0]?.id
+            setTab(String(nextId || ''))
+            props.onCardChange?.(nextId)
+          }
+        }}>{showArchived ? '收起' : '更多'}</button> : null}
+      </div>
+      {props.children(scopedRows, activeCard)}
+    </div>
   )
 }
 

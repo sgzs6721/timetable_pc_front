@@ -1,10 +1,11 @@
 import { CalendarOutlined, CheckOutlined, CrownOutlined, SafetyCertificateOutlined, TeamOutlined } from '@ant-design/icons'
-import { Button, Modal, Tabs, message } from 'antd'
+import { Button, Modal, message } from 'antd'
 import { useEffect, useMemo, useState } from 'react'
 import { postJson } from '../api/biz'
 import { PageHead, money, tell, useShell } from './kit'
 import { MembershipPaymentModal, type MembershipPaymentIntent } from './membership-payment'
 import './MembershipPage.css'
+import './MembershipPurchase.css'
 
 interface TermOption {
   years: number
@@ -16,6 +17,9 @@ interface UpgradeOption {
   mode: string
   label: string
   amount?: number
+  chargeDays?: number
+  effectiveFrom?: string
+  effectiveTo?: string
   description?: string
   validityText?: string
 }
@@ -68,6 +72,24 @@ interface Overview {
 }
 
 const PLAN_RANK: Record<string, number> = { year: 1, excellence: 2, navigator: 3 }
+const UPGRADE_OPTION_LABELS: Record<string, string> = {
+  remaining_period: '按剩余有效期补差价',
+  one_cycle: '至少补一个周期差价',
+}
+
+function decorateUpgradeOption(option: UpgradeOption): UpgradeOption {
+  const from = String(option.effectiveFrom || '').slice(0, 10)
+  const to = String(option.effectiveTo || '').slice(0, 10)
+  const days = Number(option.chargeDays || 0)
+  const validityText = from && to
+    ? `${from} 至 ${to}${days > 0 ? `（${days}天）` : ''}`
+    : (option.validityText || '')
+  return {
+    ...option,
+    label: UPGRADE_OPTION_LABELS[option.mode] || option.label || '升级补差价',
+    validityText,
+  }
+}
 
 function membershipStatusText(status?: string, planName?: string): string {
   const value = String(status || '').trim().toLowerCase()
@@ -110,7 +132,6 @@ function upgradeStartingPrice(plan: Plan): number | undefined {
 export function MembershipPage() {
   const shell = useShell()
   const [data, setData] = useState<Overview | null>(null)
-  const [mode, setMode] = useState('plans')
   const [planId, setPlanId] = useState('')
   const [showLower, setShowLower] = useState(false)
   const [upgradeMode, setUpgradeMode] = useState('')
@@ -146,7 +167,9 @@ export function MembershipPage() {
   }), [data, currentRank])
   const visiblePlans = plans.filter((item) => showLower || !item.unavailable)
   const plan = plans.find((item) => item.id === planId)
-  const upgradeOptions = plan?.upgradeTarget ? (plan.upgradeOptions || []) : []
+  const upgradeOptions = plan?.upgradeTarget
+    ? (plan.upgradeOptions || []).map(decorateUpgradeOption)
+    : []
   const selectedUpgrade = upgradeOptions.find((item) => item.mode === upgradeMode) || upgradeOptions[0]
   const quoted = plan?.upgradeTarget ? selectedUpgrade?.amount : termPrice(plan, termYears)
   const years = Number(data?.addonBillingYears || 1)
@@ -222,11 +245,10 @@ export function MembershipPage() {
           <div><TeamOutlined /><span>每校区容量</span><strong>{currentPlan?.studentLimitPerCampus || '-'}<small>人</small></strong></div>
         </div>
       </section>
-      <Tabs className="membership-main-tabs" activeKey={mode} onChange={setMode} items={[
-        { key: 'plans', label: '会员套餐', children: (
-          <section className="membership-panel">
+      <div className="membership-workspace">
+          <section className="membership-panel membership-plans-panel">
             <header className="membership-section-head">
-              <div><h2>选择适合你的方案</h2><p>不同套餐对应机构、校区与学员容量上限</p></div>
+              <div><h2>会员套餐</h2><p>选择适合机构规模的方案</p></div>
               {plans.some((item) => item.unavailable) ? <Button type="link" onClick={() => setShowLower((open) => !open)}>{showLower ? '收起低阶套餐' : '查看全部套餐'}</Button> : null}
             </header>
             <div className="membership-plan-grid">
@@ -243,20 +265,19 @@ export function MembershipPage() {
                   <span className="membership-plan-limits"><span>{item.organizationLimit || '-'}<small>机构</small></span><span>{item.campusLimit || '-'}<small>校区</small></span><span>{item.studentLimitPerCampus || '-'}<small>学员/校区</small></span></span>
                 </button>
               })}
-            </div>
-            <div className="membership-purchase-grid">
+              <div className="membership-purchase-grid">
               <div className="membership-benefits">
-                <h3><SafetyCertificateOutlined /> {plan?.name || '套餐'}权益</h3>
-                {plan?.benefitLines?.length ? <ul>{plan.benefitLines.map((line) => <li key={line}><CheckOutlined />{line}</li>)}</ul> : <p>选择套餐后查看对应权益</p>}
+                <h3><SafetyCertificateOutlined /> 订单结算</h3>
+                {plan?.benefitLines?.length ? <ul>{plan.benefitLines.map((line) => <li key={line}><CheckOutlined /><strong>{plan.name}</strong><span>{line}</span></li>)}</ul> : <p>选择套餐后查看订单信息</p>}
               </div>
               <div className="membership-checkout">
                 {plan?.upgradeTarget ? <>
-                  <div className="membership-checkout-head"><div><span>升级方式</span><strong>选择权益生效方案</strong></div></div>
+                  <div className="membership-checkout-head"><div><span>升级方式</span><strong>{upgradeOptions.length > 1 ? '报价不同是因升级有效期不同' : '确认升级权益有效期'}</strong></div></div>
                 {!upgradeOptions.length ? <p>升级报价暂不可用</p> : (
                   <div className="membership-upgrade-options">
                     {upgradeOptions.map((item) => (
                       <button key={item.mode} type="button" className={(selectedUpgrade?.mode === item.mode) ? 'is-on' : ''} onClick={() => setUpgradeMode(item.mode)}>
-                        <span>{item.label}</span><strong>¥{money(item.amount)}</strong><small>{item.validityText || '立即生效'}</small>
+                        <span>{item.label}</span><strong>¥{money(item.amount)}</strong><small>有效期：{item.validityText || '支付成功后立即生效'}</small>
                       </button>
                     ))}
                   </div>
@@ -269,19 +290,26 @@ export function MembershipPage() {
                     <Button disabled={termYears >= 3} onClick={() => setTermYears((value) => Math.min(3, value + 1))}>＋</Button>
                   </div>
                 </>}
+                <div className="membership-order-summary">
+                  <div><span>套餐方案</span><strong>{plan?.name || '待选择'}</strong></div>
+                  <div><span>业务类型</span><strong>{plan?.upgradeTarget ? '套餐升级' : (data?.currentPlanId ? '会员续费' : '新购会员')}</strong></div>
+                  <div><span>服务期限</span><strong>{plan?.upgradeTarget ? (selectedUpgrade?.validityText || '待确认') : `${termYears * 12} 个月`}</strong></div>
+                  <div><span>权益范围</span><strong>{plan ? `${plan.organizationLimit || '-'}机构 · ${plan.campusLimit || '-'}校区 · ${plan.studentLimitPerCampus || '-'}人/校区` : '待选择'}</strong></div>
+                </div>
                 <div className="membership-total"><span>{plan?.upgradeTarget ? '升级补差价' : (data?.currentPlanId ? '续费金额' : '购买金额')}</span><strong>{quoted == null ? '待确认' : `¥${money(quoted)}`}</strong></div>
                 <Button className="membership-pay-button" type="primary" size="large" onClick={openPayment}>{purchaseLabel}</Button>
                 <small className="membership-secure-note"><SafetyCertificateOutlined /> 支付成功后权益自动生效</small>
               </div>
+              </div>
             </div>
           </section>
-        ) },
-        { key: 'addon', label: '学员扩容', children: (
           <section className="membership-panel membership-addon-panel">
-            <header className="membership-section-head"><div><h2>按校区增加学员容量</h2><p>{data?.addonAvailable && data.addonEffectiveTo ? `有效期至 ${String(data.addonEffectiveTo).slice(0, 10)}，本次按${years}年计费` : '扩容有效期与会员一致，不足整年按整年计费'}</p></div></header>
-            {!data?.addonAvailable ? <div className="membership-empty-note">开通有效会员后可购买学员扩容</div> : null}
-            {data?.addonAvailable && !groups.length ? <div className="membership-empty-note">暂无可扩容校区</div> : null}
-            {groups.map((group) => {
+            <header className="membership-section-head"><div><h2>学员扩容</h2><p>{data?.addonAvailable && data.addonEffectiveTo ? `有效期至 ${String(data.addonEffectiveTo).slice(0, 10)}，本次按${years}年计费` : '按校区增加容量，扩容有效期与会员一致'}</p></div></header>
+            <div className="membership-addon-layout">
+              <div className="membership-addon-operations">
+                {!data?.addonAvailable ? <div className="membership-empty-note">开通有效会员后可购买学员扩容</div> : null}
+                {data?.addonAvailable && !groups.length ? <div className="membership-empty-note">暂无可扩容校区</div> : null}
+                {groups.map((group) => {
               const open = openOrgs[group.id] !== false
               const online = group.campuses.filter((item) => campusOnline(item.visibleInList)).length
               const picked = group.campuses.filter((item) => addons[item.campusId] > 0).length
@@ -314,8 +342,19 @@ export function MembershipPage() {
                   }) : null}
                 </div>
               )
-            })}
-            <div className="membership-addon-checkout"><div><span>学员扩容</span><strong>{selectedAddons.length ? `已选 ${selectedAddons.length} 个校区` : '请选择校区'}</strong></div><div><span>合计</span><strong>{selectedAddons.length ? `¥${money(addonTotal)}` : '—'}</strong></div><Button type="primary" size="large" onClick={() => {
+                })}
+              </div>
+              <aside className="membership-addon-order">
+                <header><SafetyCertificateOutlined /><div><h3>订单结算</h3><p>按所选校区汇总扩容费用</p></div></header>
+                <div className="membership-addon-order-list">
+                  {selectedAddons.length ? selectedAddons.map((campus) => {
+                    const increment = addons[campus.campusId]
+                    const quote = (data?.addonPrices || []).find((item) => item.capacityIncrement === increment)
+                    return <div key={campus.campusId}><span><strong>{campus.campusName}</strong><small>扩容 +{increment} 人</small></span><em>¥{money(quote?.totalPrice ?? quote?.price)}</em></div>
+                  }) : <p>在左侧选择校区和扩容人数后生成订单</p>}
+                </div>
+                <div className="membership-addon-order-meta"><span>扩容有效期<strong>{String(data?.addonEffectiveTo || '').slice(0, 10) || '待开通会员'}</strong></span><span>计费周期<strong>{years} 年</strong></span></div>
+                <div className="membership-addon-checkout"><div><span>已选校区</span><strong>{selectedAddons.length ? `${selectedAddons.length} 个` : '尚未选择'}</strong></div><div><span>订单合计</span><strong>{selectedAddons.length ? `¥${money(addonTotal)}` : '—'}</strong></div><Button className="membership-addon-pay-button" type="primary" disabled={!data?.addonAvailable || !selectedAddons.length} onClick={() => {
               if (!data?.addonAvailable) {
                 message.warning('开通有效会员后可购买学员扩容')
                 return
@@ -342,10 +381,11 @@ export function MembershipPage() {
                   },
                 }),
               })
-            }}>购买扩容</Button></div>
+                }}>购买扩容</Button></div>
+              </aside>
+            </div>
           </section>
-        ) },
-      ]} />
+      </div>
       <MembershipPaymentModal
         intent={paymentIntent}
         onClose={() => setPaymentIntent(null)}

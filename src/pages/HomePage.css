@@ -115,12 +115,12 @@
 
 .ant-tabs.home-schedule-tabs > .ant-tabs-nav {
   margin: 0 !important;
-  padding: 4px;
+  padding: var(--space-1);
 }
 
 .home-schedule-tabs .ant-tabs-tab {
-  height: 30px;
-  padding: 0 13px !important;
+  height: var(--tab-height);
+  padding: 0 var(--space-3) !important;
 }
 
 .home-schedule-refresh.ant-btn {
@@ -212,8 +212,9 @@
 }
 
 .overview-coach:disabled {
-  color: var(--ink);
-  cursor: default;
+  color: var(--muted);
+  cursor: not-allowed;
+  opacity: 0.68;
 }
 
 .overview-slot {

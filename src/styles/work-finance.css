@@ -20,7 +20,7 @@
   gap: 7px;
   padding: 0 12px;
   border: 1px solid var(--line);
-  border-radius: 999px;
+  border-radius: var(--radius-tag);
   color: var(--ink-2);
   background: #fff;
   box-shadow: var(--shadow-xs);
@@ -33,7 +33,7 @@
   transform: translateY(-1px);
 }
 
-.profit-chart-legend button.is-off {
+.profit-chart-legend button.is-hidden {
   opacity: 0.38;
 }
 
@@ -63,6 +63,20 @@
   gap: 10px;
   overflow-x: auto;
   padding: 4px 2px 8px;
+}
+
+.profit-chart-scroll.is-sparse {
+  justify-content: space-evenly;
+  overflow-x: hidden;
+}
+
+.profit-chart-scroll.is-sparse .profit-chart-group {
+  flex-basis: 140px;
+}
+
+.profit-chart-scroll.is-sparse .profit-chart-group strong,
+.profit-chart-scroll.is-sparse .profit-chart-group small {
+  max-width: 136px;
 }
 
 .profit-chart-group {
@@ -195,7 +209,7 @@
 .finance-chips button {
   padding: 6px 12px;
   border: 1px solid var(--line);
-  border-radius: 999px;
+  border-radius: var(--radius-tag);
   color: var(--ink-2);
   background: #fff;
   cursor: pointer;

@@ -1,0 +1,152 @@
+/*
+ * Shared button state contract.
+ *
+ * Page styles own each button's shape and purpose. This file owns the states
+ * every page must expose consistently: actionable, hover, pressed, keyboard
+ * focus, loading and unavailable.
+ */
+
+button {
+  touch-action: manipulation;
+  user-select: none;
+}
+
+button:not(:disabled):not([aria-disabled='true']),
+.ant-btn:not(:disabled):not(.ant-btn-disabled) {
+  cursor: pointer;
+}
+
+button:disabled,
+button[aria-disabled='true'],
+.ant-btn:disabled,
+.ant-btn.ant-btn-disabled {
+  cursor: not-allowed !important;
+}
+
+button:focus-visible,
+.ant-btn:focus-visible {
+  outline: 3px solid var(--button-focus-ring);
+  outline-offset: 2px;
+}
+
+:where(button:not(.ant-btn):disabled) {
+  box-shadow: none !important;
+  filter: saturate(0.45);
+  opacity: 0.54;
+  transform: none !important;
+}
+
+:where(button:not(.ant-btn):disabled:hover),
+:where(button:not(.ant-btn):disabled:active) {
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+:where(button:not(.ant-btn):not(:disabled):not([aria-disabled='true']):hover) {
+  filter: brightness(0.985);
+}
+
+:where(button:not(.ant-btn):not(:disabled):not([aria-disabled='true']):active) {
+  filter: brightness(0.96);
+  transform: translateY(1px);
+}
+
+/* Ant Design buttons: keep every variant in the same interaction language. */
+.ant-btn {
+  font-weight: 620;
+}
+
+.ant-btn:not(:disabled):not(.ant-btn-disabled):not(.ant-btn-loading):active {
+  transform: translateY(1px);
+}
+
+.ant-btn-default:not(:disabled):not(.ant-btn-disabled):active,
+.ant-btn-dashed:not(:disabled):not(.ant-btn-disabled):active {
+  border-color: #9fadc2 !important;
+  color: var(--ink) !important;
+  background: #f1f4f9 !important;
+}
+
+.ant-btn-dashed:not(:disabled):not(.ant-btn-disabled):hover {
+  border-color: #9db1ef !important;
+  color: var(--primary) !important;
+  background: var(--primary-faint) !important;
+}
+
+.ant-btn-text:not(:disabled):not(.ant-btn-disabled):hover {
+  color: var(--ink) !important;
+  background: #f1f4f9 !important;
+}
+
+.ant-btn-link:not(:disabled):not(.ant-btn-disabled):hover {
+  color: var(--primary-dark) !important;
+  background: var(--primary-soft) !important;
+}
+
+.ant-btn-dangerous.ant-btn-text:not(:disabled):not(.ant-btn-disabled):hover,
+.ant-btn-dangerous.ant-btn-link:not(:disabled):not(.ant-btn-disabled):hover {
+  color: var(--red) !important;
+  background: var(--red-soft) !important;
+}
+
+.ant-btn-dangerous.ant-btn-primary:not(:disabled):not(.ant-btn-disabled) {
+  border-color: transparent;
+  background: linear-gradient(135deg, #e66c78, var(--red));
+  box-shadow: 0 7px 16px rgba(220, 82, 96, 0.16);
+}
+
+.ant-btn-dangerous.ant-btn-primary:not(:disabled):not(.ant-btn-disabled):hover {
+  border-color: transparent !important;
+  background: linear-gradient(135deg, #e97983, #c94554) !important;
+  box-shadow: 0 10px 22px rgba(220, 82, 96, 0.22) !important;
+}
+
+.ant-btn.ant-btn-loading:not(:disabled) {
+  cursor: wait !important;
+}
+
+.ant-btn.ant-btn-loading:not(:disabled):hover,
+.ant-btn.ant-btn-loading:not(:disabled):active {
+  transform: none;
+}
+
+.ant-btn:disabled,
+.ant-btn.ant-btn-disabled {
+  border-color: var(--button-disabled-border) !important;
+  color: var(--button-disabled-text) !important;
+  background: var(--button-disabled-bg) !important;
+  box-shadow: none !important;
+  opacity: 1;
+  transform: none !important;
+}
+
+.ant-btn-link:disabled,
+.ant-btn-link.ant-btn-disabled,
+.ant-btn-text:disabled,
+.ant-btn-text.ant-btn-disabled {
+  border-color: transparent !important;
+  background: transparent !important;
+}
+
+.ant-btn-icon-only:not(.ant-btn-link) {
+  padding-inline: 0;
+}
+
+/* Selected buttons are still actionable; unavailable buttons never animate. */
+button[aria-pressed='true']:not(:disabled) {
+  cursor: pointer;
+}
+
+button.is-disabled,
+button.is-off:disabled {
+  cursor: not-allowed !important;
+}
+
+@media (forced-colors: active) {
+  button:disabled,
+  .ant-btn:disabled,
+  .ant-btn.ant-btn-disabled {
+    border-color: GrayText !important;
+    color: GrayText !important;
+  }
+}

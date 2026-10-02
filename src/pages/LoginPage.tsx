@@ -2,7 +2,7 @@ import { ArrowRightOutlined, CalendarOutlined, LineChartOutlined, SafetyCertific
 import { Button, Checkbox, Form, Input, message } from 'antd'
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { getWechatWebConfig, loginByPassword } from '../api/auth'
+import { getUserInfo, getWechatWebConfig, loginByPassword } from '../api/auth'
 import { setToken } from '../session'
 import './LoginPage.css'
 
@@ -33,7 +33,9 @@ export function LoginPage() {
     try {
       const login = await loginByPassword(values.phone.trim(), values.password)
       setToken(login.token)
-      navigate('/home', { replace: true })
+      const user = await getUserInfo().catch(() => null)
+      const pureParent = String(user?.role || login.role || '').toLowerCase() === 'parent' && !Number(user?.orgMemberId || 0)
+      navigate(pureParent ? '/parent/home' : '/home', { replace: true })
     } catch (error) {
       message.error(error instanceof Error ? error.message : '登录失败')
     } finally {

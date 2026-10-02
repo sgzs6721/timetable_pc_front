@@ -2,7 +2,8 @@ import { Button, Form, Input, Modal, Select, Table, message } from 'antd'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getJson, putJson } from '../api/biz'
-import { NeedCampus, PageHead, genderText, money, monthKey, periodChoices, type PeriodOption, tell, useShell } from './kit'
+import { BusinessDatePicker } from '../components/BusinessDatePicker'
+import { NeedCampus, PageHead, genderText, money, monthKey, periodChoices, type PeriodOption, tell, todayIso, useShell } from './kit'
 
 interface Staff {
   staffId: number
@@ -158,8 +159,10 @@ export function SalaryPage() {
             />
             {data?.canManagePayoutStatus ? (
               <Form
+                key={`${row.staffId}-${row.payoutStatus}`}
                 layout="inline"
                 style={{ marginTop: 12 }}
+                initialValues={{ status: row.payoutStatus || 0, paymentDate: todayIso() }}
                 onFinish={async (values: { status: number; paymentType?: number; paymentDate?: string; paymentRemark?: string }) => {
                   if (!data?.canManagePayoutStatus) {
                     message.warning('仅管理员可更新发放状态')
@@ -217,8 +220,8 @@ export function SalaryPage() {
                   }
                 }}
               >
-                <Form.Item name="status" initialValue={row.payoutStatus || 0}><Select options={[{ value: 0, label: '应发' }, { value: 1, label: '已发' }]} /></Form.Item>
-                <Form.Item name="paymentDate"><Input type="date" /></Form.Item>
+                <Form.Item name="status"><Select options={[{ value: 0, label: '应发' }, { value: 1, label: '已发' }]} /></Form.Item>
+                <Form.Item name="paymentDate"><BusinessDatePicker /></Form.Item>
                 <Form.Item name="paymentType"><Select style={{ width: 120 }} placeholder="支付方式" options={[{ value: 1, label: '支付宝' }, { value: 2, label: '微信' }, { value: 3, label: '银行卡' }, { value: 4, label: '公户' }, { value: 5, label: '现金' }]} /></Form.Item>
                 <Form.Item name="paymentRemark"><Input placeholder="支付账户或流水号" /></Form.Item>
                 <Button htmlType="submit">记录发放</Button>

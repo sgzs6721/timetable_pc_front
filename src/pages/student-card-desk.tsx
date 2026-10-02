@@ -1,39 +1,75 @@
-import { Button, Form, Input, Modal, Popconfirm, Select, Space, Switch, Tabs, message } from 'antd'
+import { Button, Form, Input, Modal, Popconfirm, Select, Switch, Tabs, message } from 'antd'
 import { useContext, useRef, useState } from 'react'
 import { postJson, putJson } from '../api/biz'
 import { money, tell } from './kit'
 import type { Student, Card, Named } from './students-model'
 import { CardSaveButton, StoredRights, cardDraftError, cardEditBaseline, cardEditKey, rightFields, serviceRightPayload } from './student-profile'
 import type { CardFormValues } from './student-profile'
-import { CatalogHold, CatalogLoadContext, ChoiceTabs, CoachHint, cardCategoryText, personName } from './students-domain'
+import { CatalogHold, CatalogLoadContext, ChoiceTabs, cardCategoryText, personName } from './students-domain'
 
 export function CardDesk(props: { student: Student; coaches: Named[]; services: Named[]; groups: Named[]; onChanged: () => Promise<void> }) {
   const cards = props.student.cards || []
   const [editing, setEditing] = useState<Card | null>(null)
+  const [creating, setCreating] = useState(false)
   return (
-    <Space direction="vertical" style={{ width: '100%' }}>
-      <CardSummary cards={cards} />
-      <CardCreate student={props.student} coaches={props.coaches} services={props.services} groups={props.groups} onChanged={props.onChanged} />
-      {cards.map((card) => (
-        <Space key={card.id} wrap>
-          <span>{card.cardName || card.studentGroupName || cardCategoryText(card.cardCategory)}{card.status != null && card.status !== 1 ? ' · 已关闭' : ''}</span>
-          <span>{(card.coachMemberNames || []).join('、')}</span>
-          {card.status === 1 || card.status == null ? <Button size="small" onClick={() => setEditing(card)}>编辑</Button> : null}
-          {card.canClose === false ? <span>{card.closeBlockedReason || '当前不能关闭'}</span> : card.status === 1 || card.status == null ? (
-            <Popconfirm title="结清并关闭这张卡？" onConfirm={async () => {
-              try {
-                await postJson(`/student-cards/${card.id}/close`, {})
-                message.success('卡已关闭')
-                await props.onChanged()
-              } catch (error) {
-                message.error(tell(error, '关闭失败'))
-              }
-            }}>
-              <Button size="small">关闭</Button>
-            </Popconfirm>
-          ) : null}
-        </Space>
-      ))}
+    <section className="student-detail-panel student-card-desk">
+      <header className="student-detail-section-head">
+        <div><h3>卡片管理</h3><p>{cards.length ? `共 ${cards.length} 张卡片，课程权益相互独立` : '为学员配置课程或服务权益'}</p></div>
+        <Button type="primary" ghost onClick={() => setCreating(true)}>新增卡类型</Button>
+      </header>
+      {cards.length ? <div className="student-card-desk-list">
+        {cards.map((card) => {
+          const category = cardCategoryText(card.cardCategory)
+          const typeLabel = category === '时段卡'
+            ? ({ WEEK: '周卡', MONTH: '月卡', QUARTER: '季卡', HALF_YEAR: '半年卡', YEAR: '年卡' }[String(card.periodType || '').toUpperCase()] || category)
+            : category
+          const active = card.status === 1 || card.status == null
+          const balanceText = category === '储值卡'
+            ? `余额 ¥${money(card.remainingAmount)} / ¥${money(card.totalAmount)}`
+            : category === '时段卡'
+              ? (card.validEndDate ? `有效期至 ${card.validEndDate}` : '待缴费后生成有效期')
+              : `剩余 ${card.remainingHours ?? 0} / ${card.totalHours ?? 0} 课时`
+          const relation = [card.studentGroupName, (card.coachMemberNames || []).join('、')].filter(Boolean).join(' · ')
+          return (
+            <div className={`student-card-desk-row${active ? '' : ' is-closed'}`} key={card.id || `${category}-${card.cardName}`}>
+              <span className={`student-card-desk-icon is-${String(card.cardCategory || 'hours').toLowerCase()}`}>{typeLabel.slice(0, 1)}</span>
+              <div className="student-card-desk-info">
+                <div><strong>{card.cardName || card.studentGroupName || typeLabel}</strong><span>{typeLabel}</span>{active ? null : <em>已关闭</em>}</div>
+                <p>{balanceText}{relation ? ` · ${relation}` : ''}</p>
+                {card.canClose === false && active ? <small>{card.closeBlockedReason || '当前权益未结清，暂不能关闭'}</small> : null}
+              </div>
+              {active ? <div className="student-card-desk-actions">
+                <Button size="small" onClick={() => setEditing(card)}>编辑</Button>
+                {card.canClose === false ? null : (
+                  <Popconfirm title="结清并关闭这张卡？" description="关闭后不能继续缴费或打卡，历史记录仍会保留。" onConfirm={async () => {
+                    try {
+                      await postJson(`/student-cards/${card.id}/close`, {})
+                      message.success('卡已关闭')
+                      await props.onChanged()
+                    } catch (error) {
+                      message.error(tell(error, '关闭失败'))
+                    }
+                  }}>
+                    <Button size="small">关闭</Button>
+                  </Popconfirm>
+                )}
+              </div> : null}
+            </div>
+          )
+        })}
+      </div> : <div className="student-card-desk-empty"><strong>尚未配置卡片</strong><p>新增卡类型后，可继续记录缴费和打卡。</p></div>}
+      <Modal title="新增卡类型" open={creating} onCancel={() => setCreating(false)} footer={null} destroyOnHidden width={680}>
+        <CardCreate
+          student={props.student}
+          coaches={props.coaches}
+          services={props.services}
+          groups={props.groups}
+          onChanged={async () => {
+            setCreating(false)
+            await props.onChanged()
+          }}
+        />
+      </Modal>
       <Modal title="编辑课时卡" open={!!editing} onCancel={() => setEditing(null)} footer={null} destroyOnHidden>
         {editing ? (
           <Form
@@ -77,17 +113,28 @@ export function CardDesk(props: { student: Student; coaches: Named[]; services: 
             }}
           >
             <Form.Item name="cardName" label="名称"><Input /></Form.Item>
-            {String(editing.cardCategory || '').toUpperCase() === 'PERIOD' ? <Form.Item name="periodType" label="时段"><PeriodTypeSelect locked={editing.periodTypeEditable === false} /></Form.Item> : null}
-            {String(editing.cardCategory || '').toUpperCase() !== 'HOURS' ? <Form.Item name="courseCategory" label="包含课程" valuePropName="checked"><Switch /></Form.Item> : null}
-            <CourseField groups={props.groups} category={String(editing.cardCategory || '').toUpperCase()} name="studentGroupId" coachField="coachMemberIds" courseFlag="courseCategory" originalId={editing.studentGroupId} />
-            <Form.Item name="coachMemberIds" label="选择老师" extra={<CoachHint />}><CoachMultiSelect coaches={props.coaches} /></Form.Item>
-            {String(editing.cardCategory || '').toUpperCase() !== 'HOURS' ? <Form.Item name="serviceItemIds" label="适用服务（多选）"><ServiceMultiSelect services={props.services.filter((item) => (item.enabled !== 0 && item.enabled !== false) || (editing.serviceItemIds || []).includes(item.id))} /></Form.Item> : null}
-            {String(editing.cardCategory || '').toUpperCase() === 'STORED_VALUE' ? <StoredRights services={props.services} /> : null}
+            <CardEditBindingFields card={editing} coaches={props.coaches} services={props.services} groups={props.groups} />
             <CardSaveButton card={editing} groups={props.groups} services={props.services} />
           </Form>
         ) : null}
       </Modal>
-    </Space>
+    </section>
+  )
+}
+
+function CardEditBindingFields(props: { card: Card; coaches: Named[]; services: Named[]; groups: Named[] }) {
+  const category = String(props.card.cardCategory || '').toUpperCase()
+  const courseFlag = Form.useWatch('courseCategory')
+  const course = category === 'HOURS' || courseFlag !== false
+  return (
+    <>
+      {category === 'PERIOD' ? <Form.Item name="periodType" label="时段"><PeriodTypeSelect locked={props.card.periodTypeEditable === false} /></Form.Item> : null}
+      {category !== 'HOURS' ? <Form.Item name="courseCategory" label="包含课程" valuePropName="checked"><Switch /></Form.Item> : null}
+      {course ? <CourseField groups={props.groups} category={category} name="studentGroupId" coachField="coachMemberIds" courseFlag="courseCategory" originalId={props.card.studentGroupId} /> : null}
+      {course ? <Form.Item name="coachMemberIds" label="选择老师"><CoachMultiSelect coaches={props.coaches} /></Form.Item> : null}
+      {category !== 'HOURS' ? <Form.Item name="serviceItemIds" label="适用服务（多选）"><ServiceMultiSelect services={props.services.filter((item) => (item.enabled !== 0 && item.enabled !== false) || (props.card.serviceItemIds || []).includes(item.id))} /></Form.Item> : null}
+      {category === 'STORED_VALUE' ? <StoredRights services={props.services} /> : null}
+    </>
   )
 }
 
@@ -369,7 +416,7 @@ export function CardCreate(props: { student: Student; coaches: Named[]; services
       {category !== 'HOURS' ? <Form.Item name="courseCategory" label="包含课程" valuePropName="checked"><Switch /></Form.Item> : null}
       {course ? <CourseField groups={props.groups} category={category} name="studentGroupId" coachField="coachMemberIds" courseFlag="courseCategory" /> : null}
       {course ? (
-        <Form.Item name="coachMemberIds" label="选择老师" extra={<CoachHint />}>
+        <Form.Item name="coachMemberIds" label="选择老师">
           <CoachMultiSelect coaches={props.coaches} />
         </Form.Item>
       ) : null}

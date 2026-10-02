@@ -1,16 +1,17 @@
-import { Button, Form, Input, Modal, Popconfirm, Select, Space, Switch, Table, Tabs, message } from 'antd'
+import { Button, Form, Input, Modal, Popconfirm, Space, Switch, Tabs, message } from 'antd'
 import { useEffect, useState } from 'react'
 import { delJson, postJson, putJson } from '../api/biz'
-import { genderText, money, tell } from './kit'
+import { AppIcon, genderText, money, studentStatusText, tell } from './kit'
 import type { Student, Named, PayRecord, PayLaunch, CheckRecord } from './students-model'
 import { CardDesk } from './student-card-desk'
 import { CampusTransfer } from './student-campus-transfer'
-import { BirthDateItem, CoachSaveButton, PhoneActions, ProfileSaveButton, campusProfile, coachIdsKey, createdAtText, detailTabKey, profileProblem } from './student-profile'
-import { TeacherPaymentList, canAdjustPayment, canEditPayment, childPaymentDisplay, deletePaymentContent, deletePaymentPeerLabel, deletePaymentTitle, groupPayments, paymentAmountText, paymentAvgText, paymentChildLine, paymentCommissionText, paymentRemainingText, paymentRemarkText, paymentSummaryMetrics, paymentValidityCell, supplementSectionFoldable, supplementSectionTitle } from './student-payments'
+import { BirthDateItem, PhoneActions, ProfileSaveButton, campusProfile, coachIdsKey, createdAtText, detailTabKey, profileProblem } from './student-profile'
+import { TeacherPaymentList } from './student-payments'
 import { PaymentEditor } from './student-payment-editor'
-import { CheckInPanel, CourseRecords } from './student-checkins'
+import { CheckInPanel } from './student-checkins'
+import { StudentPaymentHistory } from './student-payment-history'
 import { FeeItems } from './student-fees'
-import { AssignedCoaches, CardRecordTabs, ChoiceTabs, CoachHint, archiveHint, canArchiveStudent, cardBalanceView, cardValidityLine, lastCheckInText, orderedStudentCards, paymentBlockReason, personName, saveActiveCardCoaches, showsCardCoaches } from './students-domain'
+import { AssignedCoaches, ChoiceTabs, archiveHint, canArchiveStudent, cardBalanceView, cardValidityLine, courseCoachCount, lastCheckInText, orderedStudentCards, paymentBlockReason, personName, saveActiveCardCoaches, showsCardCoaches } from './students-domain'
 
 export function StudentDetail(props: {
   tab?: string
@@ -34,31 +35,84 @@ export function StudentDetail(props: {
   onChanged: () => Promise<void>
   onAccess: (enabled: boolean) => Promise<void>
   onLocal: (patch: Partial<Student>) => void
-  onCheckIn: () => void
+  onDeleted: () => void
+  onCheckIn: (cardId?: number) => void
   reloadList: () => void
 }) {
   const student = props.student
   const cards = orderedStudentCards(student.cards || [])
   const [activeCardId, setActiveCardId] = useState<number | undefined>(cards[0]?.id)
-  const [openSupplementIds, setOpenSupplementIds] = useState<number[]>([])
+  const [paymentCardId, setPaymentCardId] = useState<number | undefined>(cards[0]?.id)
   const [detailTab, setDetailTab] = useState(detailTabKey(props.tab))
   useEffect(() => { setDetailTab(detailTabKey(props.tab)) }, [props.tab])
   const activeCard = cards.find((card) => card.id === activeCardId) || cards[0]
-  const activeIndex = Math.max(0, cards.findIndex((card) => card.id === activeCard?.id))
   const balance = activeCard ? cardBalanceView(activeCard) : null
   const validity = activeCard ? cardValidityLine(activeCard) : null
   const serviceNames = (activeCard?.serviceItemNames || []).map((item) => String(item || '').trim()).filter(Boolean)
   const profile = campusProfile(student, props.campuses)
   const created = createdAtText(student.createTime)
-  const expiredHours = Number(activeCard?.expiredHours || 0)
+  const statusText = studentStatusText(student)
+  const statusTone = statusText === '结业' ? 'graduated' : statusText === '待缴费' ? 'pending' : 'active'
+  const cardFacts = [
+    activeCard?.courseCategory !== false && activeCard?.studentGroupName ? { label: '课程', value: activeCard.studentGroupName } : null,
+    serviceNames.length ? { label: '适用服务', value: serviceNames.join('、') } : null,
+    lastCheckInText(activeCard?.lastCourseDate) ? { label: '最后打卡', value: lastCheckInText(activeCard?.lastCourseDate) } : null,
+    validity ? { label: validity.label, value: validity.text } : null,
+    profile.campus ? { label: profile.label, value: profile.campus } : null,
+    profile.source ? { label: '来源', value: profile.source } : null,
+    created ? { label: '创建时间', value: created } : null,
+  ].filter((item): item is { label: string; value: string } => !!item)
   const [savingProfile, setSavingProfile] = useState(false)
+  const [profileEditing, setProfileEditing] = useState(false)
+  const [feeItemsOpen, setFeeItemsOpen] = useState(false)
+  const [coachEditing, setCoachEditing] = useState(false)
+  const [coachDraft, setCoachDraft] = useState<number[]>([])
+  const [savingCoaches, setSavingCoaches] = useState(false)
+  const coachAssignmentDisabled = Number(student.status || 0) === 2 || courseCoachCount(student, activeCard, props.groups) > 1
+  const assignableCoaches = props.coaches.filter((item) => Number(item.status ?? 1) !== 0)
   useEffect(() => {
     if (activeCard?.id && activeCard.id !== activeCardId) setActiveCardId(activeCard.id)
   }, [student.id, cards.map((card) => card.id).join('|')])
+  useEffect(() => { setPaymentCardId(activeCard?.id) }, [activeCard?.id])
+  useEffect(() => {
+    setProfileEditing(false)
+    setFeeItemsOpen(false)
+    setCoachEditing(false)
+  }, [student.id])
+  useEffect(() => { setCoachEditing(false) }, [activeCard?.id])
+  async function saveProfile(values: { name: string; gender?: number; phone?: string; birthDate?: string; remark?: string }) {
+    if (savingProfile) return
+    const problem = profileProblem(values, student)
+    if (problem === 'unchanged') return
+    if (problem) {
+      message.warning(problem)
+      return
+    }
+    setSavingProfile(true)
+    try {
+      const birthDate = String(values.birthDate || '').trim()
+      await putJson(`/students/${student.id}`, {
+        ...values,
+        name: values.name.trim(),
+        phone: String(values.phone || '').trim(),
+        birthDate: birthDate || undefined,
+        clearBirthDate: !birthDate,
+      })
+      message.success('资料已保存')
+      setProfileEditing(false)
+      await props.onChanged()
+      props.reloadList()
+    } catch (error) {
+      message.error(tell(error, '保存失败'))
+    } finally {
+      setSavingProfile(false)
+    }
+  }
   return (
-    <Space direction="vertical" style={{ width: '100%' }} size={16}>
-    {props.manage ? null : <p>{props.readOnlyText}</p>}
+    <div className="student-detail">
+    {props.manage ? null : <div className="student-detail-readonly">{props.readOnlyText}</div>}
     <Tabs
+      className="student-detail-tabs"
       activeKey={detailTab}
       onChange={setDetailTab}
       items={[
@@ -66,145 +120,105 @@ export function StudentDetail(props: {
           key: 'base',
           label: '基本信息',
           children: (
-            <Space direction="vertical" style={{ width: '100%' }} size={16}>
-              {activeCard && balance ? (
-                <>
-                  <div className="card-switch">
-                    {cards.length > 1 ? <Button disabled={activeIndex <= 0} onClick={() => setActiveCardId(cards[activeIndex - 1]?.id)}>上一张</Button> : <span />}
+            <div className="student-detail-base">
+              <section className="student-detail-overview-panel">
+                <div className="student-detail-overview-main">
+                  <div className="student-detail-identity">
+                    <span className={`student-detail-avatar is-${Number(student.gender) === 2 ? 'female' : Number(student.gender) === 1 ? 'male' : 'neutral'}`}>{Array.from(student.name || '学')[0]}</span>
                     <div>
-                      <strong>{balance.value}</strong>
-                      <em>{balance.tag} · {balance.metric}{cards.length > 1 ? ` · ${activeIndex + 1}/${cards.length}` : ''}</em>
-                      {expiredHours > 0 && String(activeCard.cardCategory || '').toUpperCase() === 'HOURS' ? <em className="card-switch-extra">{expiredHours}课时过期</em> : null}
+                      <div className="student-detail-name-row">
+                        <h2>{student.name}</h2>
+                        {genderText(student.gender) ? <span className={`student-detail-gender is-${Number(student.gender) === 2 ? 'female' : 'male'}`}>{genderText(student.gender)}</span> : null}
+                        <span className={`student-detail-status is-${statusTone}`}>{statusText}</span>
+                      </div>
+                      {profile.campus ? <p>{profile.campus}</p> : null}
                     </div>
-                    {cards.length > 1 ? <Button disabled={activeIndex >= cards.length - 1} onClick={() => setActiveCardId(cards[activeIndex + 1]?.id)}>下一张</Button> : <span />}
                   </div>
-                  <dl className="card-facts">
-                    {activeCard.courseCategory !== false && activeCard.studentGroupName ? <><dt>课程</dt><dd>{activeCard.studentGroupName}</dd></> : null}
-                    {serviceNames.length ? <><dt>服务</dt><dd>{serviceNames.join('、')}</dd></> : null}
-                    {lastCheckInText(activeCard.lastCourseDate) ? <><dt>最后打卡时间</dt><dd>{lastCheckInText(activeCard.lastCourseDate)}</dd></> : null}
-                    {validity ? <><dt>{validity.label}</dt><dd>{validity.text}</dd></> : null}
-                    {profile.campus ? <><dt>{profile.label}</dt><dd>{profile.campus}</dd></> : null}
-                    {profile.source ? <><dt>来源</dt><dd>{profile.source}</dd></> : null}
-                    {created ? <><dt>创建时间</dt><dd>{created}</dd></> : null}
-                  </dl>
-                </>
-              ) : null}
-              {props.manage ? <Form
-                layout="vertical"
-                initialValues={student}
-                onFinish={async (values: { name: string; gender?: number; phone?: string; birthDate?: string; remark?: string }) => {
-                  if (savingProfile) return
-                  const problem = profileProblem(values, student)
-                  if (problem === 'unchanged') return
-                  if (problem) {
-                    message.warning(problem)
-                    return
-                  }
-                  setSavingProfile(true)
-                  try {
-                    const birthDate = String(values.birthDate || '').trim()
-                    await putJson(`/students/${student.id}`, {
-                      ...values,
-                      name: values.name.trim(),
-                      phone: String(values.phone || '').trim(),
-                      birthDate: birthDate || undefined,
-                      clearBirthDate: !birthDate,
-                    })
-                    message.success('资料已保存')
-                    await props.onChanged()
-                    props.reloadList()
-                  } catch (error) {
-                    message.error(tell(error, '保存失败'))
-                  } finally {
-                    setSavingProfile(false)
-                  }
-                }}
-              >
-                <Form.Item name="name" label="姓名" rules={[{ required: true, whitespace: true, message: '请输入学员姓名' }, { max: 6, message: '学员姓名不能超过6个字' }]}><Input maxLength={6} /></Form.Item>
-                <Form.Item name="gender" label="性别" rules={[{ required: true, message: '请选择性别' }]}>
-                  <ChoiceTabs options={[{ value: 1, label: '男', icon: 'icon-gender-male' }, { value: 2, label: '女', icon: 'icon-gender-female' }]} />
-                </Form.Item>
-                <Form.Item name="phone" label="电话" extra={<PhoneActions />} rules={[{ pattern: /^$|^1[3-9]\d{9}$/, message: '请输入11位正确手机号' }]}><Input maxLength={11} /></Form.Item>
-                <BirthDateItem />
-                <Form.Item name="remark" label="备注"><Input.TextArea rows={2} maxLength={200} /></Form.Item>
-                <ProfileSaveButton student={student} saving={savingProfile} />
-              </Form> : (
-                <dl className="card-facts">
-                  <dt>姓名</dt><dd>{student.name}</dd>
-                  <dt>性别</dt><dd>{genderText(student.gender) || '未填'}</dd>
-                  {student.phone ? <><dt>电话</dt><dd>{student.phone}</dd></> : null}
-                  {student.birthDate ? <><dt>出生日期</dt><dd>{student.birthDate}</dd></> : null}
-                  {student.remark ? <><dt>备注</dt><dd>{student.remark}</dd></> : null}
-                </dl>
-              )}
-              {props.manage && showsCardCoaches(activeCard) ? (
-              <AssignedCoaches
-                student={student}
-                card={activeCard}
-                coaches={props.coaches}
-                groups={props.groups}
-                onChanged={props.onChanged}
-              />
-              ) : null}
-              {props.manage && showsCardCoaches(activeCard) ? (
-              <Form
-                key={`coaches-${activeCard?.id || student.id}`}
-                layout="vertical"
-                initialValues={{ coachMemberIds: activeCard?.coachMemberIds || student.coachMemberIds || [] }}
-                onFinish={async (values: { coachMemberIds: number[] }) => {
-                  if (Number(student.status || 0) === 2) {
-                    message.warning('该学员已结业，不能调整老师')
-                    return
-                  }
-                  const coachMemberIds = (values.coachMemberIds || []).map(Number).filter((id) => id > 0)
-                  const originalIds = coachIdsKey(activeCard?.coachMemberIds?.length ? activeCard.coachMemberIds : student.coachMemberIds)
-                  if (!coachMemberIds.length) {
-                    message.warning('请至少选择一位老师')
-                    return
-                  }
-                  if (coachIdsKey(coachMemberIds) === originalIds) return
-                  try {
-                    await saveActiveCardCoaches(student, activeCard, coachMemberIds)
-                    if (!coachMemberIds.length) return
-                    message.success('老师已更新')
-                    await props.onChanged()
-                  } catch (error) {
-                    message.error(tell(error, '老师保存失败'))
-                  }
-                }}
-              >
-                <Form.Item name="coachMemberIds" label="授课老师" extra={<CoachHint />}>
-                  <Select mode="multiple" options={props.coaches.map((item) => ({ value: item.id, label: personName(item) }))} />
-                </Form.Item>
-                <CoachSaveButton student={student} card={activeCard} />
-              </Form>
-              ) : null}
-              {props.manage ? <CardDesk student={student} coaches={props.coaches} services={props.services} groups={props.groups} onChanged={props.onChanged} /> : null}
-              {props.manage ? <Space direction="vertical">
-                <span>{archiveHint(student)}</span>
-                <Space wrap>
-                  {student.status !== 2 && !canArchiveStudent(student) ? (
-                    <Button onClick={() => message.warning('仍有卡权益未用尽或未到期，不能归档')}>归档结业</Button>
-                  ) : (
-                  <Popconfirm
-                    title={student.status === 2 ? '恢复在学' : '归档结业'}
-                    description={student.status === 2 ? `确定将学员“${student.name}”恢复为在学状态吗？` : `确定将学员“${student.name}”归档为结业吗？归档后仍可查看历史记录。`}
-                    okText={student.status === 2 ? '确认恢复' : '确认归档'}
-                    cancelText="取消"
-                    onConfirm={async () => {
-                      try {
-                        await putJson(`/students/${student.id}/status`, { status: student.status === 2 ? 1 : 2 })
-                        message.success(student.status === 2 ? '已恢复在学' : '已归档结业')
-                        await props.onChanged()
-                        props.reloadList()
-                      } catch (error) {
-                        message.error(tell(error, student.status === 2 ? '恢复失败' : '归档失败'))
-                      }
-                    }}
-                  >
-                    <Button>{student.status === 2 ? '恢复在学' : '归档结业'}</Button>
-                  </Popconfirm>
-                  )}
+                  {cards.length === 1 && balance ? <div className="student-single-card-summary" aria-label={`${balance.tag}，${balance.metric} ${balance.value}`}>
+                    <strong>{balance.value}</strong>
+                    <span><b>{balance.tag}</b><em>{balance.metric}</em></span>
+                  </div> : null}
+                  {props.manage ? <div className="student-detail-quick-actions">
+                    <Button disabled={Number(student.status || 0) === 2} onClick={() => setProfileEditing(true)}>编辑</Button>
+                    <Button type="primary" disabled={Number(student.status || 0) === 2 || !activeCard} onClick={() => props.onCheckIn(activeCard?.id)}>打卡</Button>
+                    <Button onClick={() => {
+                      const reason = paymentBlockReason(student)
+                      if (reason) return message.warning(reason)
+                      props.setPayOpen('new')
+                    }}>缴费</Button>
+                  </div> : null}
+                </div>
+                {cards.length > 1 ? <div className="student-card-tabs" role="tablist" aria-label="切换学员卡">
+                  {cards.map((card) => {
+                    const cardView = cardBalanceView(card)
+                    const selected = card.id === activeCard?.id
+                    return <button key={card.id || `${card.cardName}-${card.studentGroupName}`} type="button" role="tab" aria-selected={selected} className={selected ? 'is-active' : ''} onClick={() => setActiveCardId(card.id)}><span>{card.cardName || card.studentGroupName || cardView.tag}</span><em>{cardView.tag} · {cardView.value}</em></button>
+                  })}
+                </div> : cards.length ? null : <div className="student-card-tabs"><span className="student-card-tabs-empty">暂无课程卡，请点击“编辑”新增</span></div>}
+              </section>
+
+              <div className="student-detail-side-stack">
+                  <section className="student-detail-panel student-rights-panel">
+                    <header className="student-detail-section-head">
+                      <div>
+                        <div className="student-detail-heading-line">
+                          <h3>{activeCard?.cardName || activeCard?.studentGroupName || '当前卡信息'}</h3>
+                          {student.phone && props.accessVisible ? <button
+                            className="student-parent-access-info"
+                            type="button"
+                            aria-label="允许家长查看说明"
+                            onClick={() => Modal.info({
+                              title: '允许家长查看',
+                              content: '打开右侧开关后，使用该联系电话登录的家长可在家长端查看本学员的课表、缴费记录和上课记录。默认关闭。',
+                              okText: '我知道了',
+                            })}
+                          >i</button> : null}
+                        </div>
+                        <p>当前选中的课程权益</p>
+                      </div>
+                      {balance ? <span className="student-detail-card-type">{balance.tag}</span> : null}
+                    </header>
+                    {balance ? <div className="student-card-balance-inline"><span>{balance.metric}</span><strong>{balance.value}</strong></div> : null}
+                    {cardFacts.length ? <dl className="student-detail-facts">
+                      {cardFacts.map((item) => <div key={item.label}><dt>{item.label}</dt><dd>{item.value}</dd></div>)}
+                    </dl> : <p className="student-detail-empty-text">暂无课程与卡片信息</p>}
+                    {student.phone ? <div className="student-contact-access">
+                      <div className="student-contact-access-row">
+                        <span>联系电话</span>
+                        <div>
+                          <a href={`tel:${student.phone}`}>{student.phone}</a>
+                          {props.accessVisible && props.manage ? <Switch aria-label="允许家长查看" checked={props.accessOn} onChange={(checked) => props.onAccess(checked).catch((error) => message.error(tell(error, '更新失败')))} /> : null}
+                        </div>
+                      </div>
+                      {props.accessVisible && props.manage && props.accessOn ? <Button className="student-parent-fee-entry" type="text" onClick={() => setFeeItemsOpen(true)}><span>家长可缴项目</span><em>管理</em></Button> : null}
+                    </div> : null}
+                  </section>
+
+                  {props.manage && showsCardCoaches(activeCard) ? (
+                    <section className="student-detail-panel student-detail-teachers">
+                      <header className="student-detail-section-head">
+                        <div><h3>分配的老师</h3></div>
+                        <Button
+                          className="student-coach-assign-link"
+                          type="link"
+                          disabled={coachAssignmentDisabled}
+                          onClick={() => {
+                            const ids = activeCard?.coachMemberIds?.length ? activeCard.coachMemberIds : (student.coachMemberIds || [])
+                            setCoachDraft(Array.from(new Set(ids.map(Number).filter((id) => id > 0))))
+                            setCoachEditing(true)
+                          }}
+                        >分配老师</Button>
+                      </header>
+                      <AssignedCoaches student={student} card={activeCard} coaches={props.coaches} groups={props.groups} onChanged={props.onChanged} />
+                    </section>
+                  ) : null}
+              </div>
+
+              {props.manage ? <section className="student-detail-panel student-actions-panel">
+                <header className="student-detail-section-head">
+                  <div><h3>学员操作</h3><p>{archiveHint(student)}</p></div>
+                </header>
+                <div className="student-detail-record-actions">
                   <CampusTransfer student={student} campuses={props.campuses} onDone={props.onChanged} />
                   <Popconfirm
                     title={`确定删除学员“${student.name}”吗？`}
@@ -213,8 +227,7 @@ export function StudentDetail(props: {
                       try {
                         await delJson(`/students/${student.id}`)
                         message.success('已删除')
-                        props.reloadList()
-                        props.onLocal({})
+                        props.onDeleted()
                       } catch (error) {
                         message.error(tell(error, '删除失败'))
                       }
@@ -222,10 +235,32 @@ export function StudentDetail(props: {
                   >
                     <Button danger disabled={student.canDelete === false}>删除学员</Button>
                   </Popconfirm>
-                </Space>
-                {student.canDelete === false ? <span>{student.deleteBlockedReason || '当前学员暂不满足删除条件'}</span> : null}
-              </Space> : null}
-            </Space>
+                  {student.status !== 2 && !canArchiveStudent(student) ? (
+                    <Button onClick={() => message.warning('仍有卡权益未用尽或未到期，不能归档')}>归档结业</Button>
+                  ) : (
+                    <Popconfirm
+                      title={student.status === 2 ? '恢复在学' : '归档结业'}
+                      description={student.status === 2 ? `确定将学员“${student.name}”恢复为在学状态吗？` : `确定将学员“${student.name}”归档为结业吗？归档后仍可查看历史记录。`}
+                      okText={student.status === 2 ? '确认恢复' : '确认归档'}
+                      cancelText="取消"
+                      onConfirm={async () => {
+                        try {
+                          await putJson(`/students/${student.id}/status`, { status: student.status === 2 ? 1 : 2 })
+                          message.success(student.status === 2 ? '已恢复在学' : '已归档结业')
+                          await props.onChanged()
+                          props.reloadList()
+                        } catch (error) {
+                          message.error(tell(error, student.status === 2 ? '恢复失败' : '归档失败'))
+                        }
+                      }}
+                    >
+                      <Button>{student.status === 2 ? '恢复在学' : '归档结业'}</Button>
+                    </Popconfirm>
+                  )}
+                </div>
+                {student.canDelete === false ? <p className="student-detail-operation-note">{student.deleteBlockedReason || '当前学员暂不满足删除条件'}</p> : null}
+              </section> : null}
+            </div>
           ),
         },
         {
@@ -233,9 +268,9 @@ export function StudentDetail(props: {
           label: '缴费记录',
           children: (
             <Space direction="vertical" style={{ width: '100%' }}>
-              {props.manage ? props.orders.map((order) => (
-                <Space key={String(order.orderNo)}>
-                  <span>家长已支付，尚未入账 · {String(order.itemName || order.orderNo)} · {money(order.amount)}</span>
+              {props.manage && props.orders.length ? <div className="student-parent-orders">{props.orders.map((order) => (
+                <div key={String(order.orderNo)}>
+                  <span><strong>家长已支付，尚未入账</strong>{String(order.itemName || order.orderNo)} · ¥{money(order.amount)}</span>
                   <Button onClick={async () => {
                     try {
                       await postJson(`/parent-admin/orders/${order.orderNo}/book`)
@@ -245,126 +280,26 @@ export function StudentDetail(props: {
                       message.error(tell(error, '记入失败'))
                     }
                   }}>记入缴费</Button>
-                </Space>
-              )) : null}
-              {props.manage ? <Button type="primary" onClick={() => {
-                const reason = paymentBlockReason(student)
-                if (reason) {
-                  message.warning(reason)
-                  return
-                }
-                props.setPayOpen('new')
-              }}>缴费</Button> : null}
-              {props.financialHidden ? <TeacherPaymentList payments={props.payments} cards={student.cards || []} /> : (
-              <CardRecordTabs cards={student.cards} rows={props.payments} focusId={activeCard?.id}>
-              {(rows, card) => {
-                const summary = paymentSummaryMetrics(rows, card, student, props.financialHidden)
-                const paymentColumns = (kind: 'main' | 'child') => [
-                  { title: '类型', dataIndex: 'typeText', render: (value: string, row: PayRecord) => `${value || row.type || ''}${props.parentPaidIds.includes(row.id) ? ' · 家长缴费' : ''}` },
-                  ...(kind === 'child' ? [{ title: '说明', render: (_: unknown, row: PayRecord) => paymentChildLine(row, props.financialHidden) }] : []),
-                  { title: '日期', dataIndex: 'paymentDate' },
-                  { title: '课程', render: (_: unknown, row: PayRecord) => row.courseTypeLabel || row.courseType },
-                  { title: '金额', render: (_: unknown, row: PayRecord) => props.financialHidden ? '' : paymentAmountText(row, kind === 'main') },
-                  { title: '均价', render: (_: unknown, row: PayRecord) => props.financialHidden ? '' : paymentAvgText(row) },
-                  { title: '补充', render: (_: unknown, row: PayRecord) => [paymentCommissionText(row) ? `提成：${paymentCommissionText(row)}` : '', paymentRemarkText(row)].filter(Boolean).join('；') },
-                  { title: '正课', dataIndex: 'hours' },
-                  { title: '赠课', dataIndex: 'giftHours' },
-                  { title: '剩余', render: (_: unknown, row: PayRecord) => paymentRemainingText(row, card, student, kind) },
-                  { title: '有效期', render: (_: unknown, row: PayRecord) => {
-                    const view = paymentValidityCell(row, card, student, kind)
-                    return view.text ? <span className={view.tone ? `pay-validity is-${view.tone}` : 'pay-validity'}>{view.text}</span> : ''
-                  } },
-                  {
-                    title: '操作',
-                    render: (_: unknown, row: PayRecord) => (
-                      <Space>
-                        {kind === 'main' && canAdjustPayment(row) ? <Button type="link" onClick={() => props.setPayOpen({ adjust: row })}>调整</Button> : null}
-                        {(kind === 'child' ? canEditPayment(row) : row.adjustmentReason !== 'transfer') ? <Button type="link" onClick={() => props.setPayOpen(row)}>编辑</Button> : null}
-                        <Button type="link" danger onClick={() => {
-                          const storedService = String(row.displayMode || '').trim() === 'stored_service'
-                          const hours = Number(row.totalHours ?? (Number(row.hours || 0) + Number(row.giftHours || 0)))
-                          const serviceCount = Array.isArray(row.serviceRights) ? row.serviceRights.length : 0
-                          Modal.confirm({
-                            title: deletePaymentTitle(row),
-                            content: (
-                              <div>
-                                <p>{deletePaymentContent(row)}</p>
-                                {row.adjustmentReason === 'transfer' ? <p>关联记录：{String(row.transferTargetStudentName || '对方学员')} · {deletePaymentPeerLabel(row)}</p> : null}
-                                <p>{storedService ? `服务数量：${serviceCount} 项` : `课时数：${hours} 课时`}</p>
-                                <p>金额：¥{money(row.amount)}</p>
-                              </div>
-                            ),
-                            okText: '删除',
-                            okButtonProps: { danger: true },
-                            cancelText: '取消',
-                            onOk: async () => {
-                              try {
-                                await delJson(`/payment-records/${row.id}`)
-                                message.success('已删除')
-                                await props.onChanged()
-                              } catch (error) {
-                                message.error(tell(error, '删除失败，请稍后重试'))
-                                throw error
-                              }
-                            },
-                          })
-                        }}>删除</Button>
-                      </Space>
-                    ),
-                  },
-                ]
-                const grouped = groupPayments(rows)
-                const shownColumns = (kind: 'main' | 'child') => props.manage ? paymentColumns(kind) : paymentColumns(kind).filter((column) => column.title !== '操作')
-                return (
-              <Space direction="vertical" style={{ width: '100%' }}>
-                {summary.head ? (
-                  <div className="profit-day-card">
-                    <div className="stat-line"><span>{summary.head.title}{summary.head.value ? <strong>{summary.head.value}</strong> : null}</span></div>
-                    {summary.head.subtitle ? <p className="schedule-meta">{summary.head.subtitle}</p> : null}
-                    {summary.head.course ? <p className="schedule-meta">{summary.head.course}</p> : null}
-                  </div>
-                ) : null}
-                {summary.metrics.length ? (
-                  <div className="stat-line">
-                    {summary.metrics.map((item) => <span key={item.label}>{item.label}<strong>{item.value}</strong></span>)}
-                  </div>
-                ) : null}
-              <Table
-                rowKey="id"
-                dataSource={grouped}
-                pagination={false}
-                locale={{ emptyText: '该卡暂无缴费记录' }}
-                columns={shownColumns('main')}
-                expandable={{
-                  rowExpandable: (row) => row.supplements.length > 0,
-                  expandedRowKeys: grouped.filter((row) => row.supplements.length > 0).map((row) => row.id),
-                  expandedRowRender: (row) => {
-                    const title = supplementSectionTitle(row.supplements)
-                    const foldable = supplementSectionFoldable(title, row.supplements.length)
-                    const open = !foldable || openSupplementIds.includes(row.id)
-                    const shown = (open ? row.supplements : row.supplements.slice(0, 1)).map((item) => childPaymentDisplay(item, row))
-                    return (
-                      <div>
-                        {title === '补缴记录' || title === '退费记录' ? null : (
-                          <button type="button" className="supplement-head" disabled={!foldable} onClick={() => {
-                            if (!foldable) return
-                            setOpenSupplementIds((current) => current.includes(row.id) ? current.filter((id) => id !== row.id) : [...current, row.id])
-                          }}>
-                            <span>{title === '金额调整记录' ? '金额调整' : title === '课时调整记录' ? '课时调整' : '调整记录'}</span>
-                            <span>共 {row.supplements.length} 笔{foldable ? (open ? ' · 收起' : ' · 展开') : ''}</span>
-                          </button>
-                        )}
-                        <Table rowKey="id" dataSource={shown} pagination={false} columns={shownColumns('child')} />
-                      </div>
-                    )
-                  },
+                </div>
+              ))}</div> : null}
+              {props.financialHidden ? <TeacherPaymentList payments={props.payments} cards={student.cards || []} /> : <StudentPaymentHistory
+                student={student}
+                rows={props.payments}
+                parentPaidIds={props.parentPaidIds}
+                manage={props.manage}
+                focusCardId={activeCard?.id}
+                onCardChange={(cardId) => {
+                  setPaymentCardId(cardId)
+                  if (cardId) setActiveCardId(cardId)
                 }}
-              />
-              </Space>
-                )
-              }}
-              </CardRecordTabs>
-              )}
+                onPay={() => {
+                  const reason = paymentBlockReason(student)
+                  if (reason) return message.warning(reason)
+                  props.setPayOpen('new')
+                }}
+                setPayOpen={props.setPayOpen}
+                onChanged={props.onChanged}
+              />}
               <PaymentEditor
                 open={props.payOpen}
                 student={student}
@@ -372,6 +307,7 @@ export function StudentDetail(props: {
                 groups={props.groups}
                 services={props.services}
                 payments={props.payments}
+                preferredCardId={paymentCardId || activeCard?.id}
                 onClose={() => props.setPayOpen(null)}
                 onSaved={async () => { props.setPayOpen(null); await props.onChanged() }}
               />
@@ -390,39 +326,93 @@ export function StudentDetail(props: {
               financialHidden={props.financialHidden}
               coaches={props.coaches}
               focusCardId={activeCard?.id}
+              onCardChange={(cardId) => { if (cardId) setActiveCardId(cardId) }}
               onCheckIn={props.onCheckIn}
               onChanged={props.onChanged}
               manage={props.manage}
             />
           ),
         },
-        {
-          key: 'lessons',
-          label: '上课记录',
-          children: <CourseRecords studentId={student.id} coaches={props.coaches} />,
-        },
-        {
-          key: 'parent',
-          label: '家长',
-          children: props.accessVisible ? (
-            <Space direction="vertical" style={{ width: '100%' }} size={16}>
-              {props.manage ? (
-                <>
-                  <div>
-                    允许家长查看
-                    <Switch checked={props.accessOn} onChange={(checked) => props.onAccess(checked).catch((error) => message.error(tell(error, '更新失败')))} />
-                  </div>
-                  <p>打开右侧开关后，使用该联系电话登录的家长可在家长端查看本学员的课表、缴费记录和上课记录。默认关闭。</p>
-                  {props.accessOn && student.phone ? <FeeItems student={student} items={props.feeItems} onChanged={props.onChanged} /> : null}
-                  {props.accessOn && !student.phone ? <p>请先填写联系电话，才能管理家长可缴项目。</p> : null}
-                </>
-              ) : <p>{props.accessOn ? '家长可以查看该学员。' : '家长查看未开启。'}</p>}
-            </Space>
-          ) : <p>当前机构未开放家长查看。</p>,
-        },
       ]}
     />
-    </Space>
+    <Modal className="student-profile-edit-modal" title="编辑基本资料" width={720} open={profileEditing} onCancel={() => setProfileEditing(false)} footer={null} destroyOnHidden>
+      <div className="student-profile-edit-shell">
+        <section className="student-profile-edit-section">
+          <header><h3>学员资料</h3><p>修改姓名、联系方式和基础档案</p></header>
+          <Form className="student-profile-form" layout="vertical" initialValues={student} onFinish={saveProfile}>
+            <div className="student-profile-grid">
+              <Form.Item name="name" label="姓名" rules={[{ required: true, whitespace: true, message: '请输入学员姓名' }, { max: 6, message: '学员姓名不能超过6个字' }]}><Input maxLength={6} /></Form.Item>
+              <Form.Item name="phone" label="联系电话" extra={<PhoneActions />} rules={[{ pattern: /^$|^1[3-9]\d{9}$/, message: '请输入11位正确手机号' }]}><Input maxLength={11} placeholder="选填" /></Form.Item>
+              <Form.Item name="gender" label="性别" rules={[{ required: true, message: '请选择性别' }]}>
+                <ChoiceTabs options={[{ value: 1, label: '男', icon: 'icon-gender-male' }, { value: 2, label: '女', icon: 'icon-gender-female' }]} />
+              </Form.Item>
+              <BirthDateItem />
+              <Form.Item className="student-profile-wide" name="remark" label="备注"><Input.TextArea rows={3} maxLength={200} placeholder="记录需要关注的学习情况或沟通事项" /></Form.Item>
+              <div className="student-profile-actions"><Button onClick={() => setProfileEditing(false)}>取消</Button><ProfileSaveButton student={student} saving={savingProfile} /></div>
+            </div>
+          </Form>
+        </section>
+        <CardDesk student={student} coaches={props.coaches} services={props.services} groups={props.groups} onChanged={props.onChanged} />
+      </div>
+    </Modal>
+    <Modal className="student-parent-fee-modal" title="家长可缴项目" width={700} open={feeItemsOpen} onCancel={() => setFeeItemsOpen(false)} footer={null} destroyOnHidden>
+      <p className="student-parent-fee-intro">家长只能选择这里配置的项目，支付成功后会直接记入缴费记录。</p>
+      <FeeItems student={student} items={props.feeItems} onChanged={props.onChanged} />
+    </Modal>
+    <Modal
+      className="student-coach-assign-modal"
+      title={`为 ${student.name} 分配老师`}
+      width={560}
+      open={coachEditing}
+      onCancel={() => setCoachEditing(false)}
+      destroyOnHidden
+      footer={[
+        <Button key="cancel" disabled={savingCoaches} onClick={() => setCoachEditing(false)}>取消</Button>,
+        <Button
+          key="save"
+          type="primary"
+          loading={savingCoaches}
+          disabled={!coachDraft.length}
+          onClick={async () => {
+            if (!coachDraft.length) return message.warning('请至少选择一位老师')
+            if (coachIdsKey(coachDraft) === coachIdsKey(activeCard?.coachMemberIds?.length ? activeCard.coachMemberIds : student.coachMemberIds)) {
+              setCoachEditing(false)
+              return
+            }
+            setSavingCoaches(true)
+            try {
+              await saveActiveCardCoaches(student, activeCard, coachDraft)
+              message.success('分配成功')
+              setCoachEditing(false)
+              await props.onChanged()
+            } catch (error) {
+              message.error(tell(error, '分配失败'))
+            } finally {
+              setSavingCoaches(false)
+            }
+          }}
+        >确定</Button>,
+      ]}
+    >
+      <p className="student-coach-assign-subtitle">直接选择老师即可，可多选</p>
+      <div className="student-coach-assign-section-title">选择老师</div>
+      {assignableCoaches.length ? <div className="student-coach-choice-grid">
+        {assignableCoaches.map((coach) => {
+          const selected = coachDraft.includes(Number(coach.id))
+          const female = Number(coach.gender) === 2 || String(coach.gender).toLowerCase() === 'female'
+          return <button
+            key={coach.id}
+            type="button"
+            className={selected ? 'is-selected' : ''}
+            aria-pressed={selected}
+            onClick={() => setCoachDraft((current) => selected ? current.filter((id) => id !== coach.id) : [...current, coach.id])}
+          >
+            <span className={female ? 'is-female' : 'is-male'}><AppIcon name={female ? 'icon-gender-female' : 'icon-gender-male'} size={14} /></span>
+            <strong>{personName(coach)}</strong>
+          </button>
+        })}
+      </div> : <p className="student-coach-choice-empty">当前校区暂无老师</p>}
+    </Modal>
+    </div>
   )
 }
-

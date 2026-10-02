@@ -1,6 +1,7 @@
 import { Button, Form, Input, Modal, Select, Space, Switch, Table, message } from 'antd'
 import { useEffect, useState } from 'react'
 import { delJson, getJson, postJson, putJson } from '../api/biz'
+import { BusinessDatePicker } from '../components/BusinessDatePicker'
 import { PhoneCopyButton, copyPlainText, tell } from './kit'
 import type { Campus, Person, Position } from './campus-model'
 function isIdCard(value: string) {
@@ -286,7 +287,7 @@ export function Teachers({ campusId }: { campusId: number | null }) {
         <Form.Item noStyle shouldUpdate>
           {(form) => <Form.Item label="出生日期"><Input disabled placeholder="输入身份证号后自动带出" value={birthDateFromIdCard(form.getFieldValue('idCard'))} /></Form.Item>}
         </Form.Item>
-        <Form.Item name="hireDate" label="入职日期" rules={[{ required: true, message: '请选择入职日期' }]}><Input type="date" /></Form.Item>
+        <Form.Item name="hireDate" label="入职日期" rules={[{ required: true, message: '请选择入职日期' }]}><BusinessDatePicker /></Form.Item>
         <Form.Item name="positionId" label="职位" className="staff-form-full" rules={[{ required: true, message: '请选择职位' }]}><Select allowClear placeholder="请选择职位" options={roleChoices(positions, rows)} /></Form.Item>
         <div className="staff-form-full staff-switch-form-item">
           <div className="staff-switch-copy"><strong>是否为带课老师</strong><span>开启后可继续设置是否自动创建一对一课程</span></div>
@@ -502,7 +503,7 @@ export function Teachers({ campusId }: { campusId: number | null }) {
           >
             <Form.Item name="nickname" label="姓名"><Input maxLength={6} disabled /></Form.Item>
             <Form.Item name="phone" label="手机号"><Input maxLength={11} disabled /></Form.Item>
-            <Form.Item name="hireDate" label="入职日期" extra="用于按记薪周期统计固定工资" rules={[{ required: true, message: '请选择入职日期' }]}><Input type="date" /></Form.Item>
+            <Form.Item name="hireDate" label="入职日期" extra="用于按记薪周期统计固定工资" rules={[{ required: true, message: '请选择入职日期' }]}><BusinessDatePicker /></Form.Item>
             <Form.Item name="idCard" label="身份证号"><Input maxLength={18} /></Form.Item>
             <Form.Item label="出生日期" shouldUpdate>
               {() => <Input disabled placeholder="输入身份证号后自动带出" value={birthDateFromIdCard(editForm.getFieldValue('idCard'))} />}

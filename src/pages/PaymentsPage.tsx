@@ -2,6 +2,7 @@ import { Button, Input, Select, Table, Tabs, message } from 'antd'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getJson } from '../api/biz'
+import { BusinessDateRangePicker } from '../components/BusinessDatePicker'
 import { MetricBars } from './bars'
 import { NeedCampus, PageHead, money, tell, useShell } from './kit'
 
@@ -210,7 +211,13 @@ export function PaymentsPage() {
             ]}
           />
         ) : null}
-        <Select style={{ width: 120 }} value={timeRange} onChange={setTimeRange} options={[{ value: 'all', label: '全部时间' }, { value: 'today', label: '今天' }, { value: 'month', label: '本月' }, { value: 'custom', label: '自定义' }]} />
+        <Select style={{ width: 120 }} value={timeRange} onChange={(value) => {
+          if (value === 'custom' && (!custom[0] || !custom[1])) {
+            const day = today()
+            setCustom([day, day])
+          }
+          setTimeRange(value)
+        }} options={[{ value: 'all', label: '全部时间' }, { value: 'today', label: '今天' }, { value: 'month', label: '本月' }, { value: 'custom', label: '自定义' }]} />
         {timeRange === 'custom' ? <DateSpan range={custom} onChange={setCustom} /> : null}
         <Select style={{ width: 120 }} value={type} onChange={setType} options={[{ value: 'all', label: '全部类型' }, { value: 'new', label: '新增' }, { value: 'renew', label: '续费' }, { value: 'supplement', label: '补缴' }, { value: 'adjustment', label: '课时调整' }, { value: 'refund', label: '退费' }]} />
         <Select style={{ width: 140 }} value={sort} onChange={setSort} options={[{ value: 'date_desc', label: '日期最新' }, { value: 'date_asc', label: '日期最早' }, { value: 'amount_desc', label: '金额从高到低' }, { value: 'amount_asc', label: '金额从低到高' }]} />
@@ -487,10 +494,5 @@ function typeLabel(value: string): string {
 }
 
 function DateSpan(props: { range: [string, string]; onChange: (value: [string, string]) => void }) {
-  return (
-    <span>
-      <input type="date" value={props.range[0]} onChange={(event) => props.onChange([event.target.value, props.range[1]])} />
-      <input type="date" value={props.range[1]} onChange={(event) => props.onChange([props.range[0], event.target.value])} />
-    </span>
-  )
+  return <BusinessDateRangePicker value={props.range} onChange={props.onChange} style={{ width: 286 }} />
 }

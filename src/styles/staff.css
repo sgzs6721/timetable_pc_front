@@ -96,8 +96,8 @@
 .staff-form-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 10px;
-  margin-top: 4px;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
 }
 
 .service-settings-card {
@@ -145,7 +145,8 @@
 
 .campus-list-actions .ant-btn,
 .campus-list-actions .ant-select-selector {
-  min-height: 38px;
+  height: var(--control-md);
+  min-height: var(--control-md);
 }
 
 .campus-list-actions .ant-btn {
@@ -388,9 +389,9 @@
 }
 
 .campus-sub-tabs > .ant-tabs-nav {
-  margin-bottom: 16px;
-  border-color: #e1e7f1;
-  background: #f7f9fc;
+  margin-bottom: var(--space-4);
+  border-color: var(--line);
+  background: var(--surface-soft);
   box-shadow: none;
 }
 
@@ -428,27 +429,22 @@
   }
 }
 .refund-settings-tabs .ant-tabs-nav {
-  margin-bottom: 20px;
+  margin-bottom: var(--space-4);
 }
 
 .refund-settings-tabs .ant-tabs-nav-list {
-  gap: 6px;
-  padding: 4px;
-  border: 1px solid #dfe6f2;
-  border-radius: 12px;
-  background: #f8faff;
+  gap: 0;
 }
 
 .refund-settings-tabs .ant-tabs-tab {
   min-width: 92px;
   justify-content: center;
   margin: 0 !important;
-  padding: 9px 16px !important;
-  border-radius: 9px;
+  padding: 0 var(--tab-padding-inline) !important;
 }
 
 .refund-settings-tabs .ant-tabs-tab-active {
-  background: #eaf0ff;
+  background: var(--primary-soft);
 }
 
 .refund-settings-tabs .ant-tabs-ink-bar {

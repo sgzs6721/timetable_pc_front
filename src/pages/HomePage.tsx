@@ -457,6 +457,7 @@ export function HomePage() {
             const linked = singleStudent(item, studentId)
             return (
               <button
+                type="button"
                 className="schedule-row"
                 key={item.id}
                 style={{ width: 'calc(100% - 20px)', border: 0, background: 'transparent', textAlign: 'left', cursor: 'pointer' }}

@@ -4,9 +4,10 @@ import { useSearchParams } from 'react-router-dom'
 import { delJson, getJson, postJson, putJson } from '../api/biz'
 import { tell, todayIso, useShell } from './kit'
 import type { DayDialog, Schedule, Timetable, TimetableGroup } from './schedule-model'
-import { DAY_LABELS, clockText, freeUntil, fromMinutes, latestTemplateSchedules, mondayOf, scheduleCampusLegend, slotsOf, splitBoardHead, toMinutes, weekLimits } from './schedule-board-helpers'
+import { DAY_LABELS, clockText, duplicateTimetableName, freeUntil, fromMinutes, latestTemplateSchedules, mondayOf, scheduleCampusLegend, slotsOf, splitBoardHead, toMinutes, weekLimits } from './schedule-board-helpers'
 import { timetableBody, timetableOwner } from './schedule-board-fields'
 import { toDayCourses } from './schedule-day-dialog'
+import { copyScheduleItem, leaveScheduleItem, moveScheduleItem, removeScheduleItem, type ScheduleMutationTarget } from './schedule-mutations'
 
 export function useScheduleController() {
   const shell = useShell()
@@ -30,7 +31,7 @@ export function useScheduleController() {
   const [placement, setPlacement] = useState<{ kind: 'move' | 'copy'; schedule: Schedule; targets: Array<{ day: number; date: string; start: string; end: string }> } | null>(null)
   const [batch, setBatch] = useState<string[]>([])
   const [deleting, setDeleting] = useState(false)
-  const [deleteIds, setDeleteIds] = useState<number[]>([])
+  const [deleteIds, setDeleteIds] = useState<string[]>([])
   const [overview, setOverview] = useState<Schedule[] | null>(null)
   const [dayDialog, setDayDialog] = useState<DayDialog | null>(null)
   const [lookup, setLookup] = useState<Schedule[] | null>(null)
@@ -40,16 +41,16 @@ export function useScheduleController() {
   const compareAnnounce = useRef(false)
   const groupsRequestId = useRef(0)
   const [dragAction, setDragAction] = useState<{
-    scheduleId: number
+    schedule: Schedule
     name: string
     sourceLabel: string
     targetLabel: string
     canCopy: boolean
-    target: { scheduleDate: string; startTime: string; endTime: string; dayOfWeek: number }
+    target: ScheduleMutationTarget
   } | null>(null)
   const [dragHover, setDragHover] = useState<{ day: number; date: string; start: string; end: string; name: string } | null>(null)
   const dragGuard = useRef(false)
-  const dragLessonId = useRef(0)
+  const dragLessonKey = useRef('')
   const routeTimetableId = Number(params.get('timetableId') || 0)
 
   const campusId = shell.campusId
@@ -68,7 +69,8 @@ export function useScheduleController() {
   const splitWeekend = Number(current?.splitWeekend) === 1
   const templateMode = mode === 'template' && Number(current?.isWeekly) === 1
   const boardSchedules = useMemo(
-    () => templateMode ? templateSchedules.filter((item) => Number(item.uiChangeStatus || 0) !== 3) : schedules,
+    () => (templateMode ? templateSchedules : schedules)
+      .filter((item) => Number(item.uiChangeStatus || 0) !== 3),
     [templateMode, templateSchedules, schedules],
   )
   const campusLegend = scheduleCampusLegend(boardSchedules, shell.campuses)
@@ -260,30 +262,22 @@ export function useScheduleController() {
 
   async function removeSchedule(schedule: Schedule) {
     if (!current || !schedule.id) return
-    if (!templateMode || schedule.scheduleDate) {
-      await delJson(`/schedules/${schedule.id}`)
-      return
-    }
-    await postJson('/schedules/cell', {
-      scheduleId: schedule.id,
-      timetableId: current.id,
-      dayOfWeek: schedule.dayOfWeek,
-      effectiveStartDate: todayIso(),
-      startTime: clockText(schedule.startTime),
-      endTime: clockText(schedule.endTime),
-      courseName: String(schedule.courseName || schedule.displayName || '排课').trim(),
-      targetType: schedule.targetType,
-      targetId: schedule.targetId,
-      coachIds: schedule.coachIds,
-      note: schedule.note || '',
-      uiChangeStatus: 3,
-      campusId: schedule.campusId || campusId,
-      pricingStudentGroupId: schedule.pricingStudentGroupId,
-      pricingCourseType: schedule.pricingCourseType,
-      serviceQuantity: schedule.serviceQuantity,
-      excludedStudentIds: schedule.excludedStudentIds,
-      memberCardBindings: schedule.memberCardBindings,
-    })
+    await removeScheduleItem(schedule, current, campusId || 0, templateMode)
+  }
+
+  async function leaveSchedule(schedule: Schedule) {
+    if (!current || !schedule.id) return null
+    return leaveScheduleItem(schedule, current, campusId || 0)
+  }
+
+  async function moveSchedule(schedule: Schedule, target: ScheduleMutationTarget) {
+    if (!current || !schedule.id) return
+    await moveScheduleItem(schedule, current, target, templateMode)
+  }
+
+  async function copySchedule(schedule: Schedule, targets: ScheduleMutationTarget[]) {
+    if (!current || !schedule.id || !targets.length) return
+    await copyScheduleItem(schedule, current, campusId || 0, templateMode, targets)
   }
 
   async function openOverview() {
@@ -330,9 +324,8 @@ export function useScheduleController() {
     if (key === 'copy') {
       try {
         const detail = await getJson<Timetable>(`/timetables/${current.id}`)
-        const base = detail.name || '课表'
         const created = await postJson<Timetable>('/timetables', {
-          ...timetableBody({ ...detail, name: `${Array.from(base).slice(0, 10).join('')}副本` }, campusId || 0),
+          ...timetableBody({ ...detail, name: duplicateTimetableName(detail.name) }, campusId || 0),
           isDefault: 0,
         })
         message.success('已复制课表')
@@ -522,7 +515,7 @@ export function useScheduleController() {
     setDragHover,
     shell,
     dragGuard,
-    dragLessonId,
+    dragLessonKey,
     campusId,
     campusName,
     managesCampus,
@@ -543,6 +536,9 @@ export function useScheduleController() {
     switchBoardMode,
     saveCell,
     removeSchedule,
+    leaveSchedule,
+    moveSchedule,
+    copySchedule,
     openOverview,
     onTimetableMenu,
     openDay,

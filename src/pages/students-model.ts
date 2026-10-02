@@ -108,6 +108,7 @@ export interface PayRecord {
   hours?: number
   giftHours?: number
   remainingHours?: number
+  unitPrice?: number
   courseType?: string
   courseTypeLabel?: string
   paymentDate?: string

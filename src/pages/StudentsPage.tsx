@@ -52,6 +52,7 @@ export function StudentsPage() {
   const [transferOpen, setTransferOpen] = useState(false)
   const [checkStudent, setCheckStudent] = useState<Student | null>(null)
   const [checkCardId, setCheckCardId] = useState<number | undefined>()
+  const [checkCardLocked, setCheckCardLocked] = useState(false)
   const [payOpen, setPayOpen] = useState<PayLaunch | null>(null)
   const [campusHidden, setCampusHidden] = useState(false)
 
@@ -125,6 +126,7 @@ export function StudentsPage() {
   const currentOrg = shell.organizations.find((item) => item.id === shell.currentOrgId) || null
   const canManageRole = userReady && managesStudents(shell.user, currentOrg, campusId)
   const canManage = canManageRole && !campusHidden
+  const scopedCoachId = canManageRole ? coachId : (Number(shell.user?.orgMemberId || 0) || undefined)
   const readOnlyText = campusHidden ? '校区已下线，学员信息仅可查看' : '当前账号仅可查看学员信息'
 
   async function load(nextPage = page, nextKeyword = keyword) {
@@ -138,13 +140,13 @@ export function StudentsPage() {
           name: nextKeyword,
           status: queryStatus,
           cardCategory: cardCategory || undefined,
-          coachMemberId: canManageRole ? coachId : undefined,
+          coachMemberId: scopedCoachId,
           sortField: sort.split(':')[0],
           sortOrder: sort.split(':')[1],
           page: nextPage,
           pageSize: 20,
         }),
-        getJson<Record<string, unknown>>('/students/campus-summary', { campusId, includeDetail: true }),
+        getJson<Record<string, unknown>>('/students/campus-summary', { campusId, coachMemberId: scopedCoachId, includeDetail: true }),
         getJson<{ visibleInList?: boolean | number | string }>(`/campus/${campusId}`).catch(() => null),
       ])
       const source = data.records || []
@@ -240,6 +242,7 @@ export function StudentsPage() {
       return
     }
     setCheckCardId(preferredCardId || listDisplayCard(row, cardCategory)?.id)
+    setCheckCardLocked(Number(preferredCardId || 0) > 0)
     setCheckStudent(row)
   }
 
@@ -259,7 +262,7 @@ export function StudentsPage() {
         <button type="button" className="cell-link" onClick={() => openAssign(row)}>{text}</button>
       ) : text
     } },
-    { title: '课时', align: 'left' as const, render: (_: unknown, row: Student) => {
+    { title: <span className="students-hours-column-title">课时</span>, align: 'left' as const, render: (_: unknown, row: Student) => {
       const cards = orderedStudentCards((row.cards || []).filter((card) => card.status == null || Number(card.status) === 1))
       if (cards.length) {
         return (
@@ -289,10 +292,10 @@ export function StudentsPage() {
       if (!canManage) return <span className={balance.low ? 'hours-low' : undefined}>{balance.text}</span>
       return <button type="button" className={balance.low ? 'cell-link hours-low' : 'cell-link'} onClick={() => openQuick(row)}>{balance.text}</button>
     } },
-    { title: '状态', align: 'center' as const, render: (_: unknown, row: Student) => {
+    { title: <span className="students-status-column-title">状态</span>, align: 'center' as const, render: (_: unknown, row: Student) => {
       const text = studentStatusText(row)
       const tone = text === '待缴费' ? 'status-warn' : text === '结业' ? 'status-muted' : 'status-ok'
-      return <Tag className={tone}>{text}</Tag>
+      return <div className="students-status-cell"><Tag className={tone}>{text}</Tag></div>
     } },
     {
       title: '操作',
@@ -300,7 +303,6 @@ export function StudentsPage() {
       render: (_: unknown, row: Student) => (
         <div className="student-row-actions">
           <Button type="link" onClick={() => openDetail(row.id)}>详情</Button>
-          {canManage && !listServiceOnly(row, listDisplayCard(row, cardCategory)) ? <Button type="link" onClick={() => openAssign(row)}>分配老师</Button> : <span aria-hidden="true" />}
           {canManage ? <Button type="link" onClick={() => openQuick(row)}>打卡</Button> : <span aria-hidden="true" />}
         </div>
       ),
@@ -404,7 +406,7 @@ export function StudentsPage() {
           loading={loading}
           dataSource={rows}
           columns={columns}
-          pagination={{ current: page, pageSize: status === 'pending' ? 100 : 20, total, onChange: (next) => { setPage(next); load(next).catch(() => undefined) } }}
+          pagination={{ current: page, pageSize: 20, total, onChange: (next) => { setPage(next); load(next).catch(() => undefined) } }}
         />
       </section>
       <Modal title={assignStudent ? `为 ${assignStudent.name} 分配老师` : '分配老师'} open={!!assignStudent} onCancel={() => setAssignStudent(null)} footer={null} destroyOnHidden>
@@ -464,7 +466,7 @@ export function StudentsPage() {
           </Form>
         ) : null}
       </Modal>
-      <Drawer title={detail ? detail.name : '学员详情'} width={860} open={!!detail} onClose={() => { setDetail(null); setParams({}) }}>
+      <Drawer rootClassName="student-detail-drawer" title={detail ? `${detail.name} · 学员详情` : '学员详情'} width={680} open={!!detail} onClose={() => { setDetail(null); setParams({}) }}>
         {detail ? (
           <StudentDetail
             tab={params.get('tab') || ''}
@@ -495,7 +497,12 @@ export function StudentsPage() {
               setAccessOn(enabled)
             }}
             onLocal={(patch) => patchStudent(detail.id, patch)}
-            onCheckIn={() => {
+            onDeleted={() => {
+              setDetail(null)
+              setParams({})
+              load().catch(() => undefined)
+            }}
+            onCheckIn={(preferredCardId) => {
               if (!canManage) {
                 message.warning(readOnlyText)
                 return
@@ -504,6 +511,8 @@ export function StudentsPage() {
                 message.warning('该学员已结业，不能打卡')
                 return
               }
+              setCheckCardId(preferredCardId)
+              setCheckCardLocked(Number(preferredCardId || 0) > 0)
               setCheckStudent(detail)
             }}
             reloadList={() => load()}
@@ -531,10 +540,11 @@ export function StudentsPage() {
         key={checkStudent?.id || 'closed'}
         student={checkStudent}
         preferredCardId={checkCardId}
+        cardSelectionLocked={checkCardLocked}
         coaches={coaches}
         services={services}
         groups={groups}
-        onClose={() => setCheckStudent(null)}
+        onClose={() => { setCheckStudent(null); setCheckCardId(undefined); setCheckCardLocked(false) }}
         onDone={(studentId, hours, amount) => {
           const current = rows.find((item) => item.id === studentId)
           if (current) {
@@ -544,6 +554,8 @@ export function StudentsPage() {
             })
           }
           setCheckStudent(null)
+          setCheckCardId(undefined)
+          setCheckCardLocked(false)
           load().catch(() => undefined)
         }}
       />

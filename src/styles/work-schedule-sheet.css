@@ -38,9 +38,11 @@
   color: #fff;
 }
 
-.tt-modebar button.is-off {
+.tt-modebar button.is-off,
+.tt-modebar button:disabled {
   background: #d5d8e2;
   color: #fff;
+  cursor: not-allowed;
 }
 
 .drag-options {

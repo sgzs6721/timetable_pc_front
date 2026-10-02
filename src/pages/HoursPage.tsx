@@ -1,8 +1,8 @@
 import { Button, Input, Popconfirm, Select, Table, message } from 'antd'
-import { BarChartOutlined, DownOutlined, UpOutlined } from '@ant-design/icons'
 import { useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { delJson, getJson } from '../api/biz'
+import { BusinessDateRangePicker } from '../components/BusinessDatePicker'
 import { EmptyState, NeedCampus, PageHead, money, monthKey, periodChoices, type PeriodOption, shiftPeriod, tell, todayIso, useShell } from './kit'
 import './HoursPage.css'
 
@@ -52,7 +52,6 @@ export function HoursPage() {
   const [page, setPage] = useState(1)
   const [data, setData] = useState<HoursResult | null>(null)
   const [campusHours, setCampusHours] = useState<CampusHours | null>(null)
-  const [showCampusHours, setShowCampusHours] = useState(false)
   const role = String(shell.user?.role || '').trim().toLowerCase()
   const currentOrg = shell.organizations.find((item) => item.id === shell.currentOrgId) || null
   const canManage = role === 'owner' || role === 'admin' || (shell.user?.id != null && currentOrg?.ownerId === shell.user.id) || (shell.user?.campusAdminCampusIds || []).includes(Number(shell.campusId))
@@ -112,22 +111,25 @@ export function HoursPage() {
     <NeedCampus campusId={shell.campusId}>
       <PageHead title={canManage ? '课时管理' : '我的课时'} extra={data?.rangeLabel || '按校区查看上课记录'} />
       <section className="work-card">
-        <div className="hours-section-head">
-          <div>
-            <h2>上课记录</h2>
-            <p>查看销课、体验课和服务记录</p>
+        {campusHours ? (
+          <div className="hours-campus-panel">
+            <div className="hours-campus-panel-head">
+              <strong>校区课时概览</strong>
+              <span>当前校区学员课时汇总</span>
+            </div>
+            <div className="hours-campus-grid">
+              <span><small>在学学员</small><strong>{campusHours.activeStudentCount || campusHours.studentCount || 0}</strong></span>
+              <span><small>总课时</small><strong>{money(campusHours.totalHours)}</strong></span>
+              <span><small>已销课时</small><strong>{money(campusHours.consumedHours)}</strong></span>
+              <span><small>总正课</small><strong>{money(campusHours.regularHours)}</strong></span>
+              <span><small>总赠课</small><strong>{money(campusHours.bonusHours)}</strong></span>
+              <span><small>已上正课</small><strong>{money(campusHours.consumedRegularHours)}</strong></span>
+              <span><small>已上赠课</small><strong>{money(campusHours.consumedBonusHours)}</strong></span>
+              <span><small>剩余正课</small><strong>{money(campusHours.remainingRegularHours)}</strong></span>
+              <span><small>剩余赠课</small><strong>{money(campusHours.remainingBonusHours)}</strong></span>
+            </div>
           </div>
-          {campusHours ? (
-            <Button
-              className={`hours-campus-trigger${showCampusHours ? ' is-open' : ''}`}
-              icon={<BarChartOutlined />}
-              onClick={() => setShowCampusHours((open) => !open)}
-            >
-              校区课时
-              {showCampusHours ? <UpOutlined /> : <DownOutlined />}
-            </Button>
-          ) : null}
-        </div>
+        ) : null}
         <div className="hours-overview-bar">
           <div className="stat-line hours-overview-stats">
             <span><small>销课课时</small><strong>{money(data?.summaryHours)}</strong></span>
@@ -163,10 +165,11 @@ export function HoursPage() {
             </>
           ) : null}
           {mode === 'custom_range' ? (
-            <>
-              <input type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} />
-              <input type="date" value={endDate} onChange={(event) => setEndDate(event.target.value)} />
-            </>
+            <BusinessDateRangePicker
+              value={[startDate, endDate]}
+              onChange={([start, end]) => { setStartDate(start); setEndDate(end) }}
+              style={{ width: 286 }}
+            />
           ) : null}
           <Select
             style={{ width: 180 }}
@@ -189,25 +192,6 @@ export function HoursPage() {
           <Input.Search allowClear placeholder="搜索学员" style={{ width: 200 }} onSearch={(value) => { setKeyword(value); setPage(1); load(1, value).catch((error) => message.error(tell(error, '课时加载失败'))) }} />
           </div>
         </div>
-        {showCampusHours && campusHours ? (
-          <div className="hours-campus-panel">
-            <div className="hours-campus-panel-head">
-              <strong>校区课时概览</strong>
-              <span>当前校区学员课时汇总</span>
-            </div>
-            <div className="hours-campus-grid">
-              <span><small>在学学员</small><strong>{campusHours.activeStudentCount || campusHours.studentCount || 0}</strong></span>
-              <span><small>总课时</small><strong>{money(campusHours.totalHours)}</strong></span>
-              <span><small>已销课时</small><strong>{money(campusHours.consumedHours)}</strong></span>
-              <span><small>总正课</small><strong>{money(campusHours.regularHours)}</strong></span>
-              <span><small>总赠课</small><strong>{money(campusHours.bonusHours)}</strong></span>
-              <span><small>已上正课</small><strong>{money(campusHours.consumedRegularHours)}</strong></span>
-              <span><small>已上赠课</small><strong>{money(campusHours.consumedBonusHours)}</strong></span>
-              <span><small>剩余正课</small><strong>{money(campusHours.remainingRegularHours)}</strong></span>
-              <span><small>剩余赠课</small><strong>{money(campusHours.remainingBonusHours)}</strong></span>
-            </div>
-          </div>
-        ) : null}
         <Table
           rowKey={(row) => String(row.recordId || row.sortTime)}
           dataSource={data?.records || []}

@@ -1,5 +1,6 @@
-import { Button, Form, Input, Modal, Tabs, message } from 'antd'
+import { Button, Form, Modal, Tabs, message } from 'antd'
 import { delJson, getJson, postJson } from '../api/biz'
+import { BusinessDatePicker } from '../components/BusinessDatePicker'
 import { tell } from './kit'
 import type { Schedule } from './schedule-model'
 import { addDays, clockText, isoWeekday, timetableShowsWeekday } from './schedule-board-helpers'
@@ -11,7 +12,7 @@ import { DayScheduleDialog } from './schedule-day-dialog'
 import type { useScheduleController } from './schedule-controller'
 
 export function ScheduleDialogs({ vm }: { vm: ReturnType<typeof useScheduleController> }) {
-  const { setSelecting, current, weekStart, mode, schedules, templateSchedules, creating, setCreating, createSource, setCreateSource, editing, setEditing, copyDay, setCopyDay, cell, setCell, setPlacement, batch, setBatch, setDeleting, overview, setOverview, dayDialog, setDayDialog, lookup, setLookup, dragAction, setDragAction, shell, campusId, campusName, managesCampus, timetableLocked, days, templateMode, boardSchedules, slots, loadGroups, loadWeek, saveCell, removeSchedule } = vm
+  const { setSelecting, current, weekStart, mode, schedules, templateSchedules, creating, setCreating, createSource, setCreateSource, editing, setEditing, copyDay, setCopyDay, cell, setCell, setPlacement, batch, setBatch, setDeleting, overview, setOverview, dayDialog, setDayDialog, lookup, setLookup, dragAction, setDragAction, shell, campusId, campusName, managesCampus, timetableLocked, days, templateMode, boardSchedules, slots, loadGroups, loadWeek, saveCell, removeSchedule, leaveSchedule, moveSchedule, copySchedule } = vm
   return (
     <>
       <CreateTimetable
@@ -56,8 +57,8 @@ export function ScheduleDialogs({ vm }: { vm: ReturnType<typeof useScheduleContr
             await loadWeek()
           }}
         >
-          <Form.Item name="sourceDate" label="来源日期" rules={[{ required: true }]}><Input type="date" /></Form.Item>
-          <Form.Item name="targetDate" label="目标日期" rules={[{ required: true }]}><Input type="date" /></Form.Item>
+          <Form.Item name="sourceDate" label="来源日期" rules={[{ required: true }]}><BusinessDatePicker /></Form.Item>
+          <Form.Item name="targetDate" label="目标日期" rules={[{ required: true }]}><BusinessDatePicker /></Form.Item>
           <Button type="primary" htmlType="submit">复制</Button>
         </Form>
       </Modal>
@@ -115,7 +116,7 @@ export function ScheduleDialogs({ vm }: { vm: ReturnType<typeof useScheduleContr
           if (!cell?.schedule?.id) return
           const name = cell.schedule.displayName || cell.schedule.courseName || '原排课'
           const scheduleId = cell.schedule.id
-          await postJson(`/schedules/${scheduleId}/leave`, {})
+          await leaveSchedule(cell.schedule)
           message.success('已请假')
           await loadWeek()
           setCell({ day: cell.day, date: cell.date, start: cell.start, end: cell.end, slotStart: cell.slotStart, slotEnd: cell.slotEnd, echo: { name, status: 'leave', scheduleId } })
@@ -215,7 +216,7 @@ export function ScheduleDialogs({ vm }: { vm: ReturnType<typeof useScheduleContr
               {dragAction.canCopy ? (
                 <button type="button" className="is-copy" onClick={async () => {
                   try {
-                    await postJson(`/schedules/${dragAction.scheduleId}/copy`, { targets: [dragAction.target] })
+                    await copySchedule(dragAction.schedule, [dragAction.target])
                     message.success(`已复制到${dragAction.targetLabel}`)
                     setDragAction(null)
                     await loadWeek()
@@ -226,7 +227,7 @@ export function ScheduleDialogs({ vm }: { vm: ReturnType<typeof useScheduleContr
               ) : null}
               <button type="button" className="is-move" onClick={async () => {
                 try {
-                  await postJson(`/schedules/${dragAction.scheduleId}/move`, dragAction.target)
+                  await moveSchedule(dragAction.schedule, dragAction.target)
                   message.success(`已移动到${dragAction.targetLabel}`)
                   setDragAction(null)
                   await loadWeek()

@@ -36,7 +36,7 @@ export function CellDialog(input: CellDialogProps) {
   const { props, optionsLoading, optionsError, target, setTarget, query, setQuery, searchOpen, setSearchOpen, pricingKey, setPricingKey, pricingOpen, setPricingOpen, serviceQuantity, setServiceQuantity, members, membersLoaded, excluded, setExcluded, memberCards, membersOpen, setMembersOpen, instancesOpen, setInstancesOpen, cardDraftId, setCardDraftId, trialConfig, trialOn, setTrialOn, trialDuration, setTrialDuration, halfPosition, note, setNote, startTime, endTime, coachIds, setCoachIds, recordsOpen, setRecordsOpen, recordsScope, setRecordsScope, recordsLoading, saving, leaving, setLeaving, deleting, setDeleting, restoring, setRestoring, dialogCampusId, cell, campusChoices, dialogCampusName, selected, choices, instances, sameCourse, occupied, onLeave, batching, existing, pricing, showPricing, duration, room, trialSwitchDisabled, keyword, visibleOptions, coachChoices, canLeave, openWarning, scheduleUnchanged, lessonSlotStart, lessonSecondStart, showLessonHalf, firstHalfAvailable, secondHalfAvailable, trialHourBase, trialHourSecond, trialHourSecondAvailable, durationHint, recordRows, shownMembers, shownInstances, cardMember, shiftStart, shiftDuration, chooseHalf, chooseTrialHour, chooseLessonHalf, changeDialogCampus, choose, confirmOccupy, save, openRecords, openStudentRecords, toggleStudent, openCardPicker, closeCardPicker, confirmCardPicker } = vm
 
   return (
-    <Modal className="sheet-modal" open onCancel={props.onClose} footer={null} destroyOnHidden width={620} closable={false}>
+    <Modal className="sheet-modal" open centered onCancel={props.onClose} footer={null} destroyOnHidden width={620} closable={false}>
       <header className="sheet-head">
         <div className="sheet-head-title">
           <span className="sheet-head-icon"><AppIcon name="icon-timetable" size={18} /></span>
@@ -309,8 +309,8 @@ export function CellDialog(input: CellDialogProps) {
                       <span>开始时间</span>
                       <small>可切换</small>
                       <span className="sheet-stepper">
-                        <button type="button" className={[toMinutes(startTime) < toMinutes(lessonSecondStart) ? 'is-on' : '', firstHalfAvailable ? '' : 'is-off'].filter(Boolean).join(' ')} onClick={() => chooseLessonHalf('first')}>{lessonSlotStart}</button>
-                        <button type="button" className={[toMinutes(startTime) >= toMinutes(lessonSecondStart) ? 'is-on' : '', secondHalfAvailable ? '' : 'is-off'].filter(Boolean).join(' ')} onClick={() => chooseLessonHalf('second')}>{lessonSecondStart}</button>
+                        <button type="button" className={toMinutes(startTime) < toMinutes(lessonSecondStart) ? 'is-on' : ''} disabled={!firstHalfAvailable} onClick={() => chooseLessonHalf('first')}>{lessonSlotStart}</button>
+                        <button type="button" className={toMinutes(startTime) >= toMinutes(lessonSecondStart) ? 'is-on' : ''} disabled={!secondHalfAvailable} onClick={() => chooseLessonHalf('second')}>{lessonSecondStart}</button>
                       </span>
                     </div>
                   ) : (

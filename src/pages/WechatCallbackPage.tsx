@@ -1,7 +1,7 @@
 import { Button, Result, Spin } from 'antd'
 import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { loginByWechatQr } from '../api/auth'
+import { getUserInfo, loginByWechatQr } from '../api/auth'
 import { setToken } from '../session'
 
 export function WechatCallbackPage() {
@@ -16,9 +16,11 @@ export function WechatCallbackPage() {
       return
     }
     loginByWechatQr(code)
-      .then((login) => {
+      .then(async (login) => {
         setToken(login.token)
-        navigate('/home', { replace: true })
+        const user = await getUserInfo().catch(() => null)
+        const pureParent = String(user?.role || login.role || '').toLowerCase() === 'parent' && !Number(user?.orgMemberId || 0)
+        navigate(pureParent ? '/parent/home' : '/home', { replace: true })
       })
       .catch((reason: unknown) => {
         setError(reason instanceof Error ? reason.message : '微信扫码登录失败')

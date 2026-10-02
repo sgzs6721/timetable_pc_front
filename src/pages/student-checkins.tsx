@@ -1,29 +1,31 @@
-import { Button, Form, Input, InputNumber, Modal, Popconfirm, Select, Space, Table, message } from 'antd'
+import { Button, Form, Input, InputNumber, Modal, Popconfirm, Select, Space, message } from 'antd'
 import { useEffect, useMemo, useState } from 'react'
-import { delJson, getJson, putJson } from '../api/biz'
+import { delJson, putJson } from '../api/biz'
+import { BusinessDatePicker } from '../components/BusinessDatePicker'
 import { buildQuickCheckInPaymentOptions, checkInCourseSubmitWarning } from './checkin-options'
 import { money, tell, todayIso } from './kit'
 import type { Student, Card, Named, PayRecord, CheckRecord } from './students-model'
 import { paymentOptionForCourse, preferredCourseForCoach } from './student-card-desk'
 import { CheckInCoursePicker } from './student-quick-checkin'
 import { isTransferInRecord } from './student-payments'
-import { CardRecordTabs, boundedDateMax, checkInBounds, personName } from './students-domain'
+import { CardRecordTabs, boundedDateMax, cardBalanceView, checkInBounds, personName } from './students-domain'
 
-export function CheckInPanel(props: { student: Student; rows: CheckRecord[]; payments: PayRecord[]; groups: Named[]; financialHidden: boolean; coaches: Named[]; focusCardId?: number; onCheckIn: () => void; onChanged: () => Promise<void>; manage: boolean }) {
+export function CheckInPanel(props: { student: Student; rows: CheckRecord[]; payments: PayRecord[]; groups: Named[]; financialHidden: boolean; coaches: Named[]; focusCardId?: number; onCardChange?: (cardId?: number) => void; onCheckIn: (cardId?: number) => void; onChanged: () => Promise<void>; manage: boolean }) {
+  const [cardId, setCardId] = useState<number | undefined>(props.focusCardId)
+  useEffect(() => { setCardId(props.focusCardId) }, [props.focusCardId])
   return (
-    <Space direction="vertical" style={{ width: '100%' }}>
-      <Space>
-        {props.manage ? <Button type="primary" onClick={props.onCheckIn}>打卡</Button> : null}
-        <Button onClick={() => props.onChanged()}>刷新</Button>
-      </Space>
-      <CardRecordTabs cards={props.student.cards} rows={props.rows} focusId={props.focusCardId}>
-        {(rows, card) => <CheckInCard student={props.student} card={card} rows={rows} payments={props.payments} groups={props.groups} financialHidden={props.financialHidden} coaches={props.coaches} onChanged={props.onChanged} manage={props.manage} />}
+    <div className="student-record-page student-check-history">
+      <CardRecordTabs cards={props.student.cards} rows={props.rows} focusId={props.focusCardId} onCardChange={(nextId) => {
+        setCardId(nextId)
+        props.onCardChange?.(nextId)
+      }}>
+        {(rows, card) => <CheckInCard student={props.student} card={card} rows={rows} payments={props.payments} groups={props.groups} financialHidden={props.financialHidden} coaches={props.coaches} onChanged={props.onChanged} manage={props.manage} onCheckIn={() => props.onCheckIn(card?.id || cardId)} />}
       </CardRecordTabs>
-    </Space>
+    </div>
   )
 }
 
-export function CheckInCard(props: { student: Student; card?: Card; rows: CheckRecord[]; payments: PayRecord[]; groups: Named[]; financialHidden: boolean; coaches: Named[]; onChanged: () => Promise<void>; manage: boolean }) {
+export function CheckInCard(props: { student: Student; card?: Card; rows: CheckRecord[]; payments: PayRecord[]; groups: Named[]; financialHidden: boolean; coaches: Named[]; onChanged: () => Promise<void>; manage: boolean; onCheckIn?: () => void }) {
   const [selected, setSelected] = useState<string[]>([])
   const summary = checkInSummary(props.rows, props.card, props.student, props.financialHidden, props.coaches)
   const rowKey = props.rows.map((row) => row.id).join(',')
@@ -36,13 +38,18 @@ export function CheckInCard(props: { student: Student; card?: Card; rows: CheckR
     })
   }, [rowKey, props.card?.id, summary.special])
   return (
-    <Space direction="vertical" style={{ width: '100%' }}>
-      <p className="schedule-meta">{props.student.name} · 打卡记录总览</p>
-      <div className="stat-line">
-        {summary.metrics.map((item) => <span key={item.label}>{item.label}<strong>{item.value}</strong></span>)}
-      </div>
+    <div className="student-record-card-page">
+      <section className="student-record-summary student-check-summary">
+        <header>
+          <div><span className="student-record-summary-name">{props.student.name}</span><h3>打卡记录总览</h3></div>
+          {props.manage ? <Button type="primary" disabled={Number(props.student.status || 0) === 2} onClick={props.onCheckIn}>打卡</Button> : null}
+        </header>
+        <div className="student-record-metrics">
+          {summary.metrics.map((item) => <div key={item.label}><strong>{item.value}</strong><span>{item.label}</span></div>)}
+        </div>
+      </section>
       {summary.chips.length ? (
-        <div className="choice-tabs">
+        <div className="student-record-filter-chips" aria-label="筛选打卡记录">
           {summary.chips.map((item) => (
             <button key={item.key} type="button" className={[selected.includes(item.key) ? 'is-on' : '', item.gender ? `is-${item.gender}` : ''].filter(Boolean).join(' ')} onClick={() => setSelected((current) => current.includes(item.key) ? current.filter((key) => key !== item.key) : [...current, item.key])}>
               <span className={item.inactive ? 'is-inactive' : undefined}>{item.name}</span><small>{item.hoursText}</small>
@@ -53,13 +60,13 @@ export function CheckInCard(props: { student: Student; card?: Card; rows: CheckR
       {(() => {
         const timeline = buildCheckTimeline(visible, props.payments, props.card, props.student, selected.length === 0 && !summary.serviceOnly)
         if (!timeline.length) return (
-          <div>
-            <p>{props.rows.length ? '没有符合筛选的打卡记录' : (summary.serviceOnly ? '暂无服务记录' : '暂无上课记录')}</p>
-            {props.rows.length ? null : <p className="schedule-meta">{summary.serviceOnly ? '完成服务打卡后会在这里沉淀展示' : '完成打卡销课后会在这里沉淀展示'}</p>}
+          <div className="student-record-empty">
+            <strong>{props.rows.length ? '没有符合筛选的打卡记录' : (summary.serviceOnly ? '暂无服务记录' : '暂无打卡记录')}</strong>
+            {props.rows.length ? null : <span>{summary.serviceOnly ? '完成服务打卡后会在这里沉淀展示' : '完成打卡销课后会在这里沉淀展示'}</span>}
           </div>
         )
         return (
-          <div className="check-timeline">
+          <div className="check-timeline student-check-list">
             {timeline.map((item) => {
               if (item.kind === 'payment') return (
               <article key={item.id} className={item.tone ? `is-${item.tone}` : 'is-change'}>
@@ -96,7 +103,7 @@ export function CheckInCard(props: { student: Student; card?: Card; rows: CheckR
                   </Space>
                   ) : null}
                 </header>
-                <p>{checkInMeta(item.record, props.financialHidden)}</p>
+                <p>{checkInMeta(item.record, props.financialHidden, props.card)}</p>
                 {formatCheckInTime(item.record.createTime) ? <p>打卡时间：{formatCheckInTime(item.record.createTime)}</p> : null}
                 {checkInRemark(item.record) ? <p>备注：{checkInRemark(item.record)}</p> : null}
               </article>
@@ -105,7 +112,7 @@ export function CheckInCard(props: { student: Student; card?: Card; rows: CheckR
           </div>
         )
       })()}
-    </Space>
+    </div>
   )
 }
 
@@ -116,7 +123,7 @@ export function checkInRemark(record: CheckRecord): string {
   return remark && !AUTO_CHECK_IN_REMARK.test(remark) ? remark : ''
 }
 
-export function checkInMeta(record: CheckRecord, hidden: boolean): string {
+export function checkInMeta(record: CheckRecord, hidden: boolean, card?: Card): string {
   const service = checkInService(record)
   const matched = String(record.remark || '').trim().match(AUTO_CHECK_IN_REMARK)
   const slot = String(record.scheduleTimeText || matched?.[1] || '').trim()
@@ -125,7 +132,7 @@ export function checkInMeta(record: CheckRecord, hidden: boolean): string {
     weekdayOf(String(record.consumeDate || '')),
     slot,
     !hidden && record.amount != null ? `¥${money(record.amount)}` : '',
-    record.cardTypeLabel,
+    card ? cardBalanceView(card).tag : record.cardTypeLabel,
     Number(record.autoCheckIn) === 1 || matched ? '自动打卡' : '',
     service ? `${checkInHoursText(Number(record.hours || 0))}次` : `${checkInHoursText(Number(record.hours || 0))}课时`,
   ]
@@ -340,86 +347,6 @@ export function checkInSummary(rows: CheckRecord[], card: Card | undefined, stud
   }
 }
 
-export function CourseRecords(props: { studentId: number; coaches: Named[] }) {
-  const [rows, setRows] = useState<Array<Record<string, unknown>>>([])
-  const [coachId, setCoachId] = useState<number | undefined>()
-  const [courseName, setCourseName] = useState('')
-  const [loading, setLoading] = useState(true)
-  async function load(nextCoach = coachId, nextCourse = courseName) {
-    setLoading(true)
-    try {
-      const data = await getJson<Array<Record<string, unknown>>>(`/schedules/student/${props.studentId}/records`, {
-        coachId: nextCoach,
-        courseName: nextCourse.trim() || undefined,
-      })
-      setRows(data || [])
-    } finally {
-      setLoading(false)
-    }
-  }
-  useEffect(() => {
-    load().catch((error) => message.error(tell(error, '上课记录加载失败')))
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [props.studentId])
-  const totalHours = rows.reduce((sum, row) => sum + lessonHours(row.duration), 0)
-  return (
-    <Space direction="vertical" style={{ width: '100%' }}>
-      <div className="stat-line">
-        <span>总上课次数<strong>{rows.length}</strong></span>
-        <span>总消耗课时<strong>{formatTenths(totalHours)}</strong></span>
-      </div>
-      <div className="work-toolbar">
-        <Select
-          allowClear
-          placeholder="老师"
-          style={{ width: 160 }}
-          value={coachId}
-          onChange={(value) => { setCoachId(value); load(value, courseName).catch((error) => message.error(tell(error, '上课记录加载失败'))) }}
-          options={props.coaches.map((item) => ({ value: item.id, label: personName(item) }))}
-        />
-        <Input.Search allowClear placeholder="课程名称" style={{ width: 200 }} onSearch={(value) => { setCourseName(value); load(coachId, value).catch((error) => message.error(tell(error, '上课记录加载失败'))) }} />
-      </div>
-      {loading ? <p>加载中...</p> : !rows.length ? <p>暂无上课记录</p> : (
-      <Table
-        rowKey={(row) => String(row.id)}
-        dataSource={rows}
-        pagination={false}
-        columns={[
-          { title: '日期', render: (_: unknown, row: Record<string, unknown>) => String(row.displayDateStr || row.scheduleDate || row.displayDate || '') },
-          { title: '星期', render: (_: unknown, row: Record<string, unknown>) => weekdayOf(String(row.displayDateStr || row.scheduleDate || row.displayDate || '')) },
-          { title: '时间', render: (_: unknown, row: Record<string, unknown>) => `${String(row.startTimeStr || row.startTime || '').slice(0, 5)}-${String(row.endTimeStr || row.endTime || '').slice(0, 5)}` },
-          { title: '课程', dataIndex: 'courseName' },
-          { title: '老师', render: (_: unknown, row: Record<string, unknown>) => coachDisplayName(row.coachName) },
-          { title: '课时', render: (_: unknown, row: Record<string, unknown>) => `-${formatTenths(lessonHours(row.duration))}课时` },
-        ]}
-      />
-      )}
-    </Space>
-  )
-}
-
-export function coachDisplayName(name: unknown): string {
-  const normalized = String(name || '').trim()
-  if (!normalized) return ''
-  const sanitized = normalized
-    .replace(/^[^A-Za-z0-9\u4E00-\u9FFF]+/, '')
-    .replace(/[^A-Za-z0-9\u4E00-\u9FFF]+$/, '')
-    .trim()
-  return sanitized || normalized
-}
-
-export function formatTenths(value: number): string {
-  if (!Number.isFinite(value)) return '0'
-  const rounded = Math.round(value * 10) / 10
-  return Number.isInteger(rounded) ? String(rounded) : String(rounded)
-}
-
-export function lessonHours(duration: unknown): number {
-  const minutes = Number(duration || 0)
-  if (!minutes) return 0
-  return Math.round(minutes / 60 * 10) / 10
-}
-
 export function formatCheckInTime(value?: string): string {
   const normalized = String(value || '').trim().replace('T', ' ')
   if (!normalized) return ''
@@ -607,7 +534,7 @@ export function CheckEditor(props: { record: CheckRecord; student: Student; card
               )}
             </>
           )}
-          <Form.Item name="consumeDate" label="日期" extra={editorBounds.hint || undefined}><Input type="date" min={editorBounds.min || undefined} max={editorDateMax} /></Form.Item>
+          <Form.Item name="consumeDate" label="日期" extra={editorBounds.hint || undefined}><BusinessDatePicker minDate={editorBounds.min || undefined} maxDate={editorDateMax} /></Form.Item>
           <Form.Item name="hours" label={service ? '次数' : '课时'}><InputNumber min={service ? 1 : 0.5} step={service ? 1 : 0.5} style={{ width: '100%' }} /></Form.Item>
           {service ? null : (
             <Space wrap>
