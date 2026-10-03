@@ -7,15 +7,11 @@ const ONLINE_API_BASE_URL = 'https://timetable.devtesting.top/api'
 function localApiBaseUrl(): string {
   const configured = import.meta.env.VITE_LOCAL_API_BASE_URL
   if (configured) return configured
-  const hostname = window.location.hostname
-  if (hostname === 'localhost') return 'http://localhost:8081/api'
-  if (hostname === '::1') return 'http://[::1]:8081/api'
-  return 'http://127.0.0.1:8081/api'
+  return '/api'
 }
 
 function resolveApiBaseUrl(): string {
-  // 本地浏览器直连同名回环主机上的后端。保持 localhost/127.0.0.1 一致，
-  // 避免浏览器复用另一回环主机的 CORS 预检缓存。
+  // 开发环境通过 Vite 同源代理访问后端，避免回环地址与端口差异触发 CORS。
   if (import.meta.env.DEV) {
     return localApiBaseUrl()
   }
