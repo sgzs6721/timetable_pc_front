@@ -10,6 +10,7 @@ import './OrgPage.css'
 interface Org {
   id: number
   name: string
+  ownerId?: number
   phone?: string
   description?: string
   campusAdminManageSalary?: number
@@ -76,7 +77,12 @@ export function OrgPage() {
   const [savingOrg, setSavingOrg] = useState(false)
   const [savingMember, setSavingMember] = useState(false)
   const [addForm] = Form.useForm()
-  const owner = (shell.user?.role || '').toLowerCase() === 'owner' || (shell.user?.id != null && shell.organizations.some((item) => item.id === shell.currentOrgId && item.ownerId === shell.user?.id))
+  const currentOrgSummary = shell.organizations.find((item) => item.id === shell.currentOrgId)
+  const currentUserId = Number(shell.user?.id || 0)
+  const currentOwnerId = Number(org?.ownerId || currentOrgSummary?.ownerId || 0)
+  const owner = currentOwnerId > 0
+    ? currentUserId > 0 && currentUserId === currentOwnerId
+    : (shell.user?.role || '').toLowerCase() === 'owner'
   const accountPhone = String(shell.user?.phone || '').replace(/\D+/g, '').slice(0, 11)
 
   function collaboratorError(values: { nickname?: string; phone?: string }, currentId?: number) {
@@ -312,7 +318,7 @@ export function OrgPage() {
         </div>
       </section>
       </div>
-      <section className={`work-card org-block-card org-permission-card ${owner ? '' : 'org-permission-card--wide'}`}>
+      <section className="work-card org-block-card org-permission-card">
         <div className="org-card-heading">
           <span className="org-card-heading-icon org-card-heading-icon--amber"><SafetyCertificateOutlined /></span>
           <div>
@@ -333,43 +339,43 @@ export function OrgPage() {
           />
         </div>
       </section>
-      {owner ? (
-        <section className="work-card org-block-card org-danger-card">
-          <div className="org-card-heading org-card-heading--danger">
-            <span className="org-card-heading-icon org-card-heading-icon--danger"><WarningOutlined /></span>
-            <div>
-              <h2>解散机构</h2>
-              <p>不可恢复的机构级操作</p>
-            </div>
+      <section className="work-card org-block-card org-danger-card">
+        <div className="org-card-heading org-card-heading--danger">
+          <span className="org-card-heading-icon org-card-heading-icon--danger"><WarningOutlined /></span>
+          <div>
+            <h2>解散机构</h2>
+            <p>不可恢复的机构级操作</p>
           </div>
-          <div className="org-danger-body">
-            <p>只有机构创建者可以解散。解散后当前机构不再可用，请输入机构名称确认。</p>
-            <Button danger onClick={() => { setDissolveName(''); setDissolveOpen(true) }}>解散机构</Button>
-          </div>
-          <Modal title="解散机构" open={dissolveOpen} onCancel={() => setDissolveOpen(false)} footer={null} destroyOnHidden>
-            <p>请输入「{org?.name || ''}」，必须与机构名称完全一致。</p>
-            <Input value={dissolveName} onChange={(event) => setDissolveName(event.target.value)} placeholder="机构名称" />
-            <Button
-              danger
-              style={{ marginTop: 12 }}
-              disabled={dissolveName.trim() !== String(org?.name || '').trim() || !org?.name}
-              onClick={async () => {
-                try {
-                  await delJson(`/organizations/${shell.currentOrgId}`)
-                  message.success('机构已解散')
-                  setOrgId(null)
-                  setCampusId(null)
-                  setDissolveOpen(false)
-                  shell.reload()
-                  navigate('/home')
-                } catch (error) {
-                  message.error(tell(error, '解散失败'))
-                }
-              }}
-            >确认解散</Button>
-          </Modal>
-        </section>
-      ) : null}
+        </div>
+        <div className="org-danger-body">
+          <p>{owner
+            ? '解散后当前机构不再可用，请输入机构名称确认。'
+            : '只有机构创建者可以解散；当前账号为协同管理员，不能执行此操作。'}</p>
+          <Button danger disabled={!owner || !org} onClick={() => { setDissolveName(''); setDissolveOpen(true) }}>解散机构</Button>
+        </div>
+        <Modal title="解散机构" open={dissolveOpen} onCancel={() => setDissolveOpen(false)} footer={null} destroyOnHidden>
+          <p>请输入「{org?.name || ''}」，必须与机构名称完全一致。</p>
+          <Input value={dissolveName} onChange={(event) => setDissolveName(event.target.value)} placeholder="机构名称" />
+          <Button
+            danger
+            style={{ marginTop: 12 }}
+            disabled={!owner || dissolveName.trim() !== String(org?.name || '').trim() || !org?.name}
+            onClick={async () => {
+              try {
+                await delJson(`/organizations/${shell.currentOrgId}`)
+                message.success('机构已解散')
+                setOrgId(null)
+                setCampusId(null)
+                setDissolveOpen(false)
+                shell.reload()
+                navigate('/home')
+              } catch (error) {
+                message.error(tell(error, '解散失败'))
+              }
+            }}
+          >确认解散</Button>
+        </Modal>
+      </section>
       </div>
     </section>
   )
