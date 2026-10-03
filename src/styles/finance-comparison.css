@@ -1,3 +1,65 @@
+.finance-campus-comparison .finance-card-head { align-items: center; }
+
+.finance-campus-comparison__heading {
+  min-width: 0;
+}
+
+.finance-campus-comparison__actions {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.finance-campus-comparison__actions > span {
+  color: #7d8aa2;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.finance-campus-view-switch {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+}
+
+.finance-campus-view-switch button {
+  z-index: 0;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 10px;
+  border: 1px solid #dce4f0;
+  border-radius: 7px 0 0 7px;
+  color: #7c899f;
+  background: #fff;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+  transition: border-color .18s ease, color .18s ease, background .18s ease, box-shadow .18s ease;
+}
+
+.finance-campus-view-switch button + button { margin-left: -1px; border-radius: 0 7px 7px 0; }
+
+.finance-campus-view-switch button:hover { z-index: 1; border-color: #9fb2ef; color: #315ff4; }
+
+.finance-campus-view-switch button.is-active {
+  z-index: 2;
+  border-color: #7893f5;
+  color: #315ff4;
+  background: #f3f6ff;
+  box-shadow: 0 2px 7px rgba(49, 95, 244, .12);
+}
+
+.finance-campus-view-switch button:focus-visible {
+  border-radius: 4px;
+  outline: 2px solid rgba(49, 95, 244, .28);
+  outline-offset: 3px;
+}
+
 .finance-campus-compact-table {
   margin-top: 16px;
   overflow: hidden;
@@ -38,6 +100,25 @@
 .finance-campus-compact-table tbody th strong,
 .finance-campus-compact-table tbody th small {
   display: block;
+}
+
+.finance-campus-compact-table tbody tr.is-active > * { background: #f8faff; }
+
+.finance-campus-compact-table tbody th button {
+  width: 100%;
+  padding: 0;
+  border: 0;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.finance-campus-compact-table tbody th button:focus-visible {
+  border-radius: 4px;
+  outline: 2px solid rgba(49, 95, 244, .32);
+  outline-offset: 3px;
 }
 
 .finance-campus-compact-table tbody th strong {
@@ -230,6 +311,8 @@
 }
 
 @media (max-width: 760px) {
+  .finance-campus-comparison .finance-card-head { align-items: flex-start; }
+  .finance-campus-comparison__actions { align-items: flex-end; flex-direction: column; gap: 7px; }
   .finance-campus-compact-table { overflow-x: auto; }
   .finance-campus-compact-table table { min-width: 620px; }
   .finance-campus-chart__canvas { padding-left: 46px; }

@@ -1,14 +1,17 @@
 import {
   ArrowDownOutlined,
   ArrowUpOutlined,
+  BarChartOutlined,
   ClockCircleOutlined,
   PieChartOutlined,
+  UnorderedListOutlined,
   WalletOutlined,
 } from '@ant-design/icons'
 import { Skeleton, Table } from 'antd'
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 
-type DetailMode = 'income' | 'paid' | 'pending'
+type DetailMode = 'all' | 'income' | 'paid' | 'pending'
+type SingleDetailMode = Exclude<DetailMode, 'all'>
 
 interface CampusFinanceRow {
   campusId?: number
@@ -26,7 +29,7 @@ export function FinanceOverviewDashboard(props: {
   filter: ReactNode
 }) {
   const [selectedCampusId, setSelectedCampusId] = useState<number | null>(props.activeCampusId)
-  const [detailMode, setDetailMode] = useState<DetailMode>('income')
+  const [detailMode, setDetailMode] = useState<DetailMode>('all')
   const [breakdown, setBreakdown] = useState('__ALL__')
 
   useEffect(() => {
@@ -139,6 +142,7 @@ export function FinanceOverviewDashboard(props: {
         loading={props.loading}
         overview={overview}
         campusName={campusName}
+        periodLabel={props.periodLabel}
         mode={detailMode}
         breakdown={breakdown}
         onMode={switchDetail}
@@ -184,6 +188,7 @@ function CampusComparison(props: {
   selectedCampusId: number | null
   onSelect: (campusId: number) => void
 }) {
+  const [viewMode, setViewMode] = useState<'list' | 'chart'>('list')
   const rows = useMemo(() => props.rows.map((row) => {
     const income = numberOf(row.overview?.income)
     const paid = numberOf(row.overview?.paidExpense)
@@ -208,28 +213,39 @@ function CampusComparison(props: {
   return (
     <section className="finance-analysis-card finance-campus-comparison">
       <header className="finance-card-head">
-        <div><h3>校区收支对比</h3><p>{rows.length > 1 ? '点击柱组切换上方概览与下方明细' : '当前校区本期收支数据'}</p></div>
-        <span>{rows.length} 个校区</span>
+        <div className="finance-campus-comparison__heading">
+          <div><h3>校区收支对比</h3><p>{viewMode === 'chart' ? '点击柱组切换上方概览与下方明细' : '点击校区切换上方概览与下方明细'}</p></div>
+        </div>
+        <div className="finance-campus-comparison__actions">
+          <span>{rows.length} 个校区</span>
+          <div className="finance-campus-view-switch" role="group" aria-label="校区收支展示方式">
+            <button type="button" className={viewMode === 'list' ? 'is-active' : ''} aria-pressed={viewMode === 'list'} onClick={() => setViewMode('list')}><UnorderedListOutlined />列表</button>
+            <button type="button" className={viewMode === 'chart' ? 'is-active' : ''} aria-pressed={viewMode === 'chart'} onClick={() => setViewMode('chart')}><BarChartOutlined />图表</button>
+          </div>
+        </div>
       </header>
       {props.loading ? <div className="finance-chart-loading" aria-label="校区收支对比加载中">
         <Skeleton active title={{ width: '24%' }} paragraph={{ rows: 5, width: ['100%', '100%', '96%', '100%', '72%'] }} />
       </div> : null}
       {!props.loading && !rows.length ? <div className="finance-empty-inline">当前范围内暂无校区数据</div> : null}
-      {!props.loading && rows.length === 1 ? (
+      {!props.loading && rows.length && viewMode === 'list' ? (
         <div className="finance-campus-compact-table">
           <table>
             <thead><tr><th>校区</th><th>收入</th><th>已支出</th><th>待支出</th><th>预计结余</th></tr></thead>
-            <tbody><tr>
-              <th scope="row"><strong>{rows[0].campusName || '未命名校区'}</strong><small>当前查看</small></th>
-              <td className="is-income">{currency(rows[0].income)}</td>
-              <td>{currency(rows[0].paid)}</td>
-              <td className="is-pending">{currency(rows[0].pending)}</td>
-              <td className={rows[0].balance >= 0 ? 'is-balance' : 'is-deficit'}>{currency(rows[0].balance)}</td>
-            </tr></tbody>
+            <tbody>{rows.map((row) => {
+              const selected = Number(row.campusId) === Number(props.selectedCampusId)
+              return <tr key={row.campusId} className={selected ? 'is-active' : ''}>
+                <th scope="row"><button type="button" aria-pressed={selected} onClick={() => props.onSelect(Number(row.campusId))}><strong>{row.campusName || '未命名校区'}</strong><small>{selected ? '当前查看' : '点击查看'}</small></button></th>
+                <td className="is-income">{currency(row.income)}</td>
+                <td>{currency(row.paid)}</td>
+                <td className="is-pending">{currency(row.pending)}</td>
+                <td className={row.balance >= 0 ? 'is-balance' : 'is-deficit'}>{currency(row.balance)}</td>
+              </tr>
+            })}</tbody>
           </table>
         </div>
       ) : null}
-      {!props.loading && rows.length > 1 ? (
+      {!props.loading && rows.length && viewMode === 'chart' ? (
         <div className="finance-campus-chart">
           <div className="finance-campus-chart__scroll">
             <div className="finance-campus-chart__canvas" style={{ minWidth: `${Math.max(560, rows.length * 142)}px` }}>
@@ -315,6 +331,7 @@ function FinanceDetails(props: {
   loading: boolean
   overview: Record<string, unknown>
   campusName: string
+  periodLabel: string
   mode: DetailMode
   breakdown: string
   onMode: (mode: DetailMode) => void
@@ -323,27 +340,29 @@ function FinanceDetails(props: {
   const source = detailRows(props.overview, props.mode)
   const chips = Array.from(new Set(source.map((item) => detailLabel(item))))
   const shown = props.breakdown === '__ALL__' ? source : source.filter((item) => detailLabel(item) === props.breakdown)
-  const total = shown.reduce((sum, item) => sum + detailAmount(item, props.mode), 0)
-  const tabs: Array<{ key: DetailMode; label: string; value: number }> = [
-    { key: 'income', label: '收入明细', value: numberOf(props.overview.income) },
-    { key: 'paid', label: '已支出明细', value: numberOf(props.overview.paidExpense) },
-    { key: 'pending', label: '待支出明细', value: numberOf(props.overview.pendingExpense) },
+  const total = shown.reduce((sum, item) => sum + (props.mode === 'all' ? signedDetailAmount(item) : detailAmount(item, props.mode)), 0)
+  const allRows = detailRows(props.overview, 'all')
+  const tabs: Array<{ key: DetailMode; label: string; value: string }> = [
+    { key: 'all', label: '全部', value: `${allRows.length} 笔` },
+    { key: 'income', label: '收入', value: currency(numberOf(props.overview.income)) },
+    { key: 'paid', label: '已支出', value: currency(numberOf(props.overview.paidExpense)) },
+    { key: 'pending', label: '待支出', value: currency(numberOf(props.overview.pendingExpense)) },
   ]
   return (
     <section className="finance-detail-card">
       <header className="finance-card-head">
-        <div><h3>收支明细</h3><p>{props.campusName} · 按项目筛选查看每一笔资金</p></div>
-        {props.loading ? <Skeleton.Input active size="small" /> : <span>当前合计 <b>{currency(total)}</b></span>}
+        <div><h3>收支明细</h3><p>{props.campusName} · {props.periodLabel} · 逐笔查看本统计周期内的收入与支出</p></div>
+        {props.loading ? <Skeleton.Input active size="small" /> : <span>{props.mode === 'all' ? '收支净额' : '当前合计'} <b>{currency(total)}</b></span>}
       </header>
       {props.loading ? <div className="finance-detail-loading" aria-label="收支明细加载中">
         <div className="finance-detail-loading__tabs">
-          {Array.from({ length: 3 }, (_, index) => <Skeleton.Input active block key={index} />)}
+          {Array.from({ length: 4 }, (_, index) => <Skeleton.Input active block key={index} />)}
         </div>
         <Skeleton active title={false} paragraph={{ rows: 5, width: ['100%', '96%', '100%', '92%', '74%'] }} />
       </div> : <><div className="finance-detail-tabs">
         {tabs.map((tab) => (
           <button type="button" key={tab.key} className={props.mode === tab.key ? 'is-active' : ''} onClick={() => props.onMode(tab.key)} aria-pressed={props.mode === tab.key}>
-            <span>{tab.label}</span><strong>{currency(tab.value)}</strong>
+            <span>{tab.label}</span><strong>{tab.value}</strong>
           </button>
         ))}
       </div>
@@ -354,17 +373,18 @@ function FinanceDetails(props: {
         </div>
       ) : null}
       <Table
-        rowKey={(item, index) => String(item.title) + String(item.bizDate) + String(index)}
+        rowKey={(item, index) => String(item.__detailMode || props.mode) + String(item.title) + String(item.bizDate) + String(index)}
         dataSource={shown}
         pagination={shown.length > 8 ? { pageSize: 8, showSizeChanger: false } : false}
         scroll={{ x: 720 }}
         locale={{ emptyText: '当前筛选范围内还没有对应记录' }}
         columns={[
           { title: '项目', render: (_: unknown, item: Record<string, unknown>) => <strong>{String(item.title || detailLabel(item))}</strong> },
+          { title: '类型', width: 100, render: (_: unknown, item: Record<string, unknown>) => { const rowMode = detailRowMode(item, props.mode); return <span className={`finance-status is-${rowMode}`}>{detailModeText(rowMode)}</span> } },
           { title: '说明', dataIndex: 'subtitle', render: (value: unknown) => <span className="finance-table-muted">{String(value || '—')}</span> },
           { title: '日期', dataIndex: 'bizDate', width: 120 },
-          { title: '金额', align: 'right', width: 140, render: (_: unknown, item: Record<string, unknown>) => <b className={`finance-table-amount is-${props.mode}`}>{currency(detailAmount(item, props.mode))}</b> },
-          { title: '状态', dataIndex: 'statusLabel', width: 100, render: (value: unknown) => value ? <span className={`finance-status is-${props.mode}`}>{String(value)}</span> : '—' },
+          { title: '金额', align: 'right', width: 140, render: (_: unknown, item: Record<string, unknown>) => { const rowMode = detailRowMode(item, props.mode); const value = detailAmount(item, rowMode); return <b className={`finance-table-amount is-${rowMode}`}>{props.mode === 'all' && rowMode !== 'income' ? `-${currency(value)}` : currency(value)}</b> } },
+          { title: '状态', dataIndex: 'statusLabel', width: 100, render: (value: unknown, item: Record<string, unknown>) => { const rowMode = detailRowMode(item, props.mode); return value ? <span className={`finance-status is-${rowMode}`}>{String(value)}</span> : '—' } },
         ]}
       /></>}
     </section>
@@ -372,16 +392,42 @@ function FinanceDetails(props: {
 }
 
 function detailRows(overview: Record<string, unknown>, mode: DetailMode): Array<Record<string, unknown>> {
+  if (mode === 'all') {
+    const rows: Array<Record<string, unknown>> = [
+      ...detailRows(overview, 'income').map((item) => ({ ...item, __detailMode: 'income' })),
+      ...detailRows(overview, 'paid').map((item) => ({ ...item, __detailMode: 'paid' })),
+      ...detailRows(overview, 'pending').map((item) => ({ ...item, __detailMode: 'pending' })),
+    ]
+    return rows.sort((left, right) => String(right.bizDate || '').localeCompare(String(left.bizDate || '')))
+  }
   if (mode === 'income') return overview.incomeDetails as Array<Record<string, unknown>> || []
   if (mode === 'paid') return overview.paidExpenseDetails as Array<Record<string, unknown>> || []
   return overview.pendingExpenseDetails as Array<Record<string, unknown>> || []
 }
 
-function detailAmount(item: Record<string, unknown>, mode: DetailMode): number {
+function detailAmount(item: Record<string, unknown>, mode: SingleDetailMode): number {
   return numberOf(mode === 'pending' ? item.pendingAmount || item.amount : item.amount)
 }
 
+function detailRowMode(item: Record<string, unknown>, fallback: DetailMode): SingleDetailMode {
+  const mode = String(item.__detailMode || fallback)
+  return mode === 'paid' || mode === 'pending' ? mode : 'income'
+}
+
+function signedDetailAmount(item: Record<string, unknown>): number {
+  const mode = detailRowMode(item, 'all')
+  const amount = detailAmount(item, mode)
+  return mode === 'income' ? amount : -amount
+}
+
+function detailModeText(mode: SingleDetailMode): string {
+  if (mode === 'income') return '收入'
+  if (mode === 'paid') return '已支出'
+  return '待支出'
+}
+
 function detailLabel(item: Record<string, unknown>): string {
+  if (String(item.detailType || '').trim().toLowerCase() === 'salary') return '工资'
   return String(item.categoryName || item.paymentTypeLabel || item.title || '其他')
 }
 

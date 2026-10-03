@@ -1,15 +1,15 @@
-import { Button, Form, Input, InputNumber, Modal, Popconfirm, Select, Space, Switch, Table, Tabs, message } from 'antd'
+import { Button, Form, Input, InputNumber, Modal, Popconfirm, Radio, Select, Space, Switch, Table, Tabs, Tag, message } from 'antd'
 import { LeftOutlined, RightOutlined } from '@ant-design/icons'
-import { useEffect, useRef, useState } from 'react'
+import { type ReactNode, useEffect, useRef, useState } from 'react'
 import { delJson, getJson, postJson, putJson } from '../api/biz'
 import { BusinessDatePicker, BusinessDateRangePicker } from '../components/BusinessDatePicker'
+import { PaymentMethodPicker } from '../components/PaymentMethodPicker'
 import { FinanceOverviewDashboard } from './finance-overview'
 import { NeedCampus, PageHead, clampDecimalInput, money, monthKey, periodChoices, type PeriodOption, shiftPeriod, tell, todayIso, useShell } from './kit'
 
 export function FinancePage() {
   const shell = useShell()
   const campusId = shell.campusId
-  const [settingsBlock, setSettingsBlock] = useState('categories')
   const [mode, setMode] = useState('natural_month')
   const [month, setMonth] = useState(monthKey())
   const [startDate, setStartDate] = useState(monthBounds(monthKey())[0])
@@ -19,8 +19,13 @@ export function FinancePage() {
   const [campusRows, setCampusRows] = useState<Array<{ campusId?: number; campusName?: string; overview?: Record<string, unknown> }>>([])
   const [categories, setCategories] = useState<Array<Record<string, unknown>>>([])
   const [records, setRecords] = useState<Array<Record<string, unknown>>>([])
+  const [recordMode, setRecordMode] = useState<'all' | 'custom_range' | 'natural_month' | 'salary_cycle'>('all')
+  const [recordMonth, setRecordMonth] = useState(monthKey())
+  const [recordStartDate, setRecordStartDate] = useState(monthBounds(monthKey())[0])
+  const [recordEndDate, setRecordEndDate] = useState(todayIso())
+  const [recordPeriods, setRecordPeriods] = useState<PeriodOption[]>([])
+  const [recordsLoading, setRecordsLoading] = useState(true)
   const [plans, setPlans] = useState<Array<Record<string, unknown>>>([])
-  const [bills, setBills] = useState<Array<Record<string, unknown>>>([])
   const [categoryEdit, setCategoryEdit] = useState<Record<string, unknown> | null>(null)
   const [planEdit, setPlanEdit] = useState<Record<string, unknown> | null>(null)
   const [periods, setPeriods] = useState<PeriodOption[]>([])
@@ -28,9 +33,7 @@ export function FinancePage() {
   const categoryDirection = Form.useWatch('direction', categoryForm) || 'income'
   const [expenseRecurring, setExpenseRecurring] = useState(false)
   const loadRequestRef = useRef(0)
-  const billingMonth = monthKey()
-  const billingPeriod = naturalMonthRangeLabel(billingMonth)
-  const billingPeriodShort = naturalMonthRangeLabel(billingMonth, true)
+  const recordRequestRef = useRef(0)
 
   async function load() {
     if (!campusId) return
@@ -56,12 +59,10 @@ export function FinancePage() {
       setPeriods(nextPeriods)
       const resolvedMonth = String(window?.month || '')
       if ((mode === 'salary_cycle' || mode === 'natural_month') && resolvedMonth && resolvedMonth !== month) setMonth(resolvedMonth)
-      const [nextOverview, nextCategories, nextRecords, nextPlans, nextBills, nextCampusRows] = await Promise.all([
+      const [nextOverview, nextCategories, nextPlans, nextCampusRows] = await Promise.all([
         getJson<Record<string, unknown>>('/finance/overview', { campusId, ...query }),
         getJson<Array<Record<string, unknown>>>('/finance/categories', { campusId, includeDisabled: true }),
-        getJson<Array<Record<string, unknown>>>('/finance/records', { campusId, ...query }),
         getJson<Array<Record<string, unknown>>>('/finance/recurring-plans', { campusId }),
-        getJson<Array<Record<string, unknown>>>('/finance/recurring-bills', { campusId, ...query }),
         getJson<Array<{ campusId?: number; campusName?: string; overview?: Record<string, unknown> }>>('/finance/overview/by-campus', {
           campusIds: shell.campuses.map((item) => item.id).join(','),
           ...query,
@@ -71,11 +72,30 @@ export function FinancePage() {
       setOverview(nextOverview)
       setCampusRows(nextCampusRows || [])
       setCategories(nextCategories || [])
-      setRecords(nextRecords || [])
       setPlans(nextPlans || [])
-      setBills(nextBills || [])
     } finally {
       if (requestId === loadRequestRef.current) setOverviewLoading(false)
+    }
+  }
+
+  async function loadRecordDetails() {
+    if (!campusId) return
+    const requestId = ++recordRequestRef.current
+    setRecordsLoading(true)
+    try {
+      const query = recordMode === 'all' ? { timeMode: 'all' } : financeQuery(recordMode, recordMonth, recordStartDate, recordEndDate)
+      const [details, editableRecords, options] = await Promise.all([
+        getJson<Record<string, unknown>>('/finance/overview', { campusId, ...query }),
+        getJson<Array<Record<string, unknown>>>('/finance/records', { campusId, ...query }),
+        getJson<Record<string, unknown>>('/finance/time-options', { campusId, ...query }),
+      ])
+      if (requestId !== recordRequestRef.current) return
+      setRecords(mergeFinanceRecordRows(details, editableRecords || []))
+      setRecordPeriods((options?.periodOptions as PeriodOption[]) || [])
+      const resolvedMonth = String(options?.month || '')
+      if (recordMode !== 'all' && recordMode !== 'custom_range' && resolvedMonth && resolvedMonth !== recordMonth) setRecordMonth(resolvedMonth)
+    } finally {
+      if (requestId === recordRequestRef.current) setRecordsLoading(false)
     }
   }
 
@@ -83,17 +103,43 @@ export function FinancePage() {
     load().catch((error) => message.error(tell(error, '收支加载失败')))
   }, [campusId, month, mode, startDate, endDate])
 
-  const income = records.filter((item) => item.direction === 'income' || item.direction === 'INCOME')
-  const expense = records.filter((item) => item.direction !== 'income' && item.direction !== 'INCOME')
+  useEffect(() => {
+    loadRecordDetails().catch((error) => message.error(tell(error, '收支明细加载失败')))
+  }, [campusId, recordMode, recordMonth, recordStartDate, recordEndDate])
+
   const periodLabel = financePeriodLabel(mode, month, startDate, endDate)
 
   return (
     <NeedCampus campusId={campusId}>
       <PageHead title="收支管理" extra="集中查看收入、支出、待付款与校区财务表现。" />
-      <Tabs defaultActiveKey="overview" items={[
+      <Tabs defaultActiveKey="records" items={[
+        {
+          key: 'records',
+          label: '收支明细',
+          children: <RecordTable
+            rows={records}
+            loading={recordsLoading}
+            campusId={campusId}
+            categories={categories}
+            plans={plans}
+            direction="all"
+            onChanged={async () => { await Promise.all([load(), loadRecordDetails()]) }}
+            filter={<div className="finance-record-filter">
+              <span>时间选择</span>
+              <Radio.Group value={recordMode} optionType="button" buttonStyle="solid" onChange={(event) => setRecordMode(event.target.value)}>
+                <Radio.Button value="all">全部</Radio.Button>
+                <Radio.Button value="custom_range">日期区间</Radio.Button>
+                <Radio.Button value="natural_month">自然月</Radio.Button>
+                <Radio.Button value="salary_cycle">计薪周期</Radio.Button>
+              </Radio.Group>
+              {recordMode === 'custom_range' ? <BusinessDateRangePicker value={[recordStartDate, recordEndDate]} onChange={([start, end]) => { setRecordStartDate(start); setRecordEndDate(end) }} /> : null}
+              {recordMode === 'natural_month' || recordMode === 'salary_cycle' ? <Select value={recordMonth} options={periodChoices(recordPeriods, recordMonth, recordMode)} popupMatchSelectWidth={false} onChange={setRecordMonth} /> : null}
+            </div>}
+          />,
+        },
         {
           key: 'overview',
-          label: '总览',
+          label: '数据统计',
           children: (
             <FinanceOverviewDashboard
               loading={overviewLoading}
@@ -174,43 +220,8 @@ export function FinancePage() {
           key: 'settings',
           label: '财务设置',
           children: (
-            <div className="finance-settings">
-            <div className="finance-settings-blocks" role="tablist" aria-label="财务设置分类">
-              <button
-                type="button"
-                role="tab"
-                aria-selected={settingsBlock === 'categories'}
-                className={settingsBlock === 'categories' ? 'is-active' : ''}
-                onClick={() => setSettingsBlock('categories')}
-              >
-                <span className="finance-settings-blocks__index">01</span>
-                <span className="finance-settings-blocks__copy"><strong>收支项目</strong><small>维护收入与支出分类</small></span>
-                <span className="finance-settings-blocks__count"><b>{categories.length}</b><small>项</small></span>
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={settingsBlock === 'plans'}
-                className={settingsBlock === 'plans' ? 'is-active' : ''}
-                onClick={() => setSettingsBlock('plans')}
-              >
-                <span className="finance-settings-blocks__index">02</span>
-                <span className="finance-settings-blocks__copy"><strong>周期支出</strong><small>管理固定支出计划</small></span>
-                <span className="finance-settings-blocks__count"><b>{plans.length}</b><small>项</small></span>
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={settingsBlock === 'bills'}
-                className={settingsBlock === 'bills' ? 'is-active' : ''}
-                onClick={() => setSettingsBlock('bills')}
-              >
-                <span className="finance-settings-blocks__index">03</span>
-                <span className="finance-settings-blocks__copy"><strong>本月周期账单</strong><small>{billingPeriodShort}</small></span>
-                <span className="finance-settings-blocks__count"><b>{bills.length}</b><small>笔</small></span>
-              </button>
-            </div>
-            {settingsBlock === 'categories' ? <section className="work-card finance-settings-panel">
+            <div className="finance-settings finance-settings-grid">
+            <section className="work-card finance-settings-panel">
               <h2>收支项目</h2>
               <Form className="finance-category-form" form={categoryForm} layout="inline" onFinish={async (values: { name: string; direction: string; cycleMonths?: number; startDate?: string }) => {
                 const name = String(values.name || '').trim()
@@ -301,8 +312,8 @@ export function FinancePage() {
                   ),
                 },
               ]} />
-            </section> : null}
-            {settingsBlock === 'plans' ? <section className="work-card finance-settings-panel">
+            </section>
+            <section className="work-card finance-settings-panel">
               <h2>周期支出</h2>
               <Form layout="inline" onFinish={async (values: { name?: string; categoryId?: number; singleAmount?: number; cycleMonths?: number; startDate?: string; remark?: string }) => {
                 const name = String(values.name || '').trim()
@@ -341,31 +352,10 @@ export function FinancePage() {
                   ),
                 },
               ]} />
-            </section> : null}
-            {settingsBlock === 'bills' ? <section className="work-card finance-settings-panel">
-              <header className="finance-settings-panel-head">
-                <div><h2>本月周期账单</h2><p>统计周期：{billingPeriod}（自然月）</p></div>
-                <span>每月 1 日至月末</span>
-              </header>
-              <Table
-                rowKey="id"
-                dataSource={bills}
-                pagination={false}
-                locale={{ emptyText: '本月没有周期账单' }}
-                columns={[
-                  { title: '月份', dataIndex: 'billMonth' },
-                  { title: '计划', render: (_: unknown, row: Record<string, unknown>) => String(plans.find((item) => item.id === row.planId)?.name || row.planId || '') },
-                  { title: '应摊', render: (_: unknown, row: Record<string, unknown>) => money(row.apportionedAmount) },
-                  { title: '已覆盖', render: (_: unknown, row: Record<string, unknown>) => money(row.coveredAmount) },
-                  { title: '状态', render: (_: unknown, row: Record<string, unknown>) => billStatusText(row.status) },
-                ]}
-              />
-            </section> : null}
+            </section>
             </div>
           ),
         },
-        { key: 'income', label: '收入明细', children: <RecordTable rows={income.length ? income : (overview?.incomeDetails as Array<Record<string, unknown>> || [])} campusId={campusId} categories={categories} plans={plans} direction="income" onChanged={load} /> },
-        { key: 'expense', label: '运营支出明细', children: <RecordTable rows={expense.length ? expense : (overview?.paidExpenseDetails as Array<Record<string, unknown>> || [])} campusId={campusId} categories={categories} plans={plans} direction="expense" onChanged={load} /> },
       ]} />
       <Modal title="修改项目名称" open={!!categoryEdit} onCancel={() => setCategoryEdit(null)} footer={null} destroyOnHidden>
         {categoryEdit ? (
@@ -439,25 +429,47 @@ function paymentTypeText(value: unknown): string {
   return PAYMENT_TYPES.find((item) => item.value === Number(value))?.label || ''
 }
 
+function mergeFinanceRecordRows(overview: Record<string, unknown>, editable: Array<Record<string, unknown>>): Array<Record<string, unknown>> {
+  const incomes = (overview?.incomeDetails as Array<Record<string, unknown>> || []).map<Record<string, unknown>>((item) => ({ ...item, direction: 'income' }))
+  const expenses = [...(overview?.paidExpenseDetails as Array<Record<string, unknown>> || []), ...(overview?.pendingExpenseDetails as Array<Record<string, unknown>> || [])].map<Record<string, unknown>>((item) => ({ ...item, direction: 'expense' }))
+  const generated = [...incomes, ...expenses].filter((item) => String(item.detailType || '') !== 'manual')
+  const manual = editable.filter((item) => ['manual_income', 'manual_expense'].includes(String(item.sourceType || '')))
+  return [...generated, ...manual]
+    .map((item, index) => ({ ...item, recordKey: item.id || `${item.detailType || item.sourceType}-${item.staffId || item.studentId || item.title}-${recordDate(item)}-${index}` }))
+    .sort((left, right) => recordDate(right).localeCompare(recordDate(left)))
+}
+
+function recordDirection(row: Record<string, unknown>): 'income' | 'expense' {
+  return String(row.direction || '').toLowerCase() === 'income' ? 'income' : 'expense'
+}
+
+function recordDate(row: Record<string, unknown>): string {
+  return String(row.bizDate || row.date || row.paidTime || row.cycleStartDate || row.month || '').slice(0, 10)
+}
+
 function RecordTable(props: {
   rows: Array<Record<string, unknown>>
+  loading?: boolean
+  filter?: ReactNode
   campusId: number | null
   categories: Array<Record<string, unknown>>
   plans: Array<Record<string, unknown>>
-  direction: string
+  direction: 'income' | 'expense' | 'all'
   onChanged: () => Promise<void>
 }) {
   const [editing, setEditing] = useState<Record<string, unknown> | null>(null)
-  const [creating, setCreating] = useState(false)
+  const [creating, setCreating] = useState<'income' | 'expense' | null>(null)
   const [savingCreate, setSavingCreate] = useState(false)
   const [createForm] = Form.useForm()
-  const income = props.direction === 'income'
+  const combined = props.direction === 'all'
+  const activeDirection = editing ? recordDirection(editing) : creating || (props.direction === 'all' ? 'income' : props.direction)
+  const income = activeDirection === 'income'
   const recordName = income ? '收入' : '支出'
   const entries = [
     ...props.categories
-      .filter((item) => String(item.direction || '') === props.direction && Number(item.enabled) !== 0)
+      .filter((item) => String(item.direction || '').toLowerCase() === activeDirection && Number(item.enabled) !== 0)
       .map((item) => ({ value: `category:${item.id}`, label: String(item.name) })),
-    ...(props.direction === 'expense' ? props.plans.map((item) => ({ value: `plan:${item.id}`, label: `周期 · ${String(item.name || '')}` })) : []),
+    ...(activeDirection === 'expense' ? props.plans.map((item) => ({ value: `plan:${item.id}`, label: `周期 · ${String(item.name || '')}` })) : []),
   ]
   const editingEntry = editing?.planId ? `plan:${editing.planId}` : editing?.categoryId ? `category:${editing.categoryId}` : ''
   if (editingEntry && !entries.some((item) => item.value === editingEntry)) {
@@ -469,8 +481,8 @@ function RecordTable(props: {
     const plan = kind === 'plan'
     return {
       campusId: props.campusId,
-      direction: props.direction,
-      sourceType: plan ? 'recurring_expense_payment' : props.direction === 'income' ? 'manual_income' : 'manual_expense',
+      direction: activeDirection,
+      sourceType: plan ? 'recurring_expense_payment' : activeDirection === 'income' ? 'manual_income' : 'manual_expense',
       categoryId: plan ? undefined : id,
       planId: plan ? id : undefined,
       amount: values.amount,
@@ -480,11 +492,11 @@ function RecordTable(props: {
     }
   }
   function closeCreate() {
-    setCreating(false)
+    setCreating(null)
     createForm.resetFields()
   }
   async function createRecord(values: { entry: string; amount: number; bizDate?: string; paymentType: number; remark?: string }) {
-    const error = recordError(props.direction, props.campusId, values)
+    const error = recordError(activeDirection, props.campusId, values)
     if (error) return void message.warning(error)
     setSavingCreate(true)
     try {
@@ -501,12 +513,14 @@ function RecordTable(props: {
   return (
     <section className="work-card finance-record-card">
       <div className="finance-record-head">
-        <div><h2>{income ? '收入明细' : '运营支出明细'}</h2><p>查看已有{recordName}记录，需要新增时点击右侧按钮。</p></div>
-        <Button type="primary" onClick={() => setCreating(true)}>录入{recordName}</Button>
+        {combined ? props.filter : <div><h2>{income ? '收入明细' : '运营支出明细'}</h2><p>{`查看已有${recordName}记录，需要新增时点击右侧按钮。`}</p></div>}
+        {combined ? <Space><Button onClick={() => setCreating('income')}>录入收入</Button><Button type="primary" onClick={() => setCreating('expense')}>录入支出</Button></Space> : <Button type="primary" onClick={() => setCreating(props.direction as 'income' | 'expense')}>录入{recordName}</Button>}
       </div>
-      <Table rowKey={(row) => String(row.id || row.title)} dataSource={props.rows} pagination={false} columns={[
-        { title: '日期', render: (_: unknown, row: Record<string, unknown>) => String(row.bizDate || row.date || '') },
+      {combined ? null : props.filter}
+      <Table loading={props.loading} rowKey={(row) => `${recordDirection(row)}-${String(row.id || row.recordKey || row.title)}`} dataSource={props.rows} pagination={combined ? { pageSize: 10, showSizeChanger: false, hideOnSinglePage: true, showTotal: (total) => `共 ${total} 条` } : false} columns={[
+        { title: '日期', render: (_: unknown, row: Record<string, unknown>) => recordDate(row) },
         { title: '名称', render: (_: unknown, row: Record<string, unknown>) => String(row.title || row.sourceName || row.categoryName || '') },
+        ...(combined ? [{ title: '类型', width: 100, render: (_: unknown, row: Record<string, unknown>) => recordDirection(row) === 'income' ? <Tag color="green">收入</Tag> : <Tag color="orange">支出</Tag> }] : []),
         { title: '方式', render: (_: unknown, row: Record<string, unknown>) => String(row.paymentTypeLabel || paymentTypeText(row.paymentType)) },
         { title: '金额', render: (_: unknown, row: Record<string, unknown>) => money(row.amount) },
         { title: '备注', dataIndex: 'remark' },
@@ -532,7 +546,7 @@ function RecordTable(props: {
       ]} />
       <Modal
         title={`录入${recordName}`}
-        open={creating}
+        open={!!creating}
         okText="确认录入"
         cancelText="取消"
         confirmLoading={savingCreate}
@@ -543,9 +557,8 @@ function RecordTable(props: {
         <Form form={createForm} layout="vertical" initialValues={{ bizDate: todayIso() }} onFinish={createRecord}>
           <Form.Item name="entry" label={`${recordName}项目`} rules={[{ required: true, message: '请选择项目' }]}><Select placeholder={`请选择${recordName}项目`} options={entries} /></Form.Item>
           <PlanEntryHint plans={props.plans} categories={props.categories} />
-          <Form.Item name="amount" label="金额" rules={[{ required: true, message: '请输入有效金额' }]} getValueFromEvent={(value) => clampDecimalInput(value)}><InputNumber style={{ width: '100%' }} placeholder="请输入金额" min={0.01} /></Form.Item>
-          <Form.Item name="paymentType" label={`${recordName}方式`} rules={[{ required: true, message: `请选择${recordName}方式` }]}><Select placeholder={`请选择${recordName}方式`} options={PAYMENT_TYPES} /></Form.Item>
-          <Form.Item name="bizDate" label={`${recordName}日期`} rules={[{ required: true, message: `请选择${recordName}日期` }]}><BusinessDatePicker /></Form.Item>
+          <div className="finance-record-form__row"><Form.Item name="amount" label="金额" rules={[{ required: true, message: '请输入有效金额' }]} getValueFromEvent={(value) => clampDecimalInput(value)}><InputNumber style={{ width: '100%' }} placeholder="请输入金额" min={0.01} /></Form.Item><Form.Item name="bizDate" label={`${recordName}日期`} rules={[{ required: true, message: `请选择${recordName}日期` }]}><BusinessDatePicker /></Form.Item></div>
+          <Form.Item name="paymentType" label={`${recordName}方式`} rules={[{ required: true, message: `请选择${recordName}方式` }]}><PaymentMethodPicker /></Form.Item>
           <Form.Item name="remark" label="备注"><Input placeholder="选填" maxLength={200} /></Form.Item>
         </Form>
       </Modal>
@@ -561,7 +574,7 @@ function RecordTable(props: {
               paymentType: editing.paymentType,
             }}
             onFinish={async (values: { entry: string; amount: number; remark?: string; bizDate?: string; paymentType: number }) => {
-              const error = recordError(props.direction, props.campusId, values)
+              const error = recordError(activeDirection, props.campusId, values)
               if (error) {
                 message.warning(error)
                 return
@@ -580,7 +593,7 @@ function RecordTable(props: {
             <PlanEntryHint plans={props.plans} categories={props.categories} />
             <Form.Item name="bizDate" label="日期" rules={[{ required: true }]}><BusinessDatePicker /></Form.Item>
             <Form.Item name="amount" label="金额" rules={[{ required: true, message: '请输入有效金额' }]} getValueFromEvent={(value) => clampDecimalInput(value)}><InputNumber style={{ width: '100%' }} min={0.01} /></Form.Item>
-            <Form.Item name="paymentType" label={props.direction === 'income' ? '收入方式' : '支出方式'} rules={[{ required: true }]}><Select options={PAYMENT_TYPES} /></Form.Item>
+            <Form.Item name="paymentType" label={income ? '收入方式' : '支出方式'} rules={[{ required: true }]}><PaymentMethodPicker /></Form.Item>
             <Form.Item name="remark" label="备注"><Input maxLength={200} /></Form.Item>
             <Button type="primary" htmlType="submit">保存修改</Button>
           </Form>
@@ -614,12 +627,6 @@ function PlanEntryHint(props: { plans: Array<Record<string, unknown>>; categorie
       {String(plan.remark || '').trim() ? ` · 备注 ${String(plan.remark).trim()}` : ''}
     </p>
   )
-}
-
-function billStatusText(value: unknown): string {
-  if (value === 'paid') return '已覆盖'
-  if (value === 'partial') return '部分覆盖'
-  return '待覆盖'
 }
 
 function recordError(direction: string, campusId: number | null, values: { entry?: string; amount?: number; bizDate?: string; paymentType?: number }) {
@@ -705,10 +712,4 @@ function monthBounds(month: string): [string, string] {
   const [year, mon] = month.split('-').map(Number)
   const end = new Date(year, mon, 0).getDate()
   return [`${month}-01`, `${month}-${`${end}`.padStart(2, '0')}`]
-}
-
-function naturalMonthRangeLabel(month: string, short = false): string {
-  const [year, mon] = month.split('-').map(Number)
-  const endDay = Number(monthBounds(month)[1].slice(-2))
-  return short ? `${mon}月1日—${mon}月${endDay}日` : `${year}年${mon}月1日—${mon}月${endDay}日`
 }

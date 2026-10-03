@@ -1,9 +1,9 @@
 import { Button, Collapse, Empty, Form, Input, InputNumber, Modal, Radio, Select, Spin, Table, message } from 'antd'
-import { AlipayCircleFilled, BankFilled, CreditCardFilled, WalletFilled, WechatFilled } from '@ant-design/icons'
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getJson, putJson } from '../api/biz'
 import { BusinessDatePicker } from '../components/BusinessDatePicker'
+import { PaymentMethodPicker } from '../components/PaymentMethodPicker'
 import { NeedCampus, PageHead, genderText, money, type PeriodOption, tell, todayIso, useShell } from './kit'
 import './SalaryPage.css'
 
@@ -69,14 +69,6 @@ function serializeMonthPart(value: MonthPart): string {
   if (!value.year || !value.month) return ''
   return `${value.year}-${String(value.month).padStart(2, '0')}`
 }
-
-const payoutMethodOptions = [
-  { value: 1, label: <span className="salary-payment-option is-alipay"><AlipayCircleFilled /><span>支付宝</span></span> },
-  { value: 2, label: <span className="salary-payment-option is-wechat"><WechatFilled /><span>微信</span></span> },
-  { value: 3, label: <span className="salary-payment-option is-bank-card"><CreditCardFilled /><span>银行卡</span></span> },
-  { value: 4, label: <span className="salary-payment-option is-corporate"><BankFilled /><span>公户</span></span> },
-  { value: 5, label: <span className="salary-payment-option is-cash"><WalletFilled /><span>现金</span></span> },
-]
 
 export function SalaryPage() {
   const shell = useShell()
@@ -441,9 +433,7 @@ function PayoutModal({ row, summary, campusId, onClose, onSaved }: {
         <BusinessDatePicker />
       </Form.Item>
       <Form.Item name="paymentType" label="支付方式" rules={[{ required: true, message: '请选择支付方式' }]}>
-        <Radio.Group className="salary-payment-methods">
-          {payoutMethodOptions.map((item) => <Radio.Button key={item.value} value={item.value}>{item.label}</Radio.Button>)}
-        </Radio.Group>
+        <PaymentMethodPicker />
       </Form.Item>
       <Form.Item name="paymentRemark" label="流水号 / 凭证备注" rules={[{ required: true, whitespace: true, message: '请输入流水号或凭证备注' }]}>
         <Input placeholder="请输入支付流水号；现金发放可填写凭证备注" maxLength={100} />
