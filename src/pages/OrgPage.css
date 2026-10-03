@@ -61,7 +61,11 @@
 }
 
 .org-permission-card {
-  flex: 1;
+  grid-column: 1;
+}
+
+.org-permission-card--wide {
+  grid-column: 1 / -1;
 }
 
 .org-collaborators-card {
@@ -75,7 +79,7 @@
 }
 
 .org-danger-card {
-  grid-column: 1 / -1;
+  grid-column: 2;
   border-color: #f0d9dc;
 }
 
@@ -345,6 +349,8 @@
 
   .org-settings-column--left,
   .org-settings-column--right,
+  .org-permission-card,
+  .org-permission-card--wide,
   .org-danger-card {
     grid-column: 1;
   }

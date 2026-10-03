@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { clearSession, getOrgId, getToken } from '../session'
+import { clearAuthentication, clearMarketingAuthentication, discardLoginRedirect, getOrgId, getToken, rememberLoginRedirect } from '../session'
 import type { ApiResult } from './types'
 
 const ONLINE_API_BASE_URL = 'https://timetable.devtesting.top/api'
@@ -26,6 +26,13 @@ function resolveApiBaseUrl(): string {
   return import.meta.env.VITE_API_BASE_URL || ONLINE_API_BASE_URL
 }
 
+export function resolveApiAssetUrl(value: string): string {
+  const source = String(value || '').trim()
+  if (!source || /^(?:https?:|data:|blob:)/i.test(source)) return source
+  const root = resolveApiBaseUrl().replace(/\/+$/, '')
+  return `${root}${source.startsWith('/') ? '' : '/'}${source}`
+}
+
 const http = axios.create({
   baseURL: resolveApiBaseUrl(),
   timeout: 20000,
@@ -36,8 +43,22 @@ function isMarketingSessionRequest(url?: string): boolean {
 }
 
 function clearMarketingSession(): void {
-  sessionStorage.removeItem('timetable_marketing_token')
-  sessionStorage.removeItem('timetable_marketing_phone_bound')
+  clearMarketingAuthentication()
+}
+
+function expireAccountSession(): void {
+  const { pathname, search, hash } = window.location
+  const keepsOriginalLoginLanding = pathname === '/parent'
+    || pathname.startsWith('/parent/')
+    || pathname === '/platform'
+  const shouldNavigate = !pathname.startsWith('/login')
+  const returnTarget = `${pathname}${search}${hash}`
+  clearAuthentication()
+  if (shouldNavigate) {
+    if (keepsOriginalLoginLanding) discardLoginRedirect()
+    else rememberLoginRedirect(returnTarget)
+    window.location.assign('/login')
+  }
 }
 
 http.interceptors.request.use((config) => {
@@ -60,10 +81,7 @@ http.interceptors.response.use(
         if (isMarketingSessionRequest(response.config.url)) {
           clearMarketingSession()
         } else {
-          clearSession()
-          if (!window.location.pathname.startsWith('/login')) {
-            window.location.assign('/login')
-          }
+          expireAccountSession()
         }
       }
       return Promise.reject(new Error(body.message || '请求失败'))
@@ -76,10 +94,7 @@ http.interceptors.response.use(
       if (isMarketingSessionRequest(error?.config?.url)) {
         clearMarketingSession()
       } else {
-        clearSession()
-        if (!window.location.pathname.startsWith('/login')) {
-          window.location.assign('/login')
-        }
+        expireAccountSession()
       }
     }
     return Promise.reject(new Error(message))

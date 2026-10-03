@@ -21,10 +21,6 @@ export function logout(): Promise<void> {
   return postData<void>('/auth/logout')
 }
 
-export function updateUserInfo(data: Partial<UserInfo>): Promise<UserInfo> {
-  return putData<UserInfo>('/auth/userinfo', data)
-}
-
 export function uploadAvatar(file: File): Promise<UserInfo> {
   return uploadData<UserInfo>('/auth/avatar', file)
 }

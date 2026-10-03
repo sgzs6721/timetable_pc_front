@@ -488,12 +488,20 @@ export function disabledServiceWarning(services: Array<{ id: number; enabled?: n
   return blocked ? '该服务已停用' : ''
 }
 
+export function isActiveTeachingCoach(item: Named): boolean {
+  const status = item.status == null || String(item.status).trim() === '' ? 1 : Number(item.status)
+  const substitute = item.isSubstituteTeacher === true
+    || Number(item.isSubstituteTeacher) === 1
+    || String(item.isSubstituteTeacher || '').trim().toLowerCase() === 'true'
+  return status === 1 && substitute
+}
+
 export function CoachMultiSelect(props: { value?: number[]; onChange?: (value: number[]) => void; coaches: Named[]; variant?: 'select' | 'chips' }) {
   const catalog = useContext(CatalogLoadContext)
-  const choices = props.coaches.filter((item) => Number(item.status ?? 1) !== 0)
+  const choices = props.coaches.filter(isActiveTeachingCoach)
   if (catalog.coaches === 'loading') return <CatalogHold text="正在加载老师..." />
   if (catalog.coaches === 'failed') return <CatalogHold text="老师加载失败，点击重试" onRetry={catalog.retryCoaches} />
-  if (!choices.length) return <CatalogHold text="当前校区暂无老师，请先配置校区老师" />
+  if (!choices.length) return <CatalogHold text="当前校区暂无在职带课老师，请先配置老师" />
   if (props.variant === 'chips') {
     const selected = new Set((props.value || []).map(Number))
     return (
@@ -519,11 +527,28 @@ export function CoachMultiSelect(props: { value?: number[]; onChange?: (value: n
   return <Select mode="multiple" value={props.value} onChange={props.onChange} options={choices.map((item) => ({ value: item.id, label: personName(item) }))} />
 }
 
-export function ServiceMultiSelect(props: { value?: number[]; onChange?: (value: number[]) => void; services: Named[] }) {
+export function ServiceMultiSelect(props: { value?: number[]; onChange?: (value: number[]) => void; services: Named[]; variant?: 'select' | 'chips' }) {
   const catalog = useContext(CatalogLoadContext)
   if (catalog.services === 'loading') return <CatalogHold text="正在加载服务..." />
   if (catalog.services === 'failed') return <CatalogHold text="服务加载失败，点击重试" onRetry={catalog.retryServices} />
   if (!props.services.length) return <CatalogHold text="当前校区暂无可选服务，请先在校区设置中配置" />
+  if (props.variant === 'chips') {
+    const selected = new Set((props.value || []).map(Number))
+    return (
+      <div className="student-choice-grid student-choice-grid--services">
+        {props.services.map((item) => {
+          const id = Number(item.id)
+          const active = selected.has(id)
+          return (
+            <button key={id} type="button" aria-pressed={active} className={`student-choice-chip student-choice-chip--service${active ? ' is-selected' : ''}`} onClick={() => props.onChange?.(active ? [...selected].filter((value) => value !== id) : [...selected, id])}>
+              <span>{personName(item)}</span>
+              <small>{serviceOptionLabel(item).replace(`${personName(item)} · `, '')}</small>
+            </button>
+          )
+        })}
+      </div>
+    )
+  }
   return (
     <Select
       mode="multiple"

@@ -1,10 +1,11 @@
-import { lazy, Suspense } from 'react'
-import { Navigate, Outlet, Route, Routes, useOutletContext } from 'react-router-dom'
-import { getToken } from './session'
+import { lazy, Suspense, useEffect, useState } from 'react'
+import { Navigate, Outlet, Route, Routes, useLocation, useOutletContext } from 'react-router-dom'
+import { discardLoginRedirect, getToken, rememberLoginRedirect } from './session'
 import { AppShell, type ShellContext } from './layouts/AppShell'
 import { LegalPage } from './pages/LegalPage'
 import { LoginPage } from './pages/LoginPage'
 import { WechatCallbackPage } from './pages/WechatCallbackPage'
+import { InstitutionRouteGuard } from './routing/InstitutionRouteGuard'
 
 const AccountPage = lazy(() => import('./pages/AccountPage').then((module) => ({ default: module.AccountPage })))
 const CampusPage = lazy(() => import('./pages/CampusPage').then((module) => ({ default: module.CampusPage })))
@@ -42,10 +43,29 @@ const MarketingEnrollmentsPage = lazy(() => import('./marketing-public/Marketing
 const MarketingReferralPage = lazy(() => import('./marketing-public/MarketingMyPages').then((module) => ({ default: module.MarketingReferralPage })))
 
 function RequireAuth() {
+  const location = useLocation()
   if (!getToken()) {
-    return <Navigate to="/login" replace />
+    const keepsOriginalLoginLanding = location.pathname === '/parent'
+      || location.pathname.startsWith('/parent/')
+      || location.pathname === '/platform'
+    if (keepsOriginalLoginLanding) {
+      discardLoginRedirect()
+      return <Navigate to="/login" replace />
+    }
+    const target = `${location.pathname}${location.search}${location.hash}`
+    return <RememberThenLogin key={target} target={target} />
   }
   return <Outlet />
+}
+
+function RememberThenLogin({ target }: { target: string }) {
+  const [remembered, setRemembered] = useState(false)
+  useEffect(() => {
+    rememberLoginRedirect(target)
+    setRemembered(true)
+  }, [target])
+  if (!remembered) return <div className="route-loading">正在跳转登录…</div>
+  return <Navigate to="/login" replace />
 }
 
 function SuspendedShellOutlet() {
@@ -85,6 +105,7 @@ export function App() {
         <Route path="/my-referral/:shareCode" element={<Suspense fallback={<div className="route-loading">正在加载推广数据…</div>}><MarketingReferralPage /></Suspense>} />
         <Route element={<AppShell />}>
         <Route element={<SuspendedShellOutlet />}>
+        <Route element={<InstitutionRouteGuard />}>
         <Route path="/home" element={<HomePage />} />
         <Route path="/account" element={<AccountPage />} />
         <Route path="/students" element={<StudentsPage />} />
@@ -102,6 +123,7 @@ export function App() {
         <Route path="/marketing" element={<MarketingPage />} />
         <Route path="/guide" element={<GuidePage />} />
         <Route path="/feedback" element={<FeedbackPage />} />
+        </Route>
         </Route>
         </Route>
       </Route>

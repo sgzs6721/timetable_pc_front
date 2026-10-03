@@ -86,6 +86,7 @@ export function StudentsPage() {
   const [campusHidden, setCampusHidden] = useState(false)
 
   const campusId = shell.campusId
+  const campusName = campuses.find((item) => Number(item.id) === Number(campusId))?.name
   const reloadGroups = useCallback(() => {
     const id = campusId
     const seq = ++catalogSeq.current.groups
@@ -114,7 +115,7 @@ export function StudentsPage() {
       return
     }
     setCoachesStatus('loading')
-    getJson<Named[]>(`/campus-teacher/campus/${id}`).then((rows) => {
+    getJson<Named[]>(`/campus-teacher/campus/${id}`, { onlySubstitute: true }).then((rows) => {
       if (seq !== catalogSeq.current.coaches) return
       setCoaches(rows || [])
       setCoachesStatus('ready')
@@ -564,8 +565,13 @@ export function StudentsPage() {
         groups={groups}
         services={services}
         campusId={campusId}
+        campusName={campusName}
         onClose={() => setAdding(false)}
-        onSaved={() => { setAdding(false); load() }}
+        onSaved={(student) => {
+          setAdding(false)
+          load().catch(() => undefined)
+          if (student.id) setParams({ studentId: String(student.id) })
+        }}
       />
       <QuickCheckIn
         key={checkStudent?.id || 'closed'}

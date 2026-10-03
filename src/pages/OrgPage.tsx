@@ -197,27 +197,6 @@ export function OrgPage() {
           </div>
         </Form>
       </section>
-      <section className="work-card org-block-card org-permission-card">
-        <div className="org-card-heading">
-          <span className="org-card-heading-icon org-card-heading-icon--amber"><SafetyCertificateOutlined /></span>
-          <div>
-            <h2>机构权限</h2>
-            <p>控制校区管理员可以使用的机构级能力</p>
-          </div>
-        </div>
-        <div className="org-permission-row">
-          <div>
-            <strong>校区管理员工资权限</strong>
-            <span>允许校区管理员设置并查看本校区员工工资</span>
-          </div>
-          <Switch
-            checked={org?.campusAdminManageSalary === 1}
-            loading={permissionSaving}
-            disabled={!org || permissionSaving}
-            onChange={(checked) => { void saveSalaryPermission(checked) }}
-          />
-        </div>
-      </section>
       </div>
       <div className="org-settings-column org-settings-column--right">
       <section className={`work-card org-block-card org-collaborators-card ${owner ? '' : 'org-collaborators-card--wide'}`}>
@@ -333,6 +312,27 @@ export function OrgPage() {
         </div>
       </section>
       </div>
+      <section className={`work-card org-block-card org-permission-card ${owner ? '' : 'org-permission-card--wide'}`}>
+        <div className="org-card-heading">
+          <span className="org-card-heading-icon org-card-heading-icon--amber"><SafetyCertificateOutlined /></span>
+          <div>
+            <h2>机构权限</h2>
+            <p>控制校区管理员可以使用的机构级能力</p>
+          </div>
+        </div>
+        <div className="org-permission-row">
+          <div>
+            <strong>校区管理员工资权限</strong>
+            <span>允许校区管理员设置并查看本校区员工工资</span>
+          </div>
+          <Switch
+            checked={org?.campusAdminManageSalary === 1}
+            loading={permissionSaving}
+            disabled={!org || permissionSaving}
+            onChange={(checked) => { void saveSalaryPermission(checked) }}
+          />
+        </div>
+      </section>
       {owner ? (
         <section className="work-card org-block-card org-danger-card">
           <div className="org-card-heading org-card-heading--danger">

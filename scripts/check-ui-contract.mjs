@@ -44,10 +44,12 @@ if (!main.includes('ConfigProvider.config')) failures.push('静态 Modal 未接�
 
 const quickCheckInSource = readFileSync(join(src, 'pages/student-quick-checkin.tsx'), 'utf8')
 const scheduleSheetSource = readFileSync(join(src, 'pages/schedule-cell-dialog.tsx'), 'utf8')
+const homeSource = readFileSync(join(src, 'pages/HomePage.tsx'), 'utf8')
 const quickCheckInCss = readFileSync(join(src, 'styles/work-student-checkin.css'), 'utf8')
 const scheduleSheetCss = readFileSync(join(src, 'styles/work-schedule-sheet-polish.css'), 'utf8')
 const scheduleBoardCss = readFileSync(join(src, 'styles/work-schedule-board.css'), 'utf8')
 const financeCss = readFileSync(join(src, 'styles/work-finance.css'), 'utf8')
+const homeCss = readFileSync(join(src, 'pages/HomePage.css'), 'utf8')
 const dialogsCss = readFileSync(join(src, 'styles/dialogs.css'), 'utf8')
 const buttonCss = readFileSync(join(src, 'styles/buttons.css'), 'utf8')
 if (!buttonCss.includes('button:not(:disabled)')
@@ -81,6 +83,15 @@ if (!/\.tt-grid\s*\{[^}]*repeat\(var\(--days,\s*7\),\s*minmax\(108px,\s*1fr\)\)/
 }
 if (!financeCss.includes('.profit-chart-scroll.is-sparse')) {
   failures.push('少量校区的经营图表必须居中展示，避免大面积单侧留白')
+}
+if (!homeSource.includes('className="home-module-section"')
+  || !homeSource.includes('navForUser(user || null, currentOrg)')
+  || !homeSource.includes('disabled={Boolean(item.disabledReason)}')) {
+  failures.push('首页功能模块必须按角色权限渲染，并为不可用入口提供真实 disabled 状态')
+}
+if (!/\.home-module-grid\s*\{[^}]*grid-template-columns:\s*repeat\(4,/s.test(homeCss)
+  || !homeCss.includes('.home-module-action:disabled')) {
+  failures.push('首页功能模块必须使用响应式快捷入口网格，并覆盖禁用态样式')
 }
 
 for (const path of walk(src)) {

@@ -6,6 +6,7 @@ import { setOrgId } from '../session'
 import { loadHome } from '../api/home'
 import type { HomeBootstrap, Organization, ScheduleItem, UserInfo } from '../api/types'
 import { subscriptionBlocksPath, subscriptionExpiredText } from '../access'
+import { navForUser } from '../nav'
 import { AppIcon, EmptyState, PageHead, money, todayIso, useShell } from './kit'
 import { OrganizationCreateModal, type OrganizationCreateValues } from './organization-create-modal'
 import './HomePage.css'
@@ -17,6 +18,55 @@ interface MemberTimetable {
   id: number
   isDefault?: number
   status?: number
+}
+
+type HomeActionTone = 'slate' | 'orange' | 'blue' | 'rose' | 'green' | 'purple' | 'amber' | 'cyan'
+
+interface HomeQuickAction {
+  key: string
+  label: string
+  description: string
+  iconText: string
+  tone: HomeActionTone
+  path: string
+  requiresActiveCampus?: boolean
+}
+
+const MANAGER_QUICK_ACTIONS: HomeQuickAction[] = [
+  { key: 'org', label: '机构管理', description: '机构信息与基础配置', iconText: '机', tone: 'slate', path: '/org' },
+  { key: 'campus', label: '校区管理', description: '校区人员、业务与权限', iconText: '校', tone: 'orange', path: '/campus' },
+  { key: 'hours', label: '课时管理', description: '课时记录与核算', iconText: '时', tone: 'blue', path: '/hours', requiresActiveCampus: true },
+  { key: 'daily', label: '日常管理', description: '制度与奖惩管理', iconText: '常', tone: 'rose', path: '/daily', requiresActiveCampus: true },
+  { key: 'payments', label: '缴费管理', description: '收费记录与账单', iconText: '费', tone: 'green', path: '/payments', requiresActiveCampus: true },
+  { key: 'salary', label: '工资管理', description: '老师薪酬与结算', iconText: '薪', tone: 'purple', path: '/salary', requiresActiveCampus: true },
+  { key: 'finance', label: '收支管理', description: '收入支出全景', iconText: '账', tone: 'amber', path: '/finance', requiresActiveCampus: true },
+  { key: 'profit', label: '经营分析', description: '利润趋势与报表', iconText: '析', tone: 'cyan', path: '/profit', requiresActiveCampus: true },
+]
+
+const TEACHER_QUICK_ACTIONS: HomeQuickAction[] = [
+  { key: 'schedule', label: '我的课表', description: '查看授课安排', iconText: '表', tone: 'blue', path: '/schedule' },
+  { key: 'students', label: '我的学员', description: '查看所带学员', iconText: '生', tone: 'cyan', path: '/students' },
+  { key: 'hours', label: '我的课时', description: '查看授课课时', iconText: '时', tone: 'purple', path: '/hours' },
+  { key: 'salary', label: '我的工资', description: '查看工资明细', iconText: '薪', tone: 'green', path: '/salary' },
+  { key: 'account', label: '个人中心', description: '账户与机构信息', iconText: '我', tone: 'slate', path: '/account' },
+]
+
+const MEMBER_QUICK_ACTIONS: HomeQuickAction[] = [
+  { key: 'salary', label: '我的工资', description: '查看工资明细', iconText: '薪', tone: 'green', path: '/salary' },
+  { key: 'account', label: '个人中心', description: '账户与机构信息', iconText: '我', tone: 'slate', path: '/account' },
+]
+
+function quickActionsFor(view: HomeView): HomeQuickAction[] {
+  if (view === 'manager') return MANAGER_QUICK_ACTIONS
+  if (view === 'campus') return MANAGER_QUICK_ACTIONS.filter((item) => item.key !== 'org')
+  if (view === 'substitute') return TEACHER_QUICK_ACTIONS
+  return MEMBER_QUICK_ACTIONS
+}
+
+function campusIsOffline(campus: unknown): boolean {
+  const value = (campus as { visibleInList?: boolean | number | string | null } | undefined)?.visibleInList
+  if (typeof value === 'string') return ['0', 'false'].includes(value.trim().toLowerCase())
+  return value === false || value === 0
 }
 
 function campusAdminIds(user: UserInfo | null): number[] {
@@ -156,6 +206,24 @@ export function HomePage() {
   const view = homeView(user, currentOrg, campusId)
   const managerView = view === 'manager' || view === 'campus'
   const showSchedule = view !== 'member'
+  const quickActions = useMemo(() => {
+    const permittedPaths = new Set(navForUser(user || null, currentOrg).map((item) => item.path))
+    permittedPaths.add('/account')
+    const campus = shell.campuses.find((item) => item.id === campusId)
+    return quickActionsFor(view)
+      .filter((item) => permittedPaths.has(item.path))
+      .map((item) => {
+        let disabledReason = ''
+        if (subscriptionBlocksPath(user || null, item.path, currentOrg)) {
+          disabledReason = '会员到期后暂不可用'
+        } else if (item.requiresActiveCampus && (!campusId || !campus)) {
+          disabledReason = '请先选择校区'
+        } else if (item.requiresActiveCampus && campusIsOffline(campus)) {
+          disabledReason = '当前校区已下线'
+        }
+        return { ...item, disabledReason }
+      })
+  }, [campusId, currentOrg, shell.campuses, user, view])
 
   async function fetchMemberDay(nextUser: UserInfo | null | undefined, nextCampusId: number | null, nextDay: DayTab): Promise<ScheduleItem[]> {
     const coachId = Number(nextUser?.orgMemberId || 0)
@@ -479,6 +547,32 @@ export function HomePage() {
           ) : null}
         </section>
       ) : null}
+      <section className="home-module-section" aria-labelledby="home-module-title">
+        <header className="home-module-heading">
+          <div>
+            <span className="home-module-kicker">WORKSPACE</span>
+            <h2 id="home-module-title">功能模块</h2>
+            <p>{view === 'manager' ? '机构运营与财务分析' : view === 'campus' ? '当前校区的管理工具' : view === 'substitute' ? '授课、学员与个人数据' : '与你当前身份相关的功能'}</p>
+          </div>
+          <span className="home-module-count">{quickActions.filter((item) => !item.disabledReason).length} 项可用</span>
+        </header>
+        <div className="home-module-grid">
+          {quickActions.map((item) => (
+            <button
+              key={item.key}
+              className={`home-module-action is-${item.tone}${item.disabledReason ? ' is-disabled' : ''}`}
+              type="button"
+              disabled={Boolean(item.disabledReason)}
+              title={item.disabledReason || item.description}
+              onClick={() => openPath(item.path)}
+            >
+              <span className="home-module-icon" aria-hidden="true">{item.iconText}</span>
+              <span className="home-module-copy"><strong>{item.label}</strong><small>{item.disabledReason || item.description}</small></span>
+              <span className="home-module-arrow" aria-hidden="true">›</span>
+            </button>
+          ))}
+        </div>
+      </section>
       <CourseRecordModal studentId={recordStudentId} onClose={() => setRecordStudentId(null)} onOpenStudent={(id) => { setRecordStudentId(null); openPath(`/students?studentId=${id}`) }} />
       <OrganizationCreateModal open={creatingOrg} onClose={() => setCreatingOrg(false)} onSubmit={createOrg} phone={shell.user?.phone} onMembership={() => navigate('/membership')} />
       <Modal title="创建校区" open={creatingCampus} onCancel={() => setCreatingCampus(false)} footer={null} destroyOnHidden>

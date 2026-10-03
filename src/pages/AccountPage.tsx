@@ -1,5 +1,5 @@
 import { BankOutlined, BarChartOutlined, CheckCircleFilled, LockOutlined, PlusOutlined, SafetyCertificateOutlined, UserOutlined } from '@ant-design/icons'
-import { Button, Form, Input, Modal, Space, message } from 'antd'
+import { Button, Form, Input, Modal, Space, Tabs, message } from 'antd'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { updateWebPassword } from '../api/auth'
@@ -81,7 +81,7 @@ export function AccountPage() {
 
   return (
     <section className="account-page">
-      <PageHead title="账号设置" extra="管理 Web 端登录密码，并查看你创建或关联的机构。" />
+      <PageHead title="账号设置" extra="管理 Web 登录安全与机构权限。" />
 
       {user?.platformAdmin ? (
         <section className="work-card account-platform-entry">
@@ -91,96 +91,111 @@ export function AccountPage() {
         </section>
       ) : null}
 
-      <section className="work-card account-security-card">
-        <header className="account-card-heading">
-          <span className="account-card-icon is-green"><SafetyCertificateOutlined /></span>
-          <div className="account-card-heading-copy">
-            <h2>账户与安全</h2>
-            <p>集中管理 Web 端登录密码与找回流程</p>
-          </div>
-          <span className={`account-password-state${user?.webPasswordSet ? ' is-set' : ''}`}>
-            {user?.webPasswordSet ? <CheckCircleFilled /> : <LockOutlined />}
-            {user?.webPasswordSet ? '密码已设置' : '密码未设置'}
-          </span>
-        </header>
-
-        <div className="account-security-layout">
-          <aside className="account-login-summary">
-            <span className="account-login-summary-icon"><UserOutlined /></span>
-            <small>Web 端登录账号</small>
-            <strong>{user?.phone || '尚未绑定手机号'}</strong>
-            <p>手机号作为登录账号使用。如需修改绑定手机号，请在微信小程序内完成。</p>
-          </aside>
-          <div className="account-password-panel">
-            <div className="account-password-panel-title">
-              <h3>{user?.webPasswordSet ? '修改 Web 端密码' : '设置 Web 端密码'}</h3>
-              <p>建议定期更新密码，并避免与其他平台使用相同密码。</p>
-            </div>
-            <PasswordForm phone={user?.phone} alreadySet={!!user?.webPasswordSet} onSaved={shell.reload} />
-          </div>
-        </div>
-      </section>
-
-      <section className="work-card account-org-card account-org-card-unified">
-        <header className="account-card-heading account-org-heading">
-          <span className="account-card-icon"><BankOutlined /></span>
-          <div className="account-card-heading-copy">
-            <h2>机构与权限 <em>{organizations.length}</em></h2>
-            <p>这里仅展示你创建或关联的机构，以及对应身份和可访问校区</p>
-          </div>
-          <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreatingOrg(true)}>创建机构</Button>
-        </header>
-
-        {organizations.length ? (
-          <div className="account-org-list">
-            {organizations.map((row) => {
-              const owned = isOwnedOrganization(row, user?.id)
-              const campuses = row.campuses || []
-              return (
-                <article key={row.id} className="account-org-item">
-                  <header className="account-org-item-head">
-                    <span className="account-org-mark"><BankOutlined /></span>
-                    <div className="account-org-identity">
-                      <strong>{row.name || '未命名机构'}</strong>
-                      <div className="account-org-badges">
-                        <span className={owned ? 'is-owned' : 'is-linked'}>{owned ? '我的机构' : '关联机构'}</span>
-                      </div>
+      <section className="work-card account-management-card">
+        <Tabs
+          className="account-management-tabs"
+          defaultActiveKey="security"
+          items={[
+            {
+              key: 'security',
+              label: <span className="account-tab-label"><SafetyCertificateOutlined />账户与安全</span>,
+              children: (
+                <div className="account-tab-panel">
+                  <header className="account-card-heading">
+                    <span className="account-card-icon is-green"><SafetyCertificateOutlined /></span>
+                    <div className="account-card-heading-copy">
+                      <h2>Web 登录安全</h2>
+                      <p>集中管理 Web 端登录密码与找回流程</p>
                     </div>
+                    <span className={`account-password-state${user?.webPasswordSet ? ' is-set' : ''}`}>
+                      {user?.webPasswordSet ? <CheckCircleFilled /> : <LockOutlined />}
+                      {user?.webPasswordSet ? '密码已设置' : '密码未设置'}
+                    </span>
                   </header>
-                  <div className="account-org-details">
-                    <div>
-                      <small>我的身份</small>
-                      <strong>{row.organizationRole || (owned ? '机构负责人' : '机构成员')}</strong>
-                    </div>
-                    <div>
-                      <small>可访问校区</small>
-                      {campuses.length ? (
-                        <div className="account-campus-tags">
-                          {campuses.map((item) => (
-                            <span key={item.id}>
-                              {item.displayName || item.name || '未命名校区'}
-                              {item.positionName ? <small>{item.positionName}</small> : null}
-                            </span>
-                          ))}
-                        </div>
-                      ) : <span className="account-empty-value">暂未分配校区</span>}
+
+                  <div className="account-security-layout">
+                    <aside className="account-login-summary">
+                      <span className="account-login-summary-icon"><UserOutlined /></span>
+                      <small>Web 端登录账号</small>
+                      <strong>{user?.phone || '尚未绑定手机号'}</strong>
+                      <p>手机号作为登录账号使用。如需修改绑定手机号，请在微信小程序内完成。</p>
+                    </aside>
+                    <div className="account-password-panel">
+                      <PasswordForm phone={user?.phone} alreadySet={!!user?.webPasswordSet} onSaved={shell.reload} />
                     </div>
                   </div>
-                  <footer className="account-org-item-summary">
-                    {campuses.length ? `可访问 ${campuses.length} 个校区` : '暂无可访问校区'}
-                  </footer>
-                </article>
-              )
-            })}
-          </div>
-        ) : (
-          <div className="account-org-empty">
-            <span><BankOutlined /></span>
-            <h3>暂时还没有关联机构</h3>
-            <p>创建机构后，你可以继续添加校区和协同管理员。</p>
-            <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreatingOrg(true)}>创建第一个机构</Button>
-          </div>
-        )}
+                </div>
+              ),
+            },
+            {
+              key: 'organizations',
+              label: <span className="account-tab-label"><BankOutlined />机构与权限 <em>{organizations.length}</em></span>,
+              children: (
+                <div className="account-tab-panel">
+                  <header className="account-card-heading account-org-heading">
+                    <span className="account-card-icon"><BankOutlined /></span>
+                    <div className="account-card-heading-copy">
+                      <h2>机构列表</h2>
+                      <p>展示当前账号创建或关联的全部机构，无需切换即可查看身份与可访问校区</p>
+                    </div>
+                    <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreatingOrg(true)}>创建机构</Button>
+                  </header>
+
+                  {organizations.length ? (
+                    <div className="account-org-list" role="list">
+                      {organizations.map((row) => {
+                        const owned = isOwnedOrganization(row, user?.id)
+                        const campuses = row.campuses || []
+                        return (
+                          <article key={row.id} className="account-org-item" role="listitem">
+                            <header className="account-org-item-head">
+                              <span className="account-org-mark"><BankOutlined /></span>
+                              <div className="account-org-identity">
+                                <strong>{row.name || '未命名机构'}</strong>
+                                <div className="account-org-badges">
+                                  <span className={owned ? 'is-owned' : 'is-linked'}>{owned ? '我的机构' : '关联机构'}</span>
+                                </div>
+                              </div>
+                            </header>
+                            <div className="account-org-details">
+                              <div>
+                                <small>我的身份</small>
+                                <strong>{row.organizationRole || (owned ? '机构负责人' : '机构成员')}</strong>
+                              </div>
+                              <div>
+                                <small>可访问校区</small>
+                                {campuses.length ? (
+                                  <div className="account-campus-tags">
+                                    {campuses.map((item) => (
+                                      <span key={item.id}>
+                                        {item.displayName || item.name || '未命名校区'}
+                                        {item.positionName ? <small>{item.positionName}</small> : null}
+                                      </span>
+                                    ))}
+                                  </div>
+                                ) : <span className="account-empty-value">暂未分配校区</span>}
+                              </div>
+                            </div>
+                            <footer className="account-org-item-summary">
+                              {campuses.length ? `可访问 ${campuses.length} 个校区` : '暂无可访问校区'}
+                            </footer>
+                          </article>
+                        )
+                      })}
+                    </div>
+                  ) : (
+                    <div className="account-org-empty">
+                      <span><BankOutlined /></span>
+                      <h3>暂时还没有关联机构</h3>
+                      <p>创建机构后，你可以继续添加校区和协同管理员。</p>
+                      <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreatingOrg(true)}>创建第一个机构</Button>
+                    </div>
+                  )}
+                </div>
+              ),
+            },
+          ]}
+        />
       </section>
 
       <OrganizationCreateModal
@@ -199,71 +214,99 @@ function isOwnedOrganization(row: Affiliation, userId?: number): boolean {
 }
 
 function PasswordForm(props: { phone?: string; alreadySet: boolean; onSaved: () => void }) {
+  const [form] = Form.useForm()
   const [resetting, setResetting] = useState(false)
-  if (!props.phone) {
-    return <div className="account-password-unavailable">请先在微信小程序内绑定手机号，再设置 Web 端登录密码。</div>
-  }
+  const [saving, setSaving] = useState(false)
+
   return (
-    <Form
-      layout="vertical"
-      className="account-password-form"
-      onFinish={async (values: { oldPassword?: string; newPassword?: string; confirm?: string }) => {
-        const next = String(values.newPassword || '').trim()
-        if (next.length < 8 || next.length > 32 || !/[A-Za-z]/.test(next) || !/\d/.test(next)) {
-          message.warning('密码需为8到32位，并包含字母和数字')
-          return
-        }
-        if (next !== String(values.confirm || '').trim()) {
-          message.warning('两次输入的密码不一致')
-          return
-        }
-        if (next === props.phone?.trim()) {
-          message.warning('密码不能与手机号相同')
-          return
-        }
-        if (props.alreadySet && !resetting && !String(values.oldPassword || '').trim()) {
-          message.warning('请输入原密码')
-          return
-        }
-        try {
-          await updateWebPassword({
-            oldPassword: props.alreadySet && !resetting ? values.oldPassword : undefined,
-            newPassword: next,
-            reset: resetting || undefined,
-          })
-          message.success(resetting ? 'Web 端密码已重置' : 'Web 端密码已保存')
-          setResetting(false)
-          props.onSaved()
-        } catch (error) {
-          message.error(tell(error, '密码保存失败'))
-        }
-      }}
-    >
-      <div className="account-security-note"><LockOutlined /><span>密码需为 8–32 位，并同时包含字母和数字。</span></div>
-      {props.alreadySet && !resetting ? (
-        <Form.Item className="is-wide" name="oldPassword" label="原密码"><Input.Password /></Form.Item>
-      ) : null}
-      {resetting ? <p className="account-reset-note">已进入找回密码模式。设置新密码后，原密码会立即失效。</p> : null}
-      <Form.Item name="newPassword" label="新密码" rules={[{ required: true, message: '请输入新密码' }]}><Input.Password /></Form.Item>
-      <Form.Item name="confirm" label="确认密码" rules={[{ required: true, message: '请再次输入新密码' }]}><Input.Password /></Form.Item>
-      <Space className="account-security-actions">
-        <Button type="primary" htmlType="submit">{resetting ? '重置密码' : props.alreadySet ? '修改密码' : '设置密码'}</Button>
-        {props.alreadySet && !resetting ? (
-          <Button
-            htmlType="button"
-            onClick={() => {
-              Modal.confirm({
-                title: '找回 Web 端密码',
-                content: '确认进入找回密码流程吗？设置并保存新密码后，原密码会立即失效。',
-                okText: '继续找回',
-                cancelText: '取消',
-                onOk: () => setResetting(true),
+    <>
+      <div className="account-password-panel-title">
+        <h3>{resetting ? '重置 Web 端密码' : props.alreadySet ? '修改 Web 端密码' : '设置 Web 端密码'}</h3>
+        <p>建议定期更新密码，并避免与其他平台使用相同密码。</p>
+      </div>
+      {!props.phone ? (
+        <div className="account-password-unavailable">请先在微信小程序内绑定手机号，再设置 Web 端登录密码。</div>
+      ) : (
+        <Form
+          form={form}
+          layout="vertical"
+          className="account-password-form"
+          onFinish={async (values: { oldPassword?: string; newPassword?: string; confirm?: string }) => {
+            const next = String(values.newPassword || '').trim()
+            if (next.length < 8 || next.length > 32 || !/[A-Za-z]/.test(next) || !/\d/.test(next)) {
+              message.warning('密码需为8到32位，并包含字母和数字')
+              return
+            }
+            if (next !== String(values.confirm || '').trim()) {
+              message.warning('两次输入的密码不一致')
+              return
+            }
+            if (next === props.phone?.trim()) {
+              message.warning('密码不能与手机号相同')
+              return
+            }
+            if (props.alreadySet && !resetting && !String(values.oldPassword || '').trim()) {
+              message.warning('请输入原密码')
+              return
+            }
+            try {
+              setSaving(true)
+              await updateWebPassword({
+                oldPassword: props.alreadySet && !resetting ? values.oldPassword : undefined,
+                newPassword: next,
+                reset: resetting,
               })
-            }}
-          >忘记原密码</Button>
-        ) : null}
-        {resetting ? <Button htmlType="button" onClick={() => setResetting(false)}>返回修改密码</Button> : null}
-      </Space>
-    </Form>
+              message.success(resetting ? 'Web 端密码已重置' : 'Web 端密码已保存')
+              setResetting(false)
+              form.resetFields()
+              props.onSaved()
+            } catch (error) {
+              message.error(tell(error, '密码保存失败'))
+            } finally {
+              setSaving(false)
+            }
+          }}
+        >
+          <div className="account-security-note"><LockOutlined /><span>密码需为 8–32 位，并同时包含字母和数字。</span></div>
+          {props.alreadySet && !resetting ? (
+            <Form.Item
+              className="is-wide"
+              name="oldPassword"
+              label={(
+                <span className="account-password-label-row">
+                  <span>原密码</span>
+                  <Button
+                    type="link"
+                    htmlType="button"
+                    disabled={saving}
+                    onClick={() => {
+                      Modal.confirm({
+                        title: '重置 Web 端登录密码',
+                        content: '你已登录，可以直接设置新密码。原密码会立即失效。',
+                        okText: '继续重置',
+                        cancelText: '取消',
+                        onOk: () => {
+                          form.resetFields()
+                          setResetting(true)
+                        },
+                      })
+                    }}
+                  >忘记原密码</Button>
+                </span>
+              )}
+            >
+              <Input.Password placeholder="请输入原密码" />
+            </Form.Item>
+          ) : null}
+          {resetting ? <p className="account-reset-note">已进入重置模式。设置新密码后，原密码会立即失效。</p> : null}
+          <Form.Item name="newPassword" label="新密码" rules={[{ required: true, message: '请输入新密码' }]}><Input.Password /></Form.Item>
+          <Form.Item name="confirm" label="确认密码" rules={[{ required: true, message: '请再次输入新密码' }]}><Input.Password /></Form.Item>
+          <Space className="account-security-actions">
+            <Button type="primary" htmlType="submit" loading={saving}>{saving ? '保存中' : resetting ? '重置密码' : props.alreadySet ? '修改密码' : '设置密码'}</Button>
+            {resetting ? <Button htmlType="button" disabled={saving} onClick={() => { form.resetFields(); setResetting(false) }}>返回修改密码</Button> : null}
+          </Space>
+        </Form>
+      )}
+    </>
   )
 }

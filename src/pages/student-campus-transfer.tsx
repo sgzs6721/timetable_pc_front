@@ -4,7 +4,7 @@ import { getJson, postJson } from '../api/biz'
 import { BusinessDatePicker } from '../components/BusinessDatePicker'
 import { money, tell, todayIso } from './kit'
 import type { Student, Card, Named, PayRecord } from './students-model'
-import { serviceOriginalPrice, sliceDecimal, syncTransferDiscount, syncTransferPrice } from './student-card-desk'
+import { isActiveTeachingCoach, serviceOriginalPrice, sliceDecimal, syncTransferDiscount, syncTransferPrice } from './student-card-desk'
 import { cardCategoryText, personName } from './students-domain'
 
 export function CampusTransfer(props: { student: Student; campuses: Named[]; onDone: () => Promise<void> }) {
@@ -63,13 +63,13 @@ export function CampusTransfer(props: { student: Student; campuses: Named[]; onD
     setServices([])
     setTargetStatus('loading')
     Promise.all([
-      getJson<TransferOption[]>('/student-groups/list', { campusId: targetCampusId }),
-      getJson<Named[]>(`/campus-teacher/campus/${targetCampusId}`),
+      getJson<TransferOption[]>('/student-groups/list', { campusId: targetCampusId, includeInternal: true }),
+      getJson<Named[]>(`/campus-teacher/campus/${targetCampusId}`, { onlySubstitute: true }),
       getJson<TransferOption[]>(`/campus-services/${targetCampusId}/items`),
     ]).then(([groupRows, coachRows, serviceRows]) => {
       if (cancelled) return
       setGroups(groupRows || [])
-      setCoaches(coachRows || [])
+      setCoaches((coachRows || []).filter(isActiveTeachingCoach))
       setServices((serviceRows || []).filter((item) => item.enabled !== 0 && item.enabled !== false))
       setTargetStatus('ready')
     }).catch(() => {

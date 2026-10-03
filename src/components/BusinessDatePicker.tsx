@@ -8,6 +8,7 @@ dayjs.locale('zh-cn')
 
 const DATE_FORMAT = 'YYYY-MM-DD'
 const DATE_TIME_FORMAT = 'YYYY-MM-DDTHH:mm'
+const MONTH_FORMAT = 'YYYY-MM'
 
 type PickerStatus = 'warning' | 'error'
 
@@ -41,6 +42,10 @@ export interface BusinessDateRangePickerProps {
   status?: PickerStatus
 }
 
+export interface BusinessMonthRangePickerProps extends Omit<BusinessDateRangePickerProps, 'placeholder'> {
+  placeholder?: [string, string]
+}
+
 export interface BusinessDateTimePickerProps extends Omit<BusinessDatePickerProps, 'min' | 'max' | 'minDate' | 'maxDate'> {
   minDate?: string
   maxDate?: string
@@ -55,6 +60,12 @@ export interface BusinessMultiDatePickerProps extends Omit<BusinessDatePickerPro
 function asDay(value?: string): Dayjs | undefined {
   if (!value || !/^\d{4}-\d{2}-\d{2}/.test(value)) return undefined
   const parsed = dayjs(value)
+  return parsed.isValid() ? parsed : undefined
+}
+
+function asMonth(value?: string): Dayjs | undefined {
+  if (!value || !/^\d{4}-\d{2}$/.test(value)) return undefined
+  const parsed = dayjs(`${value}-01`)
   return parsed.isValid() ? parsed : undefined
 }
 
@@ -127,6 +138,43 @@ export function BusinessDateRangePicker({
         { label: '本月', value: [dayjs().startOf('month'), dayjs().endOf('month')] },
       ]}
       onChange={(_, dateStrings) => onChange?.([String(dateStrings[0] || ''), String(dateStrings[1] || '')])}
+    />
+  )
+}
+
+export function BusinessMonthRangePicker({
+  value,
+  onChange,
+  minDate,
+  maxDate,
+  allowClear = true,
+  placeholder = ['开始年月', '结束年月'],
+  className,
+  style,
+  ...rest
+}: BusinessMonthRangePickerProps) {
+  const range = value?.[0] || value?.[1]
+    ? [asMonth(value?.[0]) || null, asMonth(value?.[1]) || null] as [Dayjs | null, Dayjs | null]
+    : undefined
+  return (
+    <DatePicker.RangePicker
+      {...rest}
+      picker="month"
+      value={range}
+      minDate={asMonth(minDate)}
+      maxDate={asMonth(maxDate)}
+      format="YYYY年MM月"
+      allowClear={allowClear}
+      allowEmpty={[true, true]}
+      separator="至"
+      placeholder={placeholder}
+      className={['business-date-range-picker', 'business-month-range-picker', className].filter(Boolean).join(' ')}
+      classNames={{ popup: { root: popupClassName('business-calendar-range-popup business-calendar-month-range-popup') } }}
+      style={{ width: '100%', ...style }}
+      onChange={(dates) => onChange?.([
+        dates?.[0]?.format(MONTH_FORMAT) || '',
+        dates?.[1]?.format(MONTH_FORMAT) || '',
+      ])}
     />
   )
 }

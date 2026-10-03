@@ -367,6 +367,18 @@
   grid-column: 1 / -1;
 }
 
+.add-student-card__settings-row {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(118px, 0.28fr);
+  align-items: start;
+  gap: 10px;
+}
+
+.add-student-card__settings-row--single {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .add-student-card__switch .ant-form-item-control-input {
   min-height: var(--control-md);
 }

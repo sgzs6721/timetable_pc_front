@@ -1,10 +1,10 @@
-import { Button, Checkbox, Form, Input, InputNumber, Modal, Select, Space, Switch, message } from 'antd'
+import { Button, Checkbox, Form, Input, InputNumber, Modal, Select, Switch, message } from 'antd'
 import { useEffect, useMemo, useState } from 'react'
 import { getJson, postJson } from '../api/biz'
 import { BusinessDatePicker } from '../components/BusinessDatePicker'
-import { PhoneCopyButton, copyPlainText, money, tell } from './kit'
+import { AppIcon, PhoneCopyButton, copyPlainText, money, tell } from './kit'
 import type { Student, Card, ServiceRight, Named } from './students-model'
-import { CoachMultiSelect, CourseField, PERIOD_OPTIONS, ServiceMultiSelect, courseUnitPriceConfigured, serviceOriginalPrice } from './student-card-desk'
+import { CoachMultiSelect, CourseField, PERIOD_OPTIONS, ServiceMultiSelect, courseUnitPriceConfigured, isActiveTeachingCoach, serviceOriginalPrice } from './student-card-desk'
 import { personName } from './students-domain'
 
 type StudentCardCategory = 'HOURS' | 'PERIOD' | 'STORED_VALUE'
@@ -15,7 +15,20 @@ const STUDENT_CARD_TABS: Array<{ value: StudentCardCategory; label: string }> = 
   { value: 'STORED_VALUE', label: '储值卡' },
 ]
 
-export function AddStudent(props: { open: boolean; coaches: Named[]; groups: Named[]; services: Named[]; campusId: number | null; onClose: () => void; onSaved: () => void }) {
+function GenderChoice(props: { value?: number; onChange?: (value: number) => void }) {
+  return (
+    <div className="add-student-gender" role="radiogroup" aria-label="性别">
+      {([{ value: 1, label: '男', icon: 'icon-gender-male' }, { value: 2, label: '女', icon: 'icon-gender-female' }] as const).map((item) => (
+        <button key={item.value} type="button" role="radio" aria-checked={props.value === item.value} className={props.value === item.value ? 'is-selected' : ''} onClick={() => props.onChange?.(item.value)}>
+          <AppIcon name={item.icon} size={16} />
+          <span>{item.label}</span>
+        </button>
+      ))}
+    </div>
+  )
+}
+
+export function AddStudent(props: { open: boolean; coaches: Named[]; groups: Named[]; services: Named[]; campusId: number | null; campusName?: string; onClose: () => void; onSaved: (student: Student) => void }) {
   const [form] = Form.useForm()
   const [saving, setSaving] = useState(false)
   const [activeCardCategory, setActiveCardCategory] = useState<StudentCardCategory>('HOURS')
@@ -45,7 +58,7 @@ export function AddStudent(props: { open: boolean; coaches: Named[]; groups: Nam
         id="add-student-form"
         className="add-student-form"
         layout="vertical"
-        initialValues={{ cards: [{ cardCategory: 'HOURS', courseCategory: true }] }}
+        initialValues={{ gender: 1, cards: [] }}
         onFinishFailed={(info) => {
           const text = info.errorFields?.[0]?.errors?.[0]
           if (text) message.warning(String(text))
@@ -59,7 +72,7 @@ export function AddStudent(props: { open: boolean; coaches: Named[]; groups: Nam
             message.warning('请输入学员姓名')
             return
           }
-          const cards = values.cards || []
+          const cards = normalizeCardConfigDraftOrder(values.cards || [])
           if (!cards.length) {
             message.warning('请选择至少一种卡类型')
             return
@@ -78,23 +91,25 @@ export function AddStudent(props: { open: boolean; coaches: Named[]; groups: Nam
           const groupIds = Array.from(new Set(payloads.map((card) => card.studentGroupId).filter((id): id is number => !!id)))
           setSaving(true)
           try {
-            await postJson<Student>('/students', {
+            const created = await postJson<Student>('/students', {
               name: values.name.trim(),
               gender: values.gender,
               phone: String(values.phone || '').trim(),
               birthDate: values.birthDate || undefined,
-              remark: values.remark,
+              remark: String(values.remark || '').trim(),
+              oneToOne: false,
               campusId: props.campusId,
               cardCategory: payloads[0].cardCategory,
               periodType: payloads[0].periodType,
               courseCategory: payloads[0].courseCategory,
+              coachMemberId: coachIds[0],
               coachMemberIds: coachIds,
               studentGroupId: groupIds[0],
               studentGroupIds: groupIds,
               cards: payloads,
             })
             message.success('学员已添加')
-            props.onSaved()
+            props.onSaved(created)
           } catch (error) {
             message.error(tell(error, '添加失败'))
           } finally {
@@ -107,15 +122,16 @@ export function AddStudent(props: { open: boolean; coaches: Named[]; groups: Nam
             <div><h3>基本资料</h3><p>快速建立学员档案，姓名与性别为必填项</p></div>
             <span>基础信息</span>
           </header>
+          {props.campusName ? <div className="add-student-campus"><span>所属校区</span><strong>{props.campusName}</strong></div> : null}
           <div className="add-student-profile-grid">
             <Form.Item className="add-student-field--name" name="name" label="姓名" rules={[{ required: true, whitespace: true, message: '请输入学员姓名' }, { max: 6, message: '学员姓名不能超过6个字' }]}>
               <Input maxLength={6} placeholder="最多6个字" />
             </Form.Item>
             <Form.Item name="gender" label="性别" rules={[{ required: true, message: '请选择性别' }]}>
-              <Select placeholder="请选择" options={[{ value: 1, label: '男' }, { value: 2, label: '女' }]} />
+              <GenderChoice />
             </Form.Item>
-            <Form.Item name="phone" label="电话" rules={[{ pattern: /^$|^1[3-9]\d{9}$/, message: '请输入11位正确手机号' }]}>
-              <Input maxLength={11} placeholder="选填，11位手机号" />
+            <Form.Item name="phone" label="联系电话" normalize={(value) => String(value || '').replace(/\D+/g, '').slice(0, 11)} rules={[{ pattern: /^$|^1[3-9]\d{9}$/, message: '请输入11位正确手机号' }]}>
+              <Input inputMode="numeric" maxLength={11} placeholder="家长手机号（选填）" />
             </Form.Item>
             <Form.Item name="birthDate" label="出生日期" rules={[{ validator: validateBirthDate }]}>
               <BusinessDatePicker maxDate={birthDateMax()} />
@@ -145,7 +161,15 @@ export function AddStudent(props: { open: boolean; coaches: Named[]; groups: Nam
                         role="tab"
                         aria-selected={active}
                         className={`add-student-card-tab add-student-card-tab--${tab.value.toLowerCase()}${active ? ' is-active' : ''}`}
-                        onClick={() => setActiveCardCategory(tab.value)}
+                        onClick={() => {
+                          setActiveCardCategory(tab.value)
+                          if (!count) add({
+                            cardCategory: tab.value,
+                            periodType: tab.value === 'PERIOD' ? 'MONTH' : undefined,
+                            courseCategory: tab.value === 'HOURS',
+                            uiCollapsed: false,
+                          })
+                        }}
                       >
                         <span>{tab.label}</span>
                         <small>{count}</small>
@@ -159,7 +183,7 @@ export function AddStudent(props: { open: boolean; coaches: Named[]; groups: Nam
                       {fields.map((field, index) => {
                         const category = String(cardDrafts?.[field.name]?.cardCategory || form.getFieldValue(['cards', field.name, 'cardCategory']) || 'HOURS').toUpperCase()
                         if (category !== activeCardCategory) return null
-                        return <CardDraft key={field.key} fieldName={field.name} index={index} coaches={props.coaches} groups={props.groups} services={props.services} onRemove={fields.length > 1 ? () => remove(field.name) : undefined} />
+                        return <CardDraft key={field.key} fieldName={field.name} index={index} coaches={props.coaches} groups={props.groups} services={props.services} onRemove={() => remove(field.name)} />
                       })}
                     </div>
                   ) : (
@@ -174,7 +198,7 @@ export function AddStudent(props: { open: boolean; coaches: Named[]; groups: Nam
                       add({
                         cardCategory: activeCardCategory,
                         periodType: activeCardCategory === 'PERIOD' ? 'MONTH' : undefined,
-                        courseCategory: true,
+                        courseCategory: activeCardCategory === 'HOURS',
                         uiCollapsed: false,
                       })
                     }}
@@ -204,6 +228,32 @@ export interface CardFormValues {
   uiCollapsed?: boolean
 }
 
+export function normalizeCardConfigDraftOrder(cards: CardFormValues[]): CardFormValues[] {
+  const rank: Record<string, number> = { HOURS: 0, PERIOD: 1, STORED_VALUE: 2 }
+  return cards
+    .map((card, index) => ({ card, index }))
+    .sort((left, right) => {
+      const leftRank = rank[String(left.card.cardCategory || 'HOURS').toUpperCase()] ?? 99
+      const rightRank = rank[String(right.card.cardCategory || 'HOURS').toUpperCase()] ?? 99
+      return leftRank - rightRank || left.index - right.index
+    })
+    .map(({ card }) => card)
+}
+
+function PeriodTypeChips(props: { value?: string; onChange?: (value: string) => void }) {
+  return (
+    <div className="add-student-period-options" role="radiogroup" aria-label="时段卡类型">
+      {PERIOD_OPTIONS.map((option) => (
+        <button key={option.value} type="button" role="radio" aria-checked={props.value === option.value} className={props.value === option.value ? 'is-selected' : ''} onClick={() => props.onChange?.(option.value)}>{option.label}</button>
+      ))}
+    </div>
+  )
+}
+
+function CoachFieldLabel() {
+  return <span className="add-student-field-label">选择老师（多选）<button type="button" aria-label="多选老师说明" onClick={() => Modal.info({ title: '多选老师说明', content: '多选老师表示可为该学员设置备选老师，并不代表多位老师会同时上课。仅当所选课程本身配置了多位老师时，才会按课程安排共同授课。', okText: '我知道了' })}>i</button></span>
+}
+
 export function CardDraft(props: { fieldName: number; index: number; coaches: Named[]; groups: Named[]; services: Named[]; onRemove?: () => void }) {
   const form = Form.useFormInstance()
   const categoryValue = Form.useWatch(['cards', props.fieldName, 'cardCategory'])
@@ -219,7 +269,7 @@ export function CardDraft(props: { fieldName: number; index: number; coaches: Na
   return (
     <div className={`add-student-card add-student-card--${category.toLowerCase()}${collapsed ? ' is-collapsed' : ''}`}>
       <header className="add-student-card__head">
-        <div><span>{typeIndex}</span><strong>{typeCount > 1 ? `${label} ${typeIndex}` : label}</strong><small>配置学员可使用的课程权益</small></div>
+        <div><span>{typeIndex}</span><strong>{typeCount > 1 ? `${label} ${typeIndex}` : label}</strong></div>
         <div className="add-student-card__actions">
           {props.onRemove ? <Button size="small" danger type="text" onClick={props.onRemove}>移除此卡</Button> : null}
           <button
@@ -243,11 +293,17 @@ export function CardDraft(props: { fieldName: number; index: number; coaches: Na
         <Form.Item name={[props.fieldName, 'cardCategory']} hidden>
           <Input />
         </Form.Item>
-        {category === 'PERIOD' ? <Form.Item name={[props.fieldName, 'periodType']} label="时段" initialValue="MONTH"><Select options={PERIOD_OPTIONS} /></Form.Item> : null}
-        {category !== 'HOURS' ? <Form.Item className="add-student-card__switch" name={[props.fieldName, 'courseCategory']} label="包含课程" valuePropName="checked" initialValue><Switch /></Form.Item> : null}
+        {category !== 'HOURS' ? <div className={`add-student-card__settings-row add-student-card__wide${category === 'STORED_VALUE' ? ' add-student-card__settings-row--single' : ''}`}>
+          {category === 'PERIOD' ? <Form.Item name={[props.fieldName, 'periodType']} label="时段卡类型" initialValue="MONTH"><PeriodTypeChips /></Form.Item> : null}
+          <Form.Item className="add-student-card__switch" name={[props.fieldName, 'courseCategory']} label="是否为课程类" valuePropName="checked"><Switch onChange={(checked) => {
+            if (checked) return
+            form.setFieldValue(['cards', props.fieldName, 'studentGroupId'], undefined)
+            form.setFieldValue(['cards', props.fieldName, 'coachMemberIds'], [])
+          }} /></Form.Item>
+        </div> : null}
         {course ? <div><CourseField variant="chips" groups={props.groups} category={category} name={[props.fieldName, 'studentGroupId']} storeName={['cards', props.fieldName, 'studentGroupId']} coachField={['cards', props.fieldName, 'coachMemberIds']} courseFlag={['cards', props.fieldName, 'courseCategory']} /></div> : null}
-        {course ? <Form.Item name={[props.fieldName, 'coachMemberIds']} label="选择老师（多选）"><CoachMultiSelect variant="chips" coaches={props.coaches} /></Form.Item> : null}
-        {category !== 'HOURS' ? <Form.Item className="add-student-card__wide" name={[props.fieldName, 'serviceItemIds']} label={course ? '适用服务（多选）' : '适用服务（多选） *'}><ServiceMultiSelect services={props.services.filter((item) => item.enabled !== 0 && item.enabled !== false)} /></Form.Item> : null}
+        {course ? <Form.Item name={[props.fieldName, 'coachMemberIds']} label={<CoachFieldLabel />}><CoachMultiSelect variant="chips" coaches={props.coaches} /></Form.Item> : null}
+        {category !== 'HOURS' ? <Form.Item className="add-student-card__wide" name={[props.fieldName, 'serviceItemIds']} label={course ? '适用服务（多选）' : '适用服务（多选） *'}><ServiceMultiSelect variant="chips" services={props.services.filter((item) => item.enabled !== 0 && item.enabled !== false)} /></Form.Item> : null}
         {category === 'STORED_VALUE' ? <div className="add-student-card__wide"><StoredRights services={props.services} listName={props.fieldName} /></div> : null}
       </div>}
     </div>
@@ -260,7 +316,7 @@ export function StoredRights(props: { services: Named[]; listName?: number }) {
   const selected = (Form.useWatch(watchName) || []) as number[]
   if (!selected.length) return null
   return (
-    <Space direction="vertical">
+    <div className="add-student-rights-list">
       {selected.map((id) => {
         const service = props.services.find((item) => item.id === id)
         const original = serviceOriginalPrice(service)
@@ -269,14 +325,17 @@ export function StoredRights(props: { services: Named[]; listName?: number }) {
         const discountPath = props.listName == null ? discountName : ['cards', props.listName, 'rightDiscount', String(id)]
         const pricePath = props.listName == null ? priceName : ['cards', props.listName, 'rightPrice', String(id)]
         return (
-          <Space key={id} wrap>
-            <span>{service ? personName(service) : `服务${id}`} · 原价 ¥{money(original)}</span>
-            <Form.Item name={discountName} label="折扣%" style={{ marginBottom: 0 }}>
-              <InputNumber min={0} max={100} onChange={(value) => form.setFieldValue(pricePath, value == null ? undefined : Number(((original * Number(value)) / 100).toFixed(2)))} />
+          <article key={id} className="add-student-right">
+            <header><strong>{service ? personName(service) : `服务${id}`}</strong><span>原价 ¥{money(original)}</span></header>
+            <Form.Item name={discountName} label="折扣（%）" style={{ marginBottom: 0 }}>
+              <InputNumber min={0} max={100} precision={2} placeholder="如 95" onChange={(value) => form.setFieldValue(pricePath, value == null ? undefined : Number(((original * Number(value)) / 100).toFixed(2)))} />
             </Form.Item>
             <Form.Item name={priceName} label="折后单价" style={{ marginBottom: 0 }}>
               <InputNumber
                 min={0}
+                max={99999999.99}
+                precision={2}
+                placeholder="请输入折后单价"
                 onChange={(value) => {
                   if (value == null) {
                     form.setFieldValue(discountPath, undefined)
@@ -290,10 +349,10 @@ export function StoredRights(props: { services: Named[]; listName?: number }) {
                 }}
               />
             </Form.Item>
-          </Space>
+          </article>
         )
       })}
-    </Space>
+    </div>
   )
 }
 
@@ -495,11 +554,13 @@ export function BirthDateItem() {
 }
 
 export function birthDateMax(): string {
-  const date = new Date()
-  date.setMonth(date.getMonth() - 6)
-  const month = `${date.getMonth() + 1}`.padStart(2, '0')
-  const day = `${date.getDate()}`.padStart(2, '0')
-  return `${date.getFullYear()}-${month}-${day}`
+  const now = new Date()
+  const target = new Date(now.getFullYear(), now.getMonth() - 6, 1)
+  const lastDay = new Date(target.getFullYear(), target.getMonth() + 1, 0).getDate()
+  target.setDate(Math.min(now.getDate(), lastDay))
+  const month = `${target.getMonth() + 1}`.padStart(2, '0')
+  const day = `${target.getDate()}`.padStart(2, '0')
+  return `${target.getFullYear()}-${month}-${day}`
 }
 
 export function validateBirthDate(_: unknown, value?: string) {
@@ -540,14 +601,6 @@ export function ProfileSaveButton(props: { student: Student; saving: boolean }) 
   const remark = Form.useWatch('remark')
   const blocked = profileProblem({ name, gender, phone, birthDate, remark }, props.student)
   return <Button type="primary" htmlType="submit" disabled={!!blocked || props.saving}>{props.saving ? '保存中...' : '保存修改'}</Button>
-}
-
-export function isActiveTeachingCoach(item: Named): boolean {
-  const status = item.status == null || String(item.status).trim() === '' ? 1 : Number(item.status)
-  const substitute = item.isSubstituteTeacher === true
-    || Number(item.isSubstituteTeacher) === 1
-    || String(item.isSubstituteTeacher || '').trim().toLowerCase() === 'true'
-  return status === 1 && substitute
 }
 
 export function CoachTransfer(props: { open: boolean; coaches: Named[]; campusId: number; studentIds: number[]; onClose: () => void; onSaved: () => void }) {

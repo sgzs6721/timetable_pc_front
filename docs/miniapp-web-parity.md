@@ -12,7 +12,7 @@ Web 端覆盖 `miniprogram/app.json` 注册的全部 65 个页面，不再只验
 | --- | --- | --- |
 | 登录、协议、隐私 | `/login`、`/legal/agreement`、`/legal/privacy` | 手机号密码、微信扫码登录、协议与隐私页 |
 | 首页工作台 | `/home` | 角色工作台、今日/明日课程、指标、老师分组、学员上课记录、快捷入口 |
-| 我的 | `/account` | 头像、昵称、职位、网页登录密码、机构与关联机构切换、创建新机构 |
+| 我的 | `/account` | Web 登录密码、全部关联机构与权限、创建新机构 |
 | 创建机构、初始化 | `/home`、`/account` | 机构额度、资料、权限、协同管理员、创建后切换与校区引导 |
 | 学员列表、添加学员 | `/students` | 校区汇总、状态/老师筛选、搜索、分页、容量预检、新增与编辑 |
 | 学员详情 | `/students?studentId=...` | 基本资料、多个学员卡、缴费、销课、费用项、老师调整、结业/恢复/删除 |
@@ -108,8 +108,8 @@ Web 端覆盖 `miniprogram/app.json` 注册的全部 65 个页面，不再只验
 | `subpackages/marketing/pages/template-edit/template-edit` | `/marketing` 模板编辑弹窗 | 名称、文案、卖点、规则、排序、启停和长度限制一致 |
 | `subpackages/marketing/pages/campaign-edit/campaign-edit` | `/marketing` 活动编辑弹窗 | 模板套用、报名/支付方式、时间、名额、场地、联系人、发布前校验一致 |
 | `subpackages/marketing/pages/campaign-detail/campaign-detail` | `/marketing` 活动详情抽屉 | 状态操作、场次、报名、推广、奖励、二维码和统计一致 |
-| `subpackages/marketing/pages/campaign-landing/campaign-landing` | `/campaign/:shareCode` | 活动视觉、场次、剩余名额、报名字段、协议、推荐关系和支付分支一致 |
-| `subpackages/marketing/pages/my-enrollment/my-enrollment` | `/my-enrollments` | 我的报名、状态、活动下钻和允许状态下取消报名一致 |
+| `subpackages/marketing/pages/campaign-landing/campaign-landing` | `/campaign/:shareCode` | 活动视觉、场次、剩余名额、报名字段、协议、推荐关系、待支付识别、继续支付和状态自动确认一致 |
+| `subpackages/marketing/pages/my-enrollment/my-enrollment` | `/my-enrollments` | 我的报名、待支付继续付款、状态、活动下钻和仅允许状态下取消报名一致 |
 | `subpackages/marketing/pages/enrollment-list/enrollment-list` | 活动详情“报名” | 筛选、分页、导出、新老客调整和退款/作废一致 |
 | `subpackages/marketing/pages/settlement-list/settlement-list` | `/marketing` 入账结算 | 汇总、活动维度入账、扣减、净额和分页一致 |
 | `subpackages/marketing/pages/settlement-detail/settlement-detail` | 入账结算明细抽屉 | 活动入账明细、状态和分页一致 |
@@ -165,9 +165,9 @@ Web 端覆盖 `miniprogram/app.json` 注册的全部 65 个页面，不再只验
 | 工资/经营 | 周期切换、人员展开、发放/撤销与日期备注；利润周期、校区图表、日趋势、成本/收入/支出明细及学员下钻 |
 | 营销 | 方案/模板创建、草稿保存、发布/暂停/恢复/结束、场次增改关删、名额保护、报名筛选与作废、奖励发放/作废、结算明细 |
 | 家长/学员 | 成员增改删、课程与自建日程增改删、周课表、记录、权益统计、趋势、费用订单、活动与机构切换、只读分享 |
-| 营销公开页 | 活动场次、动态报名字段、推荐关系、报名/取消、支付分支、推广进度、邀请明细和海报 |
+| 营销公开页 | 活动场次、动态报名字段、推荐关系、报名/取消、待支付恢复、小程序支付引导、状态轮询、推广进度、邀请明细和海报 |
 | 平台运营 | 平台管理员权限保护、总览分页、用户与机构查询、订单、反馈处理、套餐编辑、功能开关和结算打款 |
-| 账号/会员/支持 | 资料与密码、机构/校区切换、创建机构；套餐/续费/升级/扩容和扫码支付状态；反馈提交/历史展开、使用文档 |
+| 账号/会员/支持 | 密码与机构权限、机构/校区切换、创建机构；套餐/续费/升级/扩容和扫码支付状态；反馈提交/历史展开、使用文档 |
 
 ## 共用接口
 
@@ -178,15 +178,16 @@ Web 端覆盖 `miniprogram/app.json` 注册的全部 65 个页面，不再只验
   - `POST /auth/membership/create-native-payment`
   - `POST /auth/membership/addon/create-native-payment`
   - 支付结果仍由原 `/pay/status/{orderNo}` 接口确认。
+- 营销报名页会识别既有待支付报名，Web 统一引导回小程序完成同一笔报名的支付，不重复创建报名或订单；页面会自动轮询并确认支付结果。
 - 平台营销功能开关 `/platform-features` 会同步控制 Web 的营销入口和路由。
 
 ## 工程约束与验证
 
 - 页面按领域拆分；`npm run check:source-size` 强制 `src` 中所有 TypeScript、TSX 和 CSS 文件不超过 800 行。
 - 视觉合同：`npm run check:ui-contract`
-- 页面映射合同：`npm run check:parity` 会读取小程序 `app.json`，保证每一个注册页面都出现在逐页验收矩阵中，并校验家长、平台与营销公开页路由没有回退。
-- 浏览器回归：登录/协议页、17 个机构业务路由、10 个家长业务入口及两个只读分享入口均按真实数据加载；可见 Tab 实测统一为 32px 高、13px 字号，并抽查普通表单 Modal、长表单、Confirm、快捷打卡、学员详情、校区设置、标准桌面完整周视图、家长周课表、家长统计和平台权限页。
+- 页面与行为合同：`npm run check:parity` 会读取小程序 `app.json`，保证每一个注册页面都出现在逐页验收矩阵中，并校验机构端角色路由、登录回跳、OAuth state、新增学员多卡和营销续付等关键实现没有回退。
+- 浏览器回归：登录/协议页和 17 个机构业务路由按真实数据加载；可见 Tab 实测统一为 32px 高、13px 字号，并抽查普通表单 Modal、长表单、Confirm、快捷打卡、学员详情、校区设置和标准桌面完整周视图。
 - 路由页面使用懒加载，避免所有业务页一次性进入首屏。
 - Web 生产构建：`npm run build`
 - 后端编译：`mvn clean compile -DskipTests`
-- 后端全量测试：`mvn test`（当前 1311 项，0 失败、0 错误）
+- 后端全量测试：`mvn test`（当前 1321 项，0 失败、0 错误）

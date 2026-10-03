@@ -3,7 +3,7 @@ import { Button, Checkbox, Form, Input, message } from 'antd'
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { getUserInfo, getWechatWebConfig, loginByPassword } from '../api/auth'
-import { setToken } from '../session'
+import { consumeLoginRedirect, createWechatOAuthState, setToken } from '../session'
 import './LoginPage.css'
 
 export function LoginPage() {
@@ -35,7 +35,8 @@ export function LoginPage() {
       setToken(login.token)
       const user = await getUserInfo().catch(() => null)
       const pureParent = String(user?.role || login.role || '').toLowerCase() === 'parent' && !Number(user?.orgMemberId || 0)
-      navigate(pureParent ? '/parent/home' : '/home', { replace: true })
+      const redirect = consumeLoginRedirect()
+      navigate(pureParent ? '/parent/home' : (redirect || '/home'), { replace: true })
     } catch (error) {
       message.error(error instanceof Error ? error.message : '登录失败')
     } finally {
@@ -48,10 +49,15 @@ export function LoginPage() {
       message.warning('请先同意用户协议和隐私政策')
       return
     }
-    const redirectUri = encodeURIComponent(`${window.location.origin}/login/wechat`)
-    window.location.assign(
-      `https://open.weixin.qq.com/connect/qrconnect?appid=${wechatAppId}&redirect_uri=${redirectUri}&response_type=code&scope=snsapi_login&state=timetable#wechat_redirect`,
-    )
+    try {
+      const redirectUri = encodeURIComponent(`${window.location.origin}/login/wechat`)
+      const oauthState = createWechatOAuthState()
+      window.location.assign(
+        `https://open.weixin.qq.com/connect/qrconnect?appid=${wechatAppId}&redirect_uri=${redirectUri}&response_type=code&scope=snsapi_login&state=${encodeURIComponent(oauthState)}#wechat_redirect`,
+      )
+    } catch {
+      message.error('当前浏览器无法安全发起微信登录，请升级浏览器后重试')
+    }
   }
 
   return (

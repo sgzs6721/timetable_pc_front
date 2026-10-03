@@ -1,0 +1,719 @@
+.profit-analysis-page {
+  --profit-revenue: #059669;
+  --profit-revenue-soft: rgba(16, 185, 129, 0.09);
+  --profit-teacher: #2563eb;
+  --profit-teacher-soft: rgba(37, 99, 235, 0.09);
+  --profit-expense: #d97706;
+  --profit-expense-soft: rgba(245, 158, 11, 0.11);
+  --profit-profit: #e11d48;
+  --profit-profit-soft: rgba(244, 63, 94, 0.09);
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding-bottom: 32px;
+}
+.profit-analysis-page button { font: inherit; }
+.profit-filter-panel,
+.profit-panel,
+.profit-campus-section {
+  border: 1px solid rgba(218, 227, 240, 0.96);
+  background: rgba(255, 255, 255, 0.97);
+  box-shadow: 0 12px 34px rgba(38, 59, 108, 0.065);
+}
+.profit-filter-panel {
+  min-width: 0;
+  display: flex;
+  align-items: flex-end;
+  gap: 18px;
+  padding: 18px 20px;
+  border-radius: 17px;
+}
+.profit-filter-field {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.profit-filter-campus { flex: 0 1 310px; }
+.profit-filter-mode { flex: 0 0 150px; }
+.profit-filter-period { flex: 1 1 620px; }
+.profit-filter-label {
+  color: var(--ink-3);
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 1.2;
+}
+.profit-filter-campus > .ant-select,
+.profit-filter-period > .ant-select,
+.profit-filter-period > .ant-picker {
+  min-width: 0;
+  width: 100%;
+}
+.profit-filter-campus > .ant-select { width: 100%; }
+.profit-filter-panel .ant-select-selector,
+.profit-filter-panel .ant-picker {
+  min-height: 42px !important;
+  border-color: #dce5f2 !important;
+  border-radius: 11px !important;
+  background: #f8fbff !important;
+  box-shadow: none !important;
+}
+.profit-filter-panel .ant-select-selection-item,
+.profit-filter-panel .ant-select-selection-placeholder { line-height: 40px !important; }
+.profit-filter-panel .ant-select:hover .ant-select-selector,
+.profit-filter-panel .ant-picker:hover,
+.profit-filter-panel .ant-select-focused .ant-select-selector,
+.profit-filter-panel .ant-picker-focused {
+  border-color: #9eb4fb !important;
+  background: #fff !important;
+  box-shadow: 0 0 0 3px rgba(49, 95, 244, 0.09) !important;
+}
+.profit-filter-range {
+  min-width: 0;
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 13px;
+  border: 1px solid #dce5f2;
+  border-radius: 11px;
+  color: var(--ink-2);
+  background: #f8fbff;
+}
+.profit-filter-range > svg { flex: 0 0 auto; color: #8495b1; }
+.profit-filter-divider {
+  align-self: stretch;
+  width: 1px;
+  min-height: 58px;
+  background: #e8eef7;
+}
+.profit-filter-refresh {
+  flex: 0 0 auto;
+  min-width: 86px;
+  height: 42px;
+  border-radius: 11px;
+}
+.profit-panel {
+  min-width: 0;
+  padding: 20px;
+  border-radius: 18px;
+}
+.profit-panel-head,
+.profit-campus-head,
+.profit-daily-head,
+.profit-selected-day-head {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+.profit-panel-head { margin-bottom: 16px; }
+.profit-panel-title {
+  margin: 0;
+  color: var(--ink);
+  font-size: 17px;
+  font-weight: 750;
+  line-height: 1.25;
+  letter-spacing: -0.015em;
+}
+.profit-panel-subtitle {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+.profit-empty,
+.profit-detail-empty {
+  min-height: 150px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 28px;
+  border: 1px dashed #d7e1ef;
+  border-radius: 14px;
+  color: var(--muted);
+  background: linear-gradient(180deg, #fbfdff, #f7faff);
+  text-align: center;
+}
+.profit-analysis-chart {
+  min-width: 0;
+  padding: 16px 16px 12px;
+  border: 1px solid #e0e8f4;
+  border-radius: 16px;
+  background:
+    radial-gradient(circle at 85% 0, rgba(49, 95, 244, 0.055), transparent 30%),
+    linear-gradient(180deg, #fbfdff 0%, #f7faff 100%);
+}
+.profit-chart-legends {
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.profit-analysis-page .profit-chart-legend {
+  min-width: 0;
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 10px;
+  border: 1px solid #e0e7f1;
+  border-radius: 9px;
+  color: var(--ink-2);
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 1px 2px rgba(30, 45, 82, 0.025);
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+  transition: opacity 0.18s var(--ease), border-color 0.18s var(--ease), background 0.18s var(--ease), transform 0.18s var(--ease);
+}
+.profit-analysis-page .profit-chart-legend:hover {
+  border-color: #becbf4;
+  background: #fff;
+  transform: translateY(-1px);
+}
+.profit-analysis-page .profit-chart-legend.is-hidden,
+.profit-analysis-page .profit-chart-legend[aria-pressed="false"] {
+  opacity: 0.42;
+  background: transparent;
+}
+.profit-chart-legend-dot {
+  width: 9px;
+  height: 9px;
+  flex: 0 0 9px;
+  border-radius: 50%;
+  background: #94a3b8;
+}
+.profit-chart-legend-value {
+  margin-left: 2px;
+  color: var(--ink);
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+}
+.profit-chart-legend-dot.is-revenue,
+.profit-chart-bar.is-revenue {
+  background: linear-gradient(180deg, #6ee7b7 0%, #10b981 52%, #059669 100%);
+}
+.profit-chart-legend-dot.is-teacherCost,
+.profit-chart-bar.is-teacherCost {
+  background: linear-gradient(180deg, #93c5fd 0%, #60a5fa 50%, #2563eb 100%);
+}
+.profit-chart-legend-dot.is-operatingExpense,
+.profit-chart-bar.is-operatingExpense {
+  background: linear-gradient(180deg, #fde68a 0%, #fbbf24 52%, #d97706 100%);
+}
+.profit-chart-legend-dot.is-profit,
+.profit-chart-bar.is-profit {
+  background: linear-gradient(180deg, #fda4af 0%, #fb7185 52%, #e11d48 100%);
+}
+.profit-chart-scroller {
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-inline: contain;
+  padding: 2px 2px 7px;
+}
+.profit-chart-groups {
+  position: relative;
+  width: max-content;
+  min-width: 100%;
+  display: flex;
+  align-items: stretch;
+  justify-content: space-evenly;
+  gap: 14px;
+}
+.profit-analysis-page .profit-chart-group {
+  position: relative;
+  min-width: 108px;
+  max-width: 180px;
+  flex: 1 0 116px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  padding: 8px 8px 7px;
+  border: 1px solid transparent;
+  border-radius: 13px;
+  color: inherit;
+  background: transparent;
+  box-shadow: none;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.18s var(--ease), background 0.18s var(--ease), box-shadow 0.18s var(--ease), transform 0.18s var(--ease);
+}
+.profit-analysis-page .profit-chart-group:hover {
+  border-color: rgba(203, 215, 251, 0.82);
+  background: rgba(255, 255, 255, 0.76);
+  transform: translateY(-1px);
+}
+.profit-analysis-page .profit-chart-group.is-active {
+  border-color: #c6d3fb;
+  background: linear-gradient(180deg, rgba(240, 244, 255, 0.98), rgba(250, 252, 255, 0.98));
+  box-shadow: 0 9px 20px rgba(49, 95, 244, 0.08);
+}
+.profit-chart-plot-area {
+  position: relative;
+  height: 164px;
+  overflow: hidden;
+  border-radius: 9px 9px 3px 3px;
+}
+.profit-chart-zero-axis {
+  position: absolute;
+  right: 0;
+  left: 0;
+  height: 1px;
+  background: #9eabc0;
+}
+.profit-chart-zero-axis-layer {
+  position: absolute;
+  top: 8px;
+  right: 12px;
+  left: 12px;
+  z-index: 2;
+  height: 164px;
+  pointer-events: none;
+}
+.profit-chart-zero-axis::after {
+  content: '0';
+  position: absolute;
+  right: 0;
+  top: -15px;
+  color: #8796ad;
+  font-size: 10px;
+  font-style: normal;
+}
+.profit-chart-bars {
+  position: absolute;
+  inset: 0 8px;
+  z-index: 1;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  gap: 7px;
+}
+.profit-chart-bar-slot {
+  position: relative;
+  width: 14px;
+  height: 100%;
+  flex: 0 1 14px;
+}
+.profit-chart-bar {
+  position: absolute;
+  right: 0;
+  left: 0;
+  min-height: 2px;
+  border-radius: 5px 5px 2px 2px;
+  box-shadow: 0 5px 10px rgba(31, 50, 91, 0.1);
+  transition: height 0.28s var(--ease), bottom 0.28s var(--ease), opacity 0.18s var(--ease);
+}
+.profit-chart-no-data {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3;
+  color: #9aa8bd;
+  background: rgba(248, 251, 255, 0.92);
+  font-size: 12px;
+}
+.profit-chart-bar.is-negative {
+  border-radius: 2px 2px 5px 5px;
+  background-image:
+    repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.42) 0 4px, transparent 4px 8px),
+    linear-gradient(180deg, #fb7185, #e11d48);
+}
+.profit-chart-group-label,
+.profit-chart-group-sub {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.profit-chart-group-label {
+  color: var(--ink-2);
+  font-size: 12px;
+  font-weight: 700;
+}
+.profit-chart-group.is-active .profit-chart-group-label { color: var(--primary); }
+.profit-chart-group-sub {
+  color: var(--muted);
+  font-size: 11px;
+}
+.profit-campus-section {
+  min-width: 0;
+  padding: 20px;
+  border-radius: 18px;
+}
+.profit-campus-section.is-flat {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.profit-campus-head { min-height: 42px; }
+.profit-campus-head > div {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+.profit-campus-head > div > span {
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 11px;
+  color: var(--primary);
+  background: #eef3ff;
+  font-size: 18px;
+}
+.profit-campus-head > div > div { min-width: 0; }
+.profit-campus-head p {
+  margin: 3px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+.profit-campus-title {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  color: var(--ink);
+  font-size: 17px;
+  font-weight: 760;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.profit-campus-head .ant-btn-text {
+  height: 34px;
+  padding-inline: 9px;
+  border-radius: 8px;
+  font-weight: 650;
+}
+.profit-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 15px;
+}
+.profit-summary-card {
+  position: relative;
+  min-width: 0;
+  min-height: 100px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  gap: 9px;
+  overflow: hidden;
+  padding: 17px 17px 16px 20px;
+  border: 1px solid #e0e8f3;
+  border-radius: 14px;
+  color: var(--ink-2);
+  background: linear-gradient(180deg, #fff, #f8faff);
+  box-shadow: 0 7px 18px rgba(38, 59, 108, 0.045);
+  text-align: left;
+}
+button.profit-summary-card {
+  width: 100%;
+  cursor: default;
+}
+.profit-summary-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 5px;
+  background: #94a3b8;
+}
+.profit-summary-card.is-revenue { background: linear-gradient(145deg, #fff, #edfbf6); }
+.profit-summary-card.is-teacherCost { background: linear-gradient(145deg, #fff, #eef5ff); }
+.profit-summary-card.is-operatingExpense { background: linear-gradient(145deg, #fff, #fff7e9); }
+.profit-summary-card.is-profit { background: linear-gradient(145deg, #fff, #fff1f4); }
+.profit-summary-card.is-revenue::before { background: var(--profit-revenue); }
+.profit-summary-card.is-teacherCost::before { background: var(--profit-teacher); }
+.profit-summary-card.is-operatingExpense::before { background: var(--profit-expense); }
+.profit-summary-card.is-profit::before { background: var(--profit-profit); }
+.profit-summary-card.is-clickable {
+  cursor: pointer;
+  transition: border-color 0.18s var(--ease), box-shadow 0.18s var(--ease), transform 0.18s var(--ease);
+}
+.profit-summary-card.is-clickable:hover {
+  border-color: #becbf4;
+  box-shadow: 0 12px 25px rgba(49, 95, 244, 0.09);
+  transform: translateY(-2px);
+}
+.profit-summary-label {
+  color: var(--ink-3);
+  font-size: 12px;
+  font-weight: 650;
+}
+.profit-summary-value {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--ink);
+  font-size: clamp(19px, 1.35vw, 25px);
+  font-weight: 780;
+  line-height: 1.1;
+  letter-spacing: -0.035em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.profit-summary-card.is-revenue .profit-summary-value { color: var(--profit-revenue); }
+.profit-summary-card.is-teacherCost .profit-summary-value { color: var(--profit-teacher); }
+.profit-summary-card.is-operatingExpense .profit-summary-value { color: var(--profit-expense); }
+.profit-summary-card.is-profit .profit-summary-value { color: var(--profit-profit); }
+.profit-summary-arrow {
+  position: absolute;
+  right: 15px;
+  bottom: 15px;
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(191, 205, 253, 0.72);
+  border-radius: 50%;
+  color: var(--primary);
+  background: rgba(255, 255, 255, 0.66);
+  font-size: 18px;
+  line-height: 1;
+}
+.profit-campus-detail {
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid #e8eef6;
+}
+.profit-daily-head { margin-bottom: 12px; }
+.profit-daily-head + .profit-analysis-chart { margin-bottom: 18px; }
+.profit-daily-head h3 { margin: 0; color: var(--ink); font-size: 15px; line-height: 1.3; }
+.profit-daily-head p { margin: 4px 0 0; color: var(--muted); font-size: 12px; }
+.profit-selected-day {
+  margin: 14px 0;
+  padding: 15px;
+  border: 1px solid #dfe7f3;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #fff, #f8fbff);
+}
+.profit-selected-day-head { align-items: baseline; }
+.profit-selected-day-head > div:first-child { display: flex; align-items: baseline; gap: 8px; }
+.profit-selected-day-head > div:first-child span { color: var(--muted); font-size: 12px; }
+.profit-selected-day-profit {
+  flex: 0 0 auto;
+  color: var(--profit-profit);
+  font-size: 19px;
+  font-weight: 780;
+  font-variant-numeric: tabular-nums;
+}
+.profit-selected-day-profit span { margin-right: 7px; color: var(--muted); font-size: 12px; font-weight: 650; }
+.profit-selected-day-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 13px;
+}
+.profit-selected-day-metrics > * {
+  min-width: 0;
+  padding: 11px 13px;
+  border-radius: 10px;
+  color: var(--ink-2);
+  background: #f4f7fc;
+}
+.profit-selected-day-metrics span { display: block; color: var(--muted); font-size: 12px; }
+.profit-selected-day-metrics strong { display: block; margin-top: 5px; color: var(--ink); font-size: 15px; font-variant-numeric: tabular-nums; }
+.profit-selected-day-metrics .is-revenue strong { color: var(--profit-revenue); }
+.profit-selected-day-metrics .is-teacherCost strong { color: var(--profit-teacher); }
+.profit-selected-day-metrics .is-operatingExpense strong { color: var(--profit-expense); }
+.profit-daily-list {
+  overflow: hidden;
+  border: 1px solid #dfe7f2;
+  border-radius: 14px;
+  background: #fff;
+}
+.profit-daily-row {
+  min-width: 0;
+  padding: 15px 17px;
+  background: #fff;
+  transition: background 0.18s var(--ease);
+}
+.profit-daily-row + .profit-daily-row { border-top: 1px solid #ebf0f6; }
+.profit-daily-row:hover { background: #fbfcff; }
+.profit-daily-row-head {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.profit-daily-row-head > :first-child {
+  min-width: 0;
+  color: var(--ink-2);
+  font-weight: 700;
+}
+.profit-daily-row-head small { margin-left: 5px; color: var(--muted); font-size: 11px; font-weight: 500; }
+.profit-daily-profit {
+  flex: 0 0 auto;
+  color: var(--profit-profit);
+  font-weight: 760;
+  font-variant-numeric: tabular-nums;
+}
+.profit-daily-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 9px;
+  margin-top: 11px;
+}
+.profit-daily-metric {
+  min-width: 0;
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 11px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  color: var(--ink-3);
+  background: #f6f8fc;
+  text-align: left;
+}
+button.profit-daily-metric {
+  width: 100%;
+  cursor: default;
+}
+.profit-daily-metric.is-revenue { background: var(--profit-revenue-soft); }
+.profit-daily-metric.is-teacherCost { background: var(--profit-teacher-soft); }
+.profit-daily-metric.is-operatingExpense { background: var(--profit-expense-soft); }
+.profit-daily-metric.is-revenue strong { color: var(--profit-revenue); }
+.profit-daily-metric.is-teacherCost strong { color: var(--profit-teacher); }
+.profit-daily-metric.is-operatingExpense strong { color: var(--profit-expense); }
+.profit-daily-metric strong {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--ink);
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.profit-daily-metric.is-clickable {
+  cursor: pointer;
+  transition: border-color 0.18s var(--ease), filter 0.18s var(--ease), transform 0.18s var(--ease);
+}
+.profit-daily-metric.is-clickable:hover {
+  border-color: rgba(157, 174, 223, 0.42);
+  filter: saturate(1.08);
+  transform: translateY(-1px);
+}
+.profit-daily-metric.is-active { border-color: #a9bcf8; box-shadow: inset 0 0 0 1px rgba(49, 95, 244, 0.08); }
+.profit-negative { color: var(--profit-profit) !important; }
+@media (max-width: 1380px) {
+  .profit-filter-campus {
+    flex-basis: 260px;
+  }
+  .profit-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .profit-summary-value {
+    font-size: 22px;
+  }
+}
+@media (max-width: 1180px) {
+  .profit-filter-panel {
+    flex-wrap: wrap;
+    align-items: flex-end;
+  }
+  .profit-filter-campus {
+    flex: 1 1 250px;
+  }
+  .profit-filter-period {
+    flex: 2 1 520px;
+  }
+  .profit-filter-divider {
+    display: none;
+  }
+  .profit-selected-day-metrics,
+  .profit-daily-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 820px) {
+  .profit-analysis-page {
+    gap: 14px;
+  }
+  .profit-filter-panel,
+  .profit-panel,
+  .profit-campus-section {
+    padding: 16px;
+    border-radius: 15px;
+  }
+  .profit-filter-campus,
+  .profit-filter-period {
+    flex: 1 1 100%;
+  }
+  .profit-filter-refresh {
+    margin-left: auto;
+  }
+  .profit-chart-plot-area {
+    height: 152px;
+  }
+  .profit-chart-zero-axis-layer { height: 152px; }
+  .profit-chart-groups {
+    justify-content: flex-start;
+  }
+  .profit-chart-group {
+    flex-basis: 104px;
+  }
+  .profit-summary-grid,
+  .profit-selected-day-metrics,
+  .profit-daily-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 560px) {
+  .profit-filter-panel,
+  .profit-panel,
+  .profit-campus-section {
+    padding: 14px;
+  }
+  .profit-panel-head,
+  .profit-campus-head,
+  .profit-daily-head,
+  .profit-selected-day-head,
+  .profit-daily-row-head {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 7px;
+  }
+  .profit-summary-grid,
+  .profit-selected-day-metrics,
+  .profit-daily-metrics {
+    grid-template-columns: 1fr;
+  }
+  .profit-summary-card {
+    min-height: 86px;
+  }
+  .profit-daily-row {
+    padding: 14px;
+  }
+  .profit-filter-refresh {
+    width: 100%;
+    margin-left: 0;
+  }
+  .profit-chart-legends {
+    align-items: stretch;
+  }
+  .profit-analysis-page .profit-chart-legend {
+    flex: 1 1 calc(50% - 4px);
+  }
+}

@@ -30,6 +30,7 @@ import { getUserInfo, logout } from '../api/auth'
 import { subscriptionBlocksPath, subscriptionExpiredText } from '../access'
 import { loadHome, setCurrentOrganization } from '../api/home'
 import { getJson } from '../api/biz'
+import { resolveApiAssetUrl } from '../api/http'
 import type { Campus, HomeBootstrap, Organization, UserInfo } from '../api/types'
 import { navForUser } from '../nav'
 import { clearSession, getCampusId, getOrgId, setCampusId, setOrgId } from '../session'
@@ -178,6 +179,7 @@ export function AppShell() {
       ? [
         { key: '/home', label: '首页' },
         { key: '/account', label: '个人中心' },
+        { key: '/membership', label: '会员' },
         { key: '/guide', label: '需要帮助' },
         { key: '/feedback', label: '问题反馈' },
       ]
@@ -189,7 +191,7 @@ export function AppShell() {
 
   useEffect(() => {
     if (!noOrganization) return
-    if (['/home', '/account', '/guide', '/feedback'].includes(location.pathname)) return
+    if (['/home', '/account', '/membership', '/guide', '/feedback'].includes(location.pathname)) return
     navigate('/home', { replace: true })
   }, [noOrganization, location.pathname, navigate])
 
@@ -397,7 +399,7 @@ export function AppShell() {
                 className="profile-avatar"
                 shape="square"
                 size={39}
-                src={user?.avatarUrl || undefined}
+                src={resolveApiAssetUrl(String(user?.avatarUrl || '')) || undefined}
                 icon={<UserOutlined />}
               />
             </button>
