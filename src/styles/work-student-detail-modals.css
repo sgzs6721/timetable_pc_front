@@ -3,12 +3,12 @@
 }
 
 .ant-modal-root.add-student-modal .ant-modal .ant-modal-body {
-  padding: 12px 14px 14px;
+  padding: var(--dialog-padding);
   background: #f5f7fb;
 }
 
 .ant-modal-root.add-student-modal .ant-modal .ant-modal-footer {
-  padding: 10px 14px 12px;
+  padding: var(--space-4) var(--dialog-padding);
 }
 
 .add-student-modal .ant-modal-footer .ant-btn {
@@ -18,13 +18,13 @@
 .add-student-form {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  align-items: start;
-  gap: 12px;
+  align-items: stretch;
+  gap: var(--space-4);
 }
 
 .add-student-section {
   min-width: 0;
-  padding: 12px 14px 14px;
+  padding: var(--space-3) var(--space-4) var(--space-4);
   border: 1px solid var(--line);
   border-radius: 14px;
   background: var(--card);
@@ -41,8 +41,8 @@
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 10px;
+  gap: var(--space-4);
+  margin-bottom: var(--space-3);
 }
 
 .add-student-section__head h3 {
@@ -54,7 +54,7 @@
 }
 
 .add-student-section__head p {
-  margin: 3px 0 0;
+  margin: var(--space-1) 0 0;
   color: var(--muted);
   font-size: 11px;
   line-height: 1.45;
@@ -62,7 +62,7 @@
 
 .add-student-section__head > span {
   flex: 0 0 auto;
-  padding: 3px 8px;
+  padding: var(--space-1) var(--space-2);
   border-radius: 999px;
   color: #667694;
   background: #f0f3f8;
@@ -74,7 +74,7 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   align-items: start;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .add-student-profile-grid .ant-form-item,
@@ -107,8 +107,8 @@
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 94px));
   justify-content: center;
-  gap: 3px;
-  padding: 4px;
+  gap: var(--space-1);
+  padding: var(--space-1);
   border-bottom: 1px solid #dfe6f1;
   background: #f4f6fa;
 }
@@ -120,8 +120,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 4px;
-  padding: 0 6px;
+  gap: var(--space-1);
+  padding: 0 var(--space-2);
   border: 0;
   border-radius: 8px;
   color: #65728b;
@@ -152,7 +152,7 @@
   min-width: 18px;
   height: 18px;
   display: inline-grid;
-  padding: 0 5px;
+  padding: 0 var(--space-1);
   border-radius: 999px;
   color: #7a879f;
   background: #e7ebf2;
@@ -207,7 +207,7 @@
 .add-student-card-panel {
   min-height: 0;
   flex: 1;
-  padding: 10px;
+  padding: var(--space-3);
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-color: #c5cfde transparent;
@@ -230,7 +230,7 @@
 
 .add-student-card-list {
   display: grid;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .add-student-card-empty {
@@ -263,8 +263,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding: 9px 12px;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
   border-bottom: 1px solid var(--line-soft);
   background: linear-gradient(180deg, #fff, #f8faff);
 }
@@ -277,14 +277,14 @@
   min-width: 0;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .add-student-card__actions {
   display: inline-flex !important;
   flex: 0 0 auto;
   align-items: center;
-  gap: 3px !important;
+  gap: var(--space-1) !important;
 }
 
 .add-student-card__collapse {
@@ -359,8 +359,8 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   align-items: start;
-  gap: 10px;
-  padding: 10px 12px 12px;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-3) var(--space-3);
 }
 
 .add-student-card__wide {
@@ -372,7 +372,7 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(118px, 0.28fr);
   align-items: start;
-  gap: 10px;
+  gap: var(--space-3);
 }
 
 .add-student-card__settings-row--single {
@@ -390,7 +390,7 @@
 .student-choice-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 7px;
+  gap: var(--space-2);
 }
 
 .student-choice-chip {
@@ -401,7 +401,7 @@
   align-items: flex-start;
   justify-content: center;
   gap: 2px;
-  padding: 7px 9px;
+  padding: var(--space-2) var(--space-2);
   border: 1px solid #d8e0ed;
   border-radius: 9px;
   color: #40506c;
@@ -453,13 +453,13 @@
 .student-choice-chip--coach {
   min-height: 38px;
   align-items: center;
-  padding-inline: 9px;
+  padding-inline: var(--space-2);
   text-align: center;
 }
 
 .student-choice-more {
   display: block;
-  margin: 7px 0 0 auto;
+  margin: var(--space-2) 0 0 auto;
   padding: 2px 0;
   border: 0;
   color: var(--primary);
@@ -472,7 +472,7 @@
 .add-student-add-card.ant-btn {
   width: 100%;
   height: var(--control-md);
-  margin-top: 8px;
+  margin-top: var(--space-2);
   border-color: #cfd9ea;
   color: var(--ink-2);
   background: #fff;
@@ -493,7 +493,7 @@
 @media (min-width: 1041px) {
   .add-student-section--profile,
   .add-student-section--cards {
-    height: 450px;
+    min-height: 450px;
     box-sizing: border-box;
   }
 }
@@ -517,12 +517,12 @@
 }
 
 .student-profile-edit-section {
-  padding: 18px;
+  padding: var(--space-5);
 }
 
 .student-profile-edit-section > header {
-  margin-bottom: 16px;
-  padding-bottom: 13px;
+  margin-bottom: var(--space-4);
+  padding-bottom: var(--space-3);
   border-bottom: 1px solid var(--line-soft);
 }
 
@@ -534,17 +534,17 @@
 }
 
 .student-profile-edit-section > header p {
-  margin: 3px 0 0;
+  margin: var(--space-1) 0 0;
   color: var(--muted);
   font-size: 11px;
 }
 
 .student-profile-actions {
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .student-profile-edit-shell .student-card-desk {
-  padding: 18px;
+  padding: var(--space-5);
   border: 0;
   border-top: 1px solid var(--line-soft);
   border-radius: 0;
@@ -553,8 +553,8 @@
 }
 
 .student-parent-fee-intro {
-  margin: 0 0 16px;
-  padding: 10px 12px;
+  margin: 0 0 var(--space-4);
+  padding: var(--space-3) var(--space-3);
   border-radius: 10px;
   color: var(--ink-3);
   background: #f4f7fc;
@@ -564,7 +564,7 @@
 .student-detail-heading-line {
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: var(--space-2);
 }
 
 .student-parent-access-info {
@@ -583,8 +583,8 @@
 }
 
 .student-contact-access {
-  margin-top: 13px;
-  padding-top: 13px;
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
   border-top: 1px solid var(--line-soft);
 }
 
@@ -592,7 +592,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 .student-contact-access-row > span {
@@ -605,7 +605,7 @@
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 9px;
+  gap: var(--space-2);
 }
 
 .student-contact-access-row a {
@@ -620,8 +620,8 @@
   height: 34px;
   display: flex;
   justify-content: space-between;
-  margin-top: 10px;
-  padding-inline: 10px;
+  margin-top: var(--space-3);
+  padding-inline: var(--space-3);
   border-radius: 9px;
   color: var(--ink-2);
   background: transparent;
@@ -634,7 +634,7 @@
 }
 
 .student-coach-assign-modal .ant-modal-header {
-  padding-bottom: 14px;
+  padding-bottom: var(--space-4);
   border-bottom: 1px solid var(--line-soft);
   text-align: center;
 }
@@ -646,14 +646,14 @@
 }
 
 .student-coach-assign-modal .ant-modal-body {
-  padding-top: 12px;
+  padding-top: var(--space-3);
 }
 
 .student-coach-assign-modal .ant-modal-footer {
   display: flex;
-  gap: 10px;
-  margin-top: 20px;
-  padding-top: 16px;
+  gap: var(--space-3);
+  margin-top: var(--space-5);
+  padding-top: var(--space-4);
   border-top: 1px solid var(--line-soft);
 }
 
@@ -666,14 +666,14 @@
 }
 
 .student-coach-assign-subtitle {
-  margin: -6px 0 18px;
+  margin: calc(-1 * var(--space-2)) 0 var(--space-5);
   color: var(--muted);
   font-size: 12px;
   text-align: center;
 }
 
 .student-coach-assign-section-title {
-  margin-bottom: 10px;
+  margin-bottom: var(--space-3);
   color: var(--ink-2);
   font-size: 12px;
   font-weight: 650;
@@ -682,7 +682,7 @@
 .student-coach-choice-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .student-coach-choice-grid button {
@@ -691,8 +691,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  padding: 0 9px;
+  gap: var(--space-2);
+  padding: 0 var(--space-2);
   border: 1px solid #e6eaf1;
   border-radius: 9px;
   color: var(--ink-2);

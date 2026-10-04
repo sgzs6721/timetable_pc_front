@@ -5,7 +5,6 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { marketingPublicApi } from '../api/marketing-public'
 import { BusinessDatePicker } from '../components/BusinessDatePicker'
 import type { MarketingEnrollment, MarketingLanding, MarketingSession } from './marketing-public-model'
-import './marketing-public.css'
 
 interface EnrollForm { studentName: string; sessionId?: number; gender?: string; birthDate?: string; levelText?: string; intentSlots?: string; remark?: string }
 

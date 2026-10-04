@@ -1,6 +1,5 @@
 import { Link, useParams } from 'react-router-dom'
 import legal from '../content/legal.json'
-import './LegalPage.css'
 
 interface LegalBlock {
   kind: string

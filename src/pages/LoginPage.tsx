@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { getUserInfo, getWechatWebConfig, loginByPassword } from '../api/auth'
 import { consumeLoginRedirect, createWechatOAuthState, setToken } from '../session'
-import './LoginPage.css'
 
 export function LoginPage() {
   const navigate = useNavigate()

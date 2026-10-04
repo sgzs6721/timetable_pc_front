@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { getJson } from '../api/biz'
 import { tell } from './kit'
 import type { CourseMember, Schedule, TargetOption } from './schedule-model'
-import { CARD_MARKER, cardIdFromPricing, courseMembersWarning, courseTargetWarning, fallbackCourseMembers, minOpenWarning, pricingChoices, resolveMinOpen, sortTargetOptions } from './schedule-targets'
+import { CARD_MARKER, cardIdFromPricing, courseMembersWarning, courseTargetWarning, fallbackCourseMembers, minOpenWarning, pricingChoices, resolveMinOpen, resolveMaxOpen, sortTargetOptions } from './schedule-targets'
 import { DAY_LABELS, durationLabel, freeUntil, fromMinutes, parseTrialConfig, toMinutes } from './schedule-board-helpers'
 import type { CellDialogProps } from './schedule-cell-dialog'
 
@@ -23,6 +23,7 @@ export function useCellDialogController(props: CellDialogProps) {
   const [members, setMembers] = useState<CourseMember[]>([])
   const [membersLoaded, setMembersLoaded] = useState(false)
   const [minOpenCount, setMinOpenCount] = useState(0)
+  const [maxOpenCount, setMaxOpenCount] = useState(0)
   const [excluded, setExcluded] = useState<number[]>([])
   const [memberCards, setMemberCards] = useState<Record<number, number>>({})
   const [membersOpen, setMembersOpen] = useState(false)
@@ -123,6 +124,7 @@ export function useCellDialogController(props: CellDialogProps) {
       setPricingKey('')
       setMembers([])
       setMinOpenCount(0)
+      setMaxOpenCount(0)
       setMembersLoaded(false)
       return
     }
@@ -135,6 +137,7 @@ export function useCellDialogController(props: CellDialogProps) {
     if (selected.targetType !== 'course') {
       setMembers([])
       setMinOpenCount(0)
+      setMaxOpenCount(0)
       setMembersLoaded(true)
       return
     }
@@ -142,10 +145,11 @@ export function useCellDialogController(props: CellDialogProps) {
     setMembersLoaded(false)
     const campusId = dialogCampusId
     const coachIds = selected.coachIds || []
-    getJson<{ memberHoursDetails?: CourseMember[]; minOpenCount?: number | null; oneToOne?: boolean; unitPrice?: number; studentIds?: number[]; studentNames?: string[]; coachIds?: number[] }>(`/student-groups/${selected.targetId}`)
+    getJson<{ memberHoursDetails?: CourseMember[]; minOpenCount?: number | null; maxOpenCount?: number | null; oneToOne?: boolean; unitPrice?: number; studentIds?: number[]; studentNames?: string[]; coachIds?: number[] }>(`/student-groups/${selected.targetId}`)
       .then(async (group) => {
         if (!active) return
         setMinOpenCount(resolveMinOpen(group))
+        setMaxOpenCount(resolveMaxOpen(group))
         if (sameCourse) {
           setMembers([])
           setMembersLoaded(true)
@@ -172,6 +176,7 @@ export function useCellDialogController(props: CellDialogProps) {
         if (!active) return
         setMembers([])
         setMinOpenCount(0)
+        setMaxOpenCount(0)
         setMembersLoaded(false)
       })
     return () => { active = false }
@@ -213,7 +218,7 @@ export function useCellDialogController(props: CellDialogProps) {
     : sameCourse
       ? instances.filter((item) => Number(item.status) !== 3 && !excluded.includes(item.studentId)).length
       : members.filter((item) => !excluded.includes(item.studentId)).length
-  const openWarning = selected?.targetType === 'course' && (sameCourse || membersLoaded) ? minOpenWarning(courseAttending, minOpenCount) : ''
+  const openWarning = selected?.targetType === 'course' && (sameCourse || membersLoaded) ? minOpenWarning(courseAttending, minOpenCount, maxOpenCount) : ''
   const saveBlocked = occupied || !selected || !!courseTargetWarning(selected) || !!selected.selectionBlockedReason || !!pricing?.disabled
     || (selected.targetType === 'course' && !sameCourse && membersLoaded && !!courseMembersWarning(members, excluded))
     || !!openWarning

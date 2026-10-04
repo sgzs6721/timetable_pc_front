@@ -5,7 +5,6 @@ import { useNavigate } from 'react-router-dom'
 import { delJson, getJson, postJson, putJson } from '../api/biz'
 import { setCampusId, setOrgId } from '../session'
 import { EmptyState, PageHead, PhoneCopyButton, copyPlainText, tell, useShell } from './kit'
-import './OrgPage.css'
 
 interface Org {
   id: number

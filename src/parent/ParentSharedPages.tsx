@@ -7,7 +7,6 @@ import { parentApi } from '../api/parent'
 import { BoardToolbar, ParentWeekBoard } from './parent-kit'
 import { StatsContent } from './ParentStatsPage'
 import type { ParentBoard, ParentCourseStats } from './parent-model'
-import './parent.css'
 
 function currentWeekStart() {
   const today = dayjs()

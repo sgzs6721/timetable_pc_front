@@ -17,6 +17,7 @@ const GuidePage = lazy(() => import('./pages/GuidePage').then((module) => ({ def
 const HomePage = lazy(() => import('./pages/HomePage').then((module) => ({ default: module.HomePage })))
 const HoursPage = lazy(() => import('./pages/HoursPage').then((module) => ({ default: module.HoursPage })))
 const MarketingPage = lazy(() => import('./pages/MarketingPage').then((module) => ({ default: module.MarketingPage })))
+const LeadsPage = lazy(() => import('./pages/LeadsPage').then((module) => ({ default: module.LeadsPage })))
 const MembershipPage = lazy(() => import('./pages/MembershipPage').then((module) => ({ default: module.MembershipPage })))
 const OrgPage = lazy(() => import('./pages/OrgPage').then((module) => ({ default: module.OrgPage })))
 const PaymentsPage = lazy(() => import('./pages/PaymentsPage').then((module) => ({ default: module.PaymentsPage })))
@@ -121,6 +122,7 @@ export function App() {
         <Route path="/profit" element={<ProfitPage />} />
         <Route path="/membership" element={<MembershipPage />} />
         <Route path="/marketing" element={<MarketingPage />} />
+        <Route path="/leads" element={<LeadsPage />} />
         <Route path="/guide" element={<GuidePage />} />
         <Route path="/feedback" element={<FeedbackPage />} />
         </Route>

@@ -7,7 +7,6 @@ import { getJson, postJson } from '../api/biz'
 import { setCampusId, setOrgId } from '../session'
 import { PageHead, tell, useShell } from './kit'
 import { OrganizationCreateModal, type OrganizationCreateValues } from './organization-create-modal'
-import './AccountPage.css'
 
 interface Affiliation {
   id: number

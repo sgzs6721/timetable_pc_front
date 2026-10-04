@@ -22,6 +22,11 @@ const requiredTokens = [
   '--radius-control',
   '--radius-dialog',
   '--tab-height',
+  '--page-padding',
+  '--card-padding',
+  '--dialog-padding',
+  '--form-column-gap',
+  '--action-gap',
 ]
 const globalCss = readFileSync(join(src, 'styles/global.css'), 'utf8')
 for (const token of requiredTokens) {
@@ -33,6 +38,10 @@ const consistencyIndex = main.indexOf("./styles/ui-consistency.css")
 const calendarIndex = main.indexOf("./styles/calendar.css")
 const dialogsIndex = main.indexOf("./styles/dialogs.css")
 const buttonsIndex = main.indexOf("./styles/buttons.css")
+const pageStylesIndex = main.indexOf("./styles/page-styles.css")
+if (pageStylesIndex < 0 || pageStylesIndex >= consistencyIndex) {
+  failures.push('页面样式必须集中加载在 ui-consistency.css 之前，避免访问顺序改变组件样式')
+}
 if (consistencyIndex < 0) failures.push('main.tsx 未加载 ui-consistency.css')
 if (calendarIndex < 0) failures.push('main.tsx 未加载 calendar.css')
 if (dialogsIndex < 0) failures.push('main.tsx 未加载 dialogs.css')
@@ -97,6 +106,9 @@ if (!/\.home-module-grid\s*\{[^}]*grid-template-columns:\s*repeat\(4,/s.test(hom
 for (const path of walk(src)) {
   if (!['.ts', '.tsx'].includes(extname(path))) continue
   const source = readFileSync(path, 'utf8')
+  if (relative(src, path) !== 'main.tsx' && /^import\s+['"][^'"]+\.css['"]/m.test(source)) {
+    failures.push(`${relative(root, path)} 单独加载 CSS；请在 page-styles.css 中登记，保证样式顺序稳定`)
+  }
   const nativeDialog = /\bwindow\s*\.\s*(alert|confirm|prompt)\s*\(/g
   for (const match of source.matchAll(nativeDialog)) {
     failures.push(`${relative(root, path)} 使用了原生 window.${match[1]} 弹窗`)

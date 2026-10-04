@@ -50,7 +50,13 @@
   --space-6: 24px;
   --space-8: 32px;
   --space-section: 16px;
-  --form-item-gap: 18px;
+  --page-padding: 32px;
+  --card-padding: 20px;
+  --dialog-padding: 24px;
+  --section-head-height: 56px;
+  --form-item-gap: 16px;
+  --form-column-gap: 16px;
+  --action-gap: 8px;
   --control-sm: 32px;
   --control-md: 38px;
   --control-lg: 44px;
@@ -200,8 +206,10 @@ a:hover {
 
 .route-loading {
   min-height: 54vh;
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
   color: var(--muted);
   font-size: var(--text-body);
 }
@@ -210,7 +218,7 @@ a:hover {
   content: "";
   width: 30px;
   height: 30px;
-  margin-right: 12px;
+  flex: none;
   border: 3px solid #dce5ff;
   border-top-color: var(--primary);
   border-radius: 50%;

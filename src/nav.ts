@@ -6,7 +6,10 @@ export interface NavItem {
   path: string
 }
 
+const LEADS_NAV: NavItem = { key: 'leads', label: '客源管理', path: '/leads' }
+
 const MANAGER_NAV: NavItem[] = [
+  LEADS_NAV,
   { key: 'home', label: '首页', path: '/home' },
   { key: 'students', label: '学员管理', path: '/students' },
   { key: 'schedule', label: '课表管理', path: '/schedule' },
@@ -28,6 +31,7 @@ const MANAGER_NAV: NavItem[] = [
 const CAMPUS_ADMIN_NAV = MANAGER_NAV.filter((item) => item.key !== 'org')
 
 const TEACHER_NAV: NavItem[] = [
+  LEADS_NAV,
   { key: 'home', label: '首页', path: '/home' },
   { key: 'schedule', label: '我的课表', path: '/schedule' },
   { key: 'students', label: '我的学员', path: '/students' },
@@ -38,6 +42,7 @@ const TEACHER_NAV: NavItem[] = [
 ]
 
 const MEMBER_NAV: NavItem[] = [
+  LEADS_NAV,
   { key: 'home', label: '首页', path: '/home' },
   { key: 'salary', label: '我的工资', path: '/salary' },
   { key: 'account', label: '个人中心', path: '/account' },
@@ -65,5 +70,5 @@ export function navForUser(user: UserInfo | null, org?: Organization | null): Na
   if (role === 'coach') {
     return MEMBER_NAV
   }
-  return [{ key: 'home', label: '首页', path: '/home' }, { key: 'guide', label: '需要帮助', path: '/guide' }, { key: 'feedback', label: '问题反馈', path: '/feedback' }]
+  return [LEADS_NAV, { key: 'home', label: '首页', path: '/home' }, { key: 'guide', label: '需要帮助', path: '/guide' }, { key: 'feedback', label: '问题反馈', path: '/feedback' }]
 }

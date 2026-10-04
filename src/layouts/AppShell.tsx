@@ -21,6 +21,7 @@ import {
   NotificationOutlined,
   QuestionCircleOutlined,
   SolutionOutlined,
+  TeamOutlined,
   UserOutlined,
 } from '@ant-design/icons'
 import { Avatar, Button, Dropdown, Layout, message } from 'antd'
@@ -34,11 +35,11 @@ import { resolveApiAssetUrl } from '../api/http'
 import type { Campus, HomeBootstrap, Organization, UserInfo } from '../api/types'
 import { navForUser } from '../nav'
 import { clearSession, getCampusId, getOrgId, setCampusId, setOrgId } from '../session'
-import './AppShell.css'
 
 const { Sider, Header, Content } = Layout
 
 const NAV_GROUPS = [
+  { caption: '客户跟进', paths: ['/leads'] },
   { caption: '工作台', paths: ['/home', '/students', '/schedule', '/courses', '/hours'] },
   { caption: '校务管理', paths: ['/org', '/campus', '/daily', '/payments', '/salary', '/finance', '/profit', '/marketing'] },
   { caption: '系统', paths: ['/membership', '/account', '/guide', '/feedback'] },
@@ -75,6 +76,7 @@ function RouteGlyph(props: { path: string }) {
   else if (props.path === '/finance') Icon = AccountBookOutlined
   else if (props.path === '/profit') Icon = BarChartOutlined
   else if (props.path === '/marketing') Icon = NotificationOutlined
+  else if (props.path === '/leads') Icon = TeamOutlined
   else if (props.path === '/membership') Icon = CrownOutlined
   else if (props.path === '/account') Icon = UserOutlined
   else if (props.path === '/guide') Icon = QuestionCircleOutlined
@@ -368,7 +370,7 @@ export function AppShell() {
                   <span className="shell-campus-switch-action" aria-hidden="true"><DownOutlined /></span>
                 </button>
               </Dropdown>
-              <Dropdown
+              {location.pathname !== '/leads' && <Dropdown
                 disabled={!campuses.length}
                 trigger={['click']}
                 placement="bottomRight"
@@ -388,7 +390,7 @@ export function AppShell() {
                   <strong>{currentCampus?.name || '请选择校区'}</strong>
                   <span className="shell-campus-switch-action" aria-hidden="true"><DownOutlined /></span>
                 </button>
-              </Dropdown>
+              </Dropdown>}
             </div>
             <button className="profile" type="button" onClick={() => navigate('/account')}>
               <span className="profile-copy">

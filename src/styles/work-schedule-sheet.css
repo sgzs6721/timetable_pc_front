@@ -11,9 +11,9 @@
 .tt-modebar {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin: 10px 0;
-  padding: 10px 12px;
+  gap: var(--space-3);
+  margin: var(--space-3) 0;
+  padding: var(--space-3) var(--space-3);
   border-radius: 12px;
   background: #f4f7ff;
 }
@@ -26,7 +26,7 @@
 
 .tt-modebar button {
   height: 34px;
-  padding: 0 14px;
+  padding: 0 var(--space-4);
   border: 0;
   border-radius: 9px;
   background: #fff;
@@ -48,7 +48,7 @@
 .drag-options {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
+  gap: var(--space-3);
 }
 
 .drag-options.is-single {
@@ -81,17 +81,17 @@
 .sheet-occupied,
 .sheet-echo,
 .sheet-foot {
-  padding-left: 18px;
-  padding-right: 18px;
+  padding-left: var(--space-5);
+  padding-right: var(--space-5);
 }
 
 .sheet-head {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 12px;
-  padding-top: 16px;
-  padding-bottom: 12px;
+  gap: var(--space-3);
+  padding-top: var(--space-4);
+  padding-bottom: var(--space-3);
 }
 
 .sheet-head strong,
@@ -115,7 +115,7 @@
 .sheet-card footer {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .sheet-head-actions button,
@@ -150,9 +150,9 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 10px;
-  margin: 0 18px 12px;
-  padding: 10px 12px;
+  gap: var(--space-3);
+  margin: 0 var(--space-5) var(--space-3);
+  padding: var(--space-3) var(--space-3);
   border-radius: 12px;
   background: #f7f8fb;
 }
@@ -172,7 +172,7 @@
 }
 
 .sheet-echo i {
-  margin-left: 8px;
+  margin-left: var(--space-2);
   color: #d97706;
   font-style: normal;
 }
@@ -188,14 +188,14 @@
 .sheet-form {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding-bottom: 8px;
+  gap: var(--space-3);
+  padding-bottom: var(--space-2);
 }
 
 .sheet-field {
   position: relative;
   min-height: 40px;
-  padding: 6px 10px;
+  padding: var(--space-2) var(--space-3);
   border-radius: 12px;
   background: #f6f7fb;
 }
@@ -222,7 +222,7 @@
 
 .sheet-switch {
   justify-content: space-between;
-  padding: 8px 10px;
+  padding: var(--space-2) var(--space-3);
   border-radius: 12px;
   background: #f6f7fb;
 }
@@ -235,7 +235,7 @@
   right: 0;
   max-height: 280px;
   overflow: auto;
-  padding: 6px;
+  padding: var(--space-2);
   border: 1px solid #e6e8ef;
   border-radius: 12px;
   background: #fff;
@@ -246,8 +246,8 @@
   display: flex;
   width: 100%;
   align-items: center;
-  gap: 8px;
-  padding: 8px;
+  gap: var(--space-2);
+  padding: var(--space-2);
   border: 0;
   border-radius: 8px;
   background: transparent;
@@ -263,7 +263,7 @@
 .sheet-menu em {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-1);
   color: #52607a;
   font-style: normal;
   font-size: 12px;
@@ -274,7 +274,7 @@
 .sheet-stepper {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-2);
 }
 
 .sheet-stepper button {
@@ -299,12 +299,12 @@
 .sheet-actions {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .sheet-actions {
   grid-template-columns: repeat(3, 1fr);
-  padding-bottom: 12px;
+  padding-bottom: var(--space-3);
 }
 
 .sheet-actions.is-two { grid-template-columns: 1fr 1fr; }
@@ -330,7 +330,7 @@
 .sheet-trial,
 .sheet-coaches,
 .sheet-people {
-  padding: 10px;
+  padding: var(--space-3);
   border-radius: 12px;
   background: #f8f9fc;
 }
@@ -345,7 +345,7 @@
   opacity: 0.45;
 }
 
-.sheet-people header { margin-bottom: 8px; }
+.sheet-people header { margin-bottom: var(--space-2); }
 .sheet-people header em,
 .sheet-people header span { color: #667085; font-size: 12px; }
 .sheet-people header em { margin-left: auto; font-style: normal; }
@@ -353,7 +353,7 @@
 .sheet-people article {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   min-height: 36px;
 }
 
@@ -363,21 +363,21 @@
 .sheet-people article button.is-low { color: #dc2626; font-weight: 700; }
 .hours-low { color: #b45309; font-weight: 600; }
 .sheet-people .is-leave { color: #d97706; }
-.sheet-warn { margin: 6px 0 0; color: #c2410c; font-size: 12px; }
+.sheet-warn { margin: var(--space-2) 0 0; color: #c2410c; font-size: 12px; }
 
 .sheet-occupied {
-  padding-bottom: 16px;
+  padding-bottom: var(--space-4);
 }
 
 .sheet-occupied b,
 .sheet-occupied p { display: block; }
 .sheet-occupied p { color: #667085; }
 
-.sheet-records { padding-bottom: 16px; }
+.sheet-records { padding-bottom: var(--space-4); }
 .sheet-records article {
   display: flex;
   justify-content: space-between;
-  padding: 8px 0;
+  padding: var(--space-2) 0;
   border-bottom: 1px solid #eef0f5;
 }
 
@@ -391,8 +391,8 @@
 
 .sheet-card {
   width: min(420px, 100%);
-  margin: 16px;
-  padding: 14px;
+  margin: var(--space-4);
+  padding: var(--space-4);
   border-radius: 16px;
   background: #fff;
 }
@@ -400,24 +400,24 @@
 .sheet-card button {
   display: block;
   width: 100%;
-  padding: 8px 0;
+  padding: var(--space-2) 0;
   text-align: left;
 }
 
 .sheet-card button.is-on { color: #2456d6; }
 .sheet-card button b.is-low { color: #dc2626; font-weight: 700; }
 .sheet-card button small { display: block; color: #b45309; font-size: 12px; }
-.sheet-foot { padding-bottom: 14px; }
+.sheet-foot { padding-bottom: var(--space-4); }
 
-.assigned-coaches { display: grid; gap: 8px; }
+.assigned-coaches { display: grid; gap: var(--space-2); }
 .assigned-coaches > strong { font-size: 14px; }
-.assigned-coaches ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
-.assigned-coaches li { display: flex; align-items: center; justify-content: space-between; min-height: 40px; padding: 0 12px; border: 1px solid #e6ebf2; border-radius: 8px; background: #f8fafc; }
+.assigned-coaches ul { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-2); }
+.assigned-coaches li { display: flex; align-items: center; justify-content: space-between; min-height: 40px; padding: 0 var(--space-3); border: 1px solid #e6ebf2; border-radius: 8px; background: #f8fafc; }
 .assigned-coaches p { margin: 0; color: #64748b; }
 
 /* Refined schedule editor surfaces */
 .tt-modebar {
-  padding: 10px 12px;
+  padding: var(--space-3) var(--space-3);
   border: 1px solid #e5ebf4;
   border-radius: 12px;
   background: linear-gradient(145deg, #fafcff, #f4f7ff);

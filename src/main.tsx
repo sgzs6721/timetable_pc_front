@@ -12,6 +12,7 @@ import './styles/finance-comparison.css'
 import './styles/finance-overview-filter.css'
 import './styles/design.css'
 import './styles/staff.css'
+import './styles/page-styles.css'
 import './styles/ui-consistency.css'
 import './styles/calendar.css'
 import './styles/dialogs.css'
@@ -84,7 +85,7 @@ const appTheme = {
       cellPaddingInline: 16,
     },
     Modal: { titleFontSize: 18 },
-    Form: { labelFontSize: 13, itemMarginBottom: 18 },
+    Form: { labelFontSize: 13, itemMarginBottom: 16, verticalLabelPadding: '0 0 8px' },
     Input: { inputFontSize: 13, inputFontSizeLG: 14, inputFontSizeSM: 12 },
     Tabs: {
       titleFontSize: 13,

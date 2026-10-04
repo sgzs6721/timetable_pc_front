@@ -4,7 +4,7 @@
 }
 
 .quick-checkin-modal .ant-modal-header {
-  padding: 15px 22px;
+  padding: var(--space-4) var(--space-6);
   background: #fff;
 }
 
@@ -17,7 +17,7 @@
   min-width: 0;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 .quick-checkin-heading > span:last-child {
@@ -64,14 +64,14 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: var(--space-2);
   text-align: center;
 }
 
 .quick-checkin-loading > span {
   width: 34px;
   height: 34px;
-  margin-bottom: 8px;
+  margin-bottom: var(--space-2);
   border: 3px solid #dfe7ff;
   border-top-color: var(--primary);
   border-radius: 50%;
@@ -96,9 +96,9 @@
 .quick-checkin-inline-notice {
   display: flex;
   align-items: flex-start;
-  gap: 8px;
-  margin-bottom: 12px;
-  padding: 10px 12px;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+  padding: var(--space-3) var(--space-3);
   border: 1px solid #f0ddbe;
   border-radius: 11px;
   color: #9a611f;
@@ -123,7 +123,7 @@
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     align-items: stretch;
-    gap: 12px;
+    gap: var(--space-3);
   }
 
   .quick-checkin-form > .quick-checkin-section {
@@ -136,7 +136,7 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 .quick-checkin-left-column > .quick-checkin-section {
@@ -146,7 +146,7 @@
 
 .quick-checkin-card-panel,
 .quick-checkin-section {
-  padding: 13px;
+  padding: var(--space-3);
   border: 1px solid #e2e8f2;
   border-radius: 15px;
   background: #fff;
@@ -161,7 +161,7 @@
 }
 
 .quick-checkin-section {
-  margin-top: 12px;
+  margin-top: var(--space-3);
 }
 
 .quick-checkin-card-head,
@@ -169,18 +169,18 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 .quick-checkin-section-heading {
-  margin-bottom: 10px;
+  margin-bottom: var(--space-3);
 }
 
 .quick-checkin-section-title {
   min-width: 0;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--space-3);
 }
 
 .quick-checkin-section-title > span {
@@ -226,7 +226,7 @@
 
 .quick-checkin-card-head > em {
   flex: none;
-  padding: 4px 9px;
+  padding: var(--space-1) var(--space-2);
   border: 1px solid #d6e0ff;
   border-radius: var(--radius-tag);
   color: var(--primary);
@@ -237,25 +237,25 @@
 }
 
 .quick-checkin-card-select.ant-form-item {
-  margin: 13px 0 0;
+  margin: var(--space-3) 0 0;
 }
 
 .quick-checkin-card-select .ant-form-item-label {
-  padding-bottom: 5px;
+  padding-bottom: var(--space-1);
 }
 
 .quick-checkin-type-options {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
+  gap: var(--space-3);
 }
 
 .quick-checkin-type-option {
   min-width: 0;
   display: flex;
   align-items: center;
-  gap: 9px;
-  padding: 9px 11px;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
   border: 1px solid #e2e8f2;
   border-radius: 12px;
   background: #fbfcff;
@@ -311,9 +311,9 @@
 .quick-checkin-course-fields {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0 12px;
-  margin-top: 11px;
-  padding-top: 11px;
+  gap: 0 var(--space-3);
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
   border-top: 1px solid #edf1f6;
 }
 
@@ -329,11 +329,11 @@
 }
 
 .quick-checkin-course-fields .ant-form-item {
-  margin-bottom: 9px;
+  margin-bottom: var(--space-2);
 }
 
 .quick-checkin-course-fields .ant-form-item-label {
-  padding-bottom: 5px;
+  padding-bottom: var(--space-1);
 }
 
 .quick-checkin-course-fields .ant-input,
@@ -363,8 +363,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding: 8px 12px;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
   border-radius: 10px;
   text-align: left;
 }
@@ -421,7 +421,7 @@
 
 .quick-checkin-list-label {
   flex: none;
-  padding-top: 7px;
+  padding-top: var(--space-2);
   color: var(--muted);
   font-size: 11px;
   font-weight: 650;
@@ -470,8 +470,8 @@
   display: flex;
   align-items: baseline;
   justify-content: center;
-  gap: 5px;
-  padding: 8px 10px;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-3);
   color: var(--ink);
   background: #fff;
   font-variant-numeric: tabular-nums;
@@ -489,9 +489,9 @@
 .quick-checkin-service-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  margin-top: 14px;
-  padding-top: 12px;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+  padding-top: var(--space-3);
   border-top: 1px solid #edf1f6;
 }
 
@@ -503,8 +503,8 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 10px;
-  padding: 9px;
+  gap: var(--space-3);
+  padding: var(--space-2);
   border: 1px solid #e6ebf3;
   border-radius: 11px;
   background: #fbfcff;
@@ -534,7 +534,7 @@
   display: flex;
   align-items: center;
   flex: none;
-  gap: 4px;
+  gap: var(--space-1);
 }
 
 .quick-checkin-stepper .ant-btn {
@@ -552,11 +552,11 @@
 
 .quick-checkin-remark.ant-form-item {
   margin-bottom: 0;
-  margin-top: 13px;
+  margin-top: var(--space-3);
 }
 
 .quick-checkin-remark .ant-form-item-label {
-  padding-bottom: 5px;
+  padding-bottom: var(--space-1);
 }
 
 .quick-checkin-remark .ant-input {
@@ -608,7 +608,7 @@
   left: 0;
   z-index: 30;
   box-sizing: border-box;
-  padding: 4px;
+  padding: var(--space-1);
   overflow-y: auto;
   border: 1px solid #dfe6f2;
   border-radius: 12px;
@@ -621,8 +621,8 @@
   min-height: 44px;
   display: flex;
   align-items: center;
-  gap: 9px;
-  padding: 8px 10px;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
   border: 0;
   border-radius: 8px;
   color: var(--ink-2);

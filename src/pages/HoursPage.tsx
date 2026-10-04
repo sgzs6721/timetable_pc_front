@@ -4,7 +4,6 @@ import { useSearchParams } from 'react-router-dom'
 import { delJson, getJson } from '../api/biz'
 import { BusinessDateRangePicker } from '../components/BusinessDatePicker'
 import { EmptyState, NeedCampus, PageHead, money, monthKey, periodChoices, type PeriodOption, shiftPeriod, tell, todayIso, useShell } from './kit'
-import './HoursPage.css'
 
 interface HoursResult {
   month?: string

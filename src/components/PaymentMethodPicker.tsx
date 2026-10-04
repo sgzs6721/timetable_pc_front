@@ -1,7 +1,6 @@
 import { AlipayCircleFilled, BankFilled, CreditCardFilled, WalletFilled, WechatFilled } from '@ant-design/icons'
 import { Radio } from 'antd'
 import type { ComponentProps } from 'react'
-import './PaymentMethodPicker.css'
 
 const PAYMENT_METHODS = [
   { value: 1, label: '支付宝', icon: <AlipayCircleFilled />, tone: 'is-alipay' },

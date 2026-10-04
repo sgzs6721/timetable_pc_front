@@ -5,7 +5,6 @@ import { getJson, putJson } from '../api/biz'
 import { BusinessDatePicker } from '../components/BusinessDatePicker'
 import { PaymentMethodPicker } from '../components/PaymentMethodPicker'
 import { NeedCampus, PageHead, genderText, money, type PeriodOption, tell, todayIso, useShell } from './kit'
-import './SalaryPage.css'
 
 interface SalaryItem extends Record<string, unknown> {
   salaryItemId?: string

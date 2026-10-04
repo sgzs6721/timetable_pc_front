@@ -4,8 +4,6 @@ import { useEffect, useMemo, useState } from 'react'
 import { postJson } from '../api/biz'
 import { PageHead, money, tell, useShell } from './kit'
 import { MembershipPaymentModal, type MembershipPaymentIntent } from './membership-payment'
-import './MembershipPage.css'
-import './MembershipPurchase.css'
 
 interface TermOption {
   years: number

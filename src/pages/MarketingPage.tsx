@@ -9,7 +9,6 @@ import { ReferralTierEditor, validateReferralTiers } from './marketing-referral'
 import { FIELD_OPTIONS, PAY_MODES, PLAY_TYPES, SIGNUP_MODES, STATUS_COLOR, STATUS_TEXT, THEMES, enumText, parseEnabledFields, parseReferralTiers, parseStringList, serializeReferralTiers, type CampaignDto, type CampaignSession, type JsonMap, type MarketingTemplate, type SettlementCampaign } from './marketing-model'
 import { MARKETING_PRESETS, presetCampaignValues, type MarketingPreset } from './marketing-presets'
 import { MarketingPreviewModal } from './marketing-preview'
-import './MarketingPage.css'
 
 function templateInitial(template?: MarketingTemplate | null): JsonMap {
   return template ? {

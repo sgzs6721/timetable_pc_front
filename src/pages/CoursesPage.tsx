@@ -4,7 +4,6 @@ import { useNavigate } from 'react-router-dom'
 import { delJson, getJson, postJson, putJson } from '../api/biz'
 import { subscriptionBlocksPath, subscriptionExpiredText } from '../access'
 import { NeedCampus, PageHead, clampDecimalInput, genderText, money, tell, useShell } from './kit'
-import './CoursesPage.css'
 
 interface Course {
   id: number
@@ -16,6 +15,7 @@ interface Course {
   invalid?: boolean
   inactiveReason?: string
   minOpenCount?: number | null
+  maxOpenCount?: number | null
   coachIds?: number[]
   coachNamesText?: string
   studentCount?: number
@@ -157,6 +157,7 @@ function courseFormKey(values: Partial<Course> & { minOpenEnabled?: boolean }, l
     coachIds,
     oneToOne,
     minOpenCount: enabled ? count : null,
+    maxOpenCount: enabled && values.maxOpenCount != null ? Number(values.maxOpenCount) : null,
   })
 }
 
@@ -168,9 +169,10 @@ function CourseSaveButton(props: { current: Course | null; saving: boolean }) {
   const oneToOne = Form.useWatch('oneToOne', form)
   const minOpenEnabled = Form.useWatch('minOpenEnabled', form)
   const minOpenCount = Form.useWatch('minOpenCount', form)
+  const maxOpenCount = Form.useWatch('maxOpenCount', form)
   const coachIds = Form.useWatch('coachIds', form)
   const locked = !!props.current?.internal
-  const values = { name, shortName, unitPrice, oneToOne, minOpenEnabled, minOpenCount, coachIds }
+  const values = { name, shortName, unitPrice, oneToOne, minOpenEnabled, minOpenCount, maxOpenCount, coachIds }
   const coaches = locked ? (props.current?.coachIds || []) : (coachIds || [])
   const nameOk = String(name || '').trim().length > 0
   const coachOk = coaches.length > 0
@@ -182,6 +184,7 @@ function CourseSaveButton(props: { current: Course | null; saving: boolean }) {
       oneToOne: isOneToOneCourse(props.current),
       minOpenEnabled: courseMinOpenEnabled(props.current),
       minOpenCount: props.current.minOpenCount,
+      maxOpenCount: props.current.maxOpenCount,
       coachIds: props.current.coachIds,
     }, locked, props.current)
     : ''
@@ -323,8 +326,21 @@ function CourseOpenFields(props: { coaches: Coach[]; courses: Course[]; editingI
       </Form.Item>
       {oneToOne ? null : (
         <>
-          <Form.Item name="minOpenEnabled" label="该课程至少多少人才能开课" extra="开启后选择开课最少人数" valuePropName="checked"><Switch disabled={props.locked} /></Form.Item>
-          {minOpenEnabled ? <Form.Item name="minOpenCount" label="最少人数"><InputNumber style={{ width: '100%' }} min={2} max={99} disabled={props.locked} /></Form.Item> : null}
+          <Form.Item name="minOpenEnabled" label="是否设置人数区间" extra="开启后设置课程最少和最多人数（2–99人）" valuePropName="checked"><Switch disabled={props.locked} /></Form.Item>
+          {minOpenEnabled ? (
+            <div className="course-open-range">
+              <Form.Item name="minOpenCount" label="最少人数" rules={[{ required: true, type: 'integer', min: 2, max: 99, message: '请输入2到99的整数' }]}>
+                <InputNumber style={{ width: '100%' }} min={2} max={99} precision={0} placeholder="最少人数" disabled={props.locked} />
+              </Form.Item>
+              <span className="course-open-range-separator">至</span>
+              <Form.Item name="maxOpenCount" label="最多人数" dependencies={['minOpenCount']} rules={[
+                { required: true, type: 'integer', min: 2, max: 99, message: '请输入2到99的整数' },
+                ({ getFieldValue }) => ({ validator: (_, value) => value != null && Number(value) < Number(getFieldValue('minOpenCount')) ? Promise.reject(new Error('最多人数不能小于最少人数')) : Promise.resolve() }),
+              ]}>
+                <InputNumber style={{ width: '100%' }} min={2} max={99} precision={0} placeholder="最多人数" disabled={props.locked} />
+              </Form.Item>
+            </div>
+          ) : null}
         </>
       )}
       {props.locked ? <p style={{ color: 'var(--muted)' }}>自动创建的一对一课程会随老师自动关联学员。一对一类型固定不可修改，这里仅支持修改课程名称和课程单价。</p> : (
@@ -437,7 +453,7 @@ export function CoursesPage() {
     { title: '单价', render: (_: unknown, row: Course) => money(row.unitPrice) },
     { title: '类型', render: (_: unknown, row: Course) => row.internal ? '内部一对一' : isOneToOneCourse(row) ? '一对一' : '其它课程' },
     { title: '状态', render: (_: unknown, row: Course) => inactiveLabel(row.inactiveReason) || (row.invalid ? '已删除老师' : '可排课') },
-    { title: '最少开课', dataIndex: 'minOpenCount', render: (value: number) => value || '不限' },
+    { title: '人数区间', render: (_: unknown, row: Course) => isOneToOneCourse(row) ? '1人' : !row.minOpenCount ? '不限' : row.maxOpenCount == null ? `至少${row.minOpenCount}人` : `${row.minOpenCount}–${row.maxOpenCount}人` },
     { title: '老师', dataIndex: 'coachNamesText' },
     {
       title: '学员',
@@ -498,7 +514,8 @@ export function CoursesPage() {
             oneToOne: isOneToOneCourse(editing),
             minOpenEnabled: courseMinOpenEnabled(editing),
             minOpenCount: courseMinOpenEnabled(editing) ? Number(editing.minOpenCount) : 2,
-          } : { oneToOne: false, minOpenEnabled: false, minOpenCount: 2 }}
+            maxOpenCount: courseMinOpenEnabled(editing) ? editing.maxOpenCount ?? null : null,
+          } : { oneToOne: false, minOpenEnabled: false, minOpenCount: 2, maxOpenCount: null }}
           onFinish={async (values: Partial<Course> & { minOpenEnabled?: boolean }) => {
             if (!canModify() || savingCourse) return
             const current = editing && editing !== 'new' ? editing : null
@@ -512,6 +529,7 @@ export function CoursesPage() {
               oneToOne: isOneToOneCourse(current),
               minOpenEnabled: courseMinOpenEnabled(current),
               minOpenCount: current.minOpenCount,
+              maxOpenCount: current.maxOpenCount,
               coachIds: current.coachIds,
             }, locked, current)) return
             const name = String(values.name || '').trim()
@@ -543,9 +561,17 @@ export function CoursesPage() {
             }
             const oneToOne = !!values.oneToOne
             const minOpenCount = oneToOne || !values.minOpenEnabled ? null : Number(values.minOpenCount)
-            if (!oneToOne && values.minOpenEnabled && (minOpenCount == null || minOpenCount < 2 || minOpenCount > 99)) {
-              message.warning('开课最少人数需在2到99之间')
-              return
+            const maxOpenCount = oneToOne || !values.minOpenEnabled || values.maxOpenCount == null ? null : Number(values.maxOpenCount)
+            if (!oneToOne && values.minOpenEnabled) {
+              if (minOpenCount == null || !Number.isInteger(minOpenCount) || minOpenCount < 2 || minOpenCount > 99
+                || maxOpenCount == null || !Number.isInteger(maxOpenCount) || maxOpenCount < 2 || maxOpenCount > 99) {
+                message.warning('请填写2到99的整数人数范围')
+                return
+              }
+              if (minOpenCount > maxOpenCount) {
+                message.warning('最少人数不能大于最多人数')
+                return
+              }
             }
             if (!current?.internal && rows.some((item) => item.name === name && item.id !== current?.id && (item.coachIds || []).some((id) => coachIds.includes(id)))) {
               message.warning('该老师已存在同名班级')
@@ -565,6 +591,7 @@ export function CoursesPage() {
               locked: false,
               oneToOne,
               minOpenCount,
+              maxOpenCount,
             }
             setSavingCourse(true)
             try {

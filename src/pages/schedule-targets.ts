@@ -49,9 +49,10 @@ export function courseTargetWarning(option?: Pick<TargetOption, 'targetType' | '
   return ''
 }
 
-export function minOpenWarning(attending: number, minOpenCount: number): string {
+export function minOpenWarning(attending: number, minOpenCount: number, maxOpenCount = 0): string {
+  if (maxOpenCount >= 2 && attending > maxOpenCount) return `当前上课人数超过课程人数上限（最多${maxOpenCount}人）`
   if (minOpenCount < 2 || attending >= minOpenCount) return ''
-  return `当前上课人数不足最少开课人数（需至少${minOpenCount}人）`
+  return `当前上课人数不够（当前${attending}人，至少需要${minOpenCount}人）`
 }
 
 export function resolveMinOpen(group?: { oneToOne?: boolean | null; minOpenCount?: number | null } | null): number {
@@ -59,6 +60,12 @@ export function resolveMinOpen(group?: { oneToOne?: boolean | null; minOpenCount
   const count = Number(group.minOpenCount)
   if (!Number.isFinite(count) || count < 2) return 0
   return Math.floor(count)
+}
+
+export function resolveMaxOpen(group?: { oneToOne?: boolean | null; maxOpenCount?: number | null } | null): number {
+  if (!group || group.oneToOne === true) return 0
+  const count = Number(group.maxOpenCount)
+  return Number.isInteger(count) && count >= 2 && count <= 99 ? count : 0
 }
 
 export function amountLabel(value: unknown): string {

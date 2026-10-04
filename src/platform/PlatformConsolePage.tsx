@@ -5,7 +5,6 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { platformApi } from '../api/platform'
 import type { PlatformCampus, PlatformFeedback, PlatformOrder, PlatformOrganization, PlatformOverview, PlatformPage, PlatformPlan, PlatformSettlement, PlatformUser } from './platform-model'
-import './platform.css'
 
 type DataTab = 'overview' | 'users' | 'organizations' | 'orders' | 'feedbacks' | 'settlements'
 type Workspace = 'data' | 'plans' | 'features'

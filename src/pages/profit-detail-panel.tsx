@@ -2,7 +2,6 @@ import { Button, Empty, Spin, Table } from 'antd'
 import { useEffect, useState } from 'react'
 import { genderText, todayIso } from './kit'
 import { currency, numberOf, PROFIT_METRICS, type ProfitDetailRequest } from './profit-model'
-import './ProfitDetail.css'
 
 export function ProfitDetailPanel(props: {
   request: ProfitDetailRequest

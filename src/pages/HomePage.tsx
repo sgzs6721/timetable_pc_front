@@ -9,7 +9,6 @@ import { subscriptionBlocksPath, subscriptionExpiredText } from '../access'
 import { navForUser } from '../nav'
 import { AppIcon, EmptyState, PageHead, money, todayIso, useShell } from './kit'
 import { OrganizationCreateModal, type OrganizationCreateValues } from './organization-create-modal'
-import './HomePage.css'
 
 type HomeView = 'manager' | 'campus' | 'substitute' | 'member'
 type DayTab = 'today' | 'tomorrow'
@@ -33,6 +32,7 @@ interface HomeQuickAction {
 }
 
 const MANAGER_QUICK_ACTIONS: HomeQuickAction[] = [
+  { key: 'leads', label: '客源管理', description: '客源录入与销售跟进', iconText: '客', tone: 'blue', path: '/leads' },
   { key: 'org', label: '机构管理', description: '机构信息与基础配置', iconText: '机', tone: 'slate', path: '/org' },
   { key: 'campus', label: '校区管理', description: '校区人员、业务与权限', iconText: '校', tone: 'orange', path: '/campus' },
   { key: 'hours', label: '课时管理', description: '课时记录与核算', iconText: '时', tone: 'blue', path: '/hours', requiresActiveCampus: true },
@@ -44,6 +44,7 @@ const MANAGER_QUICK_ACTIONS: HomeQuickAction[] = [
 ]
 
 const TEACHER_QUICK_ACTIONS: HomeQuickAction[] = [
+  { key: 'leads', label: '客源管理', description: '客源录入与销售跟进', iconText: '客', tone: 'blue', path: '/leads' },
   { key: 'schedule', label: '我的课表', description: '查看授课安排', iconText: '表', tone: 'blue', path: '/schedule' },
   { key: 'students', label: '我的学员', description: '查看所带学员', iconText: '生', tone: 'cyan', path: '/students' },
   { key: 'hours', label: '我的课时', description: '查看授课课时', iconText: '时', tone: 'purple', path: '/hours' },
@@ -52,6 +53,7 @@ const TEACHER_QUICK_ACTIONS: HomeQuickAction[] = [
 ]
 
 const MEMBER_QUICK_ACTIONS: HomeQuickAction[] = [
+  { key: 'leads', label: '客源管理', description: '客源录入与销售跟进', iconText: '客', tone: 'blue', path: '/leads' },
   { key: 'salary', label: '我的工资', description: '查看工资明细', iconText: '薪', tone: 'green', path: '/salary' },
   { key: 'account', label: '个人中心', description: '账户与机构信息', iconText: '我', tone: 'slate', path: '/account' },
 ]
@@ -566,7 +568,7 @@ export function HomePage() {
               title={item.disabledReason || item.description}
               onClick={() => openPath(item.path)}
             >
-              <span className="home-module-icon" aria-hidden="true">{item.iconText}</span>
+              <span className="home-module-icon" aria-hidden="true">{item.key === 'leads' ? <AppIcon name="icon-leads" size={26} /> : item.iconText}</span>
               <span className="home-module-copy"><strong>{item.label}</strong><small>{item.disabledReason || item.description}</small></span>
               <span className="home-module-arrow" aria-hidden="true">›</span>
             </button>

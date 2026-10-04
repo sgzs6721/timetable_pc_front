@@ -229,7 +229,12 @@ export function Teachers({ campusId }: { campusId: number | null }) {
         <div className="staff-list-tools">
           <Input.Search allowClear value={keyword} onChange={(event) => setKeyword(event.target.value)} placeholder="搜索姓名/电话" />
           {campuses.some((item) => item.id !== campusId) ? <Button onClick={() => setImporting(true)}>从其他校区导入</Button> : null}
-          <Button type="primary" onClick={() => setAdding(true)}>添加老师</Button>
+          <Button type="primary" onClick={() => {
+            setPositions([])
+            setAdding(true)
+            getJson<Position[]>('/org-positions/list', { campusId }).then(setPositions)
+              .catch((error) => message.error(tell(error, '职位加载失败')))
+          }}>添加老师</Button>
         </div>
       </header>
       <Table
@@ -608,10 +613,7 @@ export function Positions({ campusId }: { campusId: number | null }) {
           <h2>职位设置</h2>
           <span>配置当前校区人员可选择的职位</span>
         </div>
-        <Button type="primary" onClick={() => {
-          createForm.resetFields()
-          setCreating(true)
-        }}>新增职位</Button>
+        <Button type="primary" onClick={() => setCreating(true)}>新增职位</Button>
       </header>
       <Table
         rowKey="id"

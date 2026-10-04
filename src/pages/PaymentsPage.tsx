@@ -5,7 +5,6 @@ import { getJson } from '../api/biz'
 import { BusinessDateRangePicker } from '../components/BusinessDatePicker'
 import { MetricBars } from './bars'
 import { NeedCampus, PageHead, money, tell, useShell } from './kit'
-import './PaymentsPage.css'
 
 interface StatTag { label?: string; tone?: string; date?: string }
 interface Stat {

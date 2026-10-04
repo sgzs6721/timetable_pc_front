@@ -76,6 +76,12 @@ export interface ServiceRight {
 }
 
 export interface Named {
+  oneToOne?: boolean
+  maxOpenCount?: number | null
+  enrolledStudentCount?: number | null
+  enrolledStudentIds?: number[] | null
+  studentCount?: number
+  studentIds?: number[]
   id: number
   name?: string
   nickname?: string

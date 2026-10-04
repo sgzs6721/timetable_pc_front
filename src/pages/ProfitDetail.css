@@ -1,31 +1,31 @@
 .profit-inline-detail {
-  margin: 14px -2px -2px;
-  padding-top: 14px;
+  margin: var(--space-4) -2px -2px;
+  padding-top: var(--space-4);
   border-top: 1px dashed #d9e2ef;
 }
 .profit-detail-panel {
   min-width: 0;
   overflow: hidden;
   border: 1px solid #dce5f1;
-  border-radius: 14px;
+  border-radius: var(--radius-panel);
   background: linear-gradient(180deg, #fbfdff, #fff);
 }
 .profit-detail-summary,
 .profit-detail-note,
 .profit-detail-filter {
-  margin-right: 16px;
-  margin-left: 16px;
+  margin-right: var(--space-4);
+  margin-left: var(--space-4);
 }
 .profit-detail-summary {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 9px;
-  margin-top: 15px;
-  margin-bottom: 14px;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+  margin-bottom: var(--space-4);
 }
 .profit-detail-summary-item {
   min-width: 0;
-  padding: 11px 13px;
+  padding: var(--space-3) var(--space-3);
   border: 1px solid #e4eaf3;
   border-radius: 10px;
   color: var(--muted);
@@ -34,7 +34,7 @@
 }
 .profit-detail-summary-item strong {
   display: block;
-  margin-top: 4px;
+  margin-top: var(--space-1);
   overflow: hidden;
   color: var(--ink);
   font-size: 17px;
@@ -51,7 +51,7 @@
 .profit-detail-table .ant-table-container { border-radius: 0; }
 .profit-detail-table .ant-table-thead > tr > th {
   height: 42px;
-  padding: 10px 14px;
+  padding: var(--space-3) var(--space-4);
   border-bottom-color: #e4eaf3;
   color: var(--ink-3);
   background: #f6f8fc;
@@ -59,7 +59,7 @@
   font-weight: 700;
 }
 .profit-detail-table .ant-table-tbody > tr > td {
-  padding: 12px 14px;
+  padding: var(--space-3) var(--space-4);
   border-bottom-color: #edf1f6;
   color: var(--ink-2);
   vertical-align: top;
@@ -67,9 +67,9 @@
 .profit-detail-table .ant-table-tbody > tr:last-child > td { border-bottom: 0; }
 .profit-detail-table .ant-table-tbody > tr:hover > td { background: #fbfcff !important; }
 .profit-detail-note {
-  margin-top: 12px;
-  margin-bottom: 14px;
-  padding: 11px 13px;
+  margin-top: var(--space-3);
+  margin-bottom: var(--space-4);
+  padding: var(--space-3) var(--space-3);
   border: 1px solid #dbe8fb;
   border-radius: 10px;
   color: #526783;
@@ -82,10 +82,10 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  margin-top: 10px;
-  margin-bottom: 12px;
-  padding: 9px 12px;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+  margin-bottom: var(--space-3);
+  padding: var(--space-2) var(--space-3);
   border-radius: 10px;
   color: var(--ink-3);
   background: #f4f7fc;
@@ -96,8 +96,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  padding: 28px;
+  gap: var(--space-3);
+  padding: var(--space-8);
   color: var(--muted);
 }
 .profit-detail-person,
@@ -105,7 +105,7 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: var(--space-1);
 }
 .profit-detail-person strong,
 .profit-detail-formula strong {
@@ -116,7 +116,7 @@
 }
 .profit-detail-person small,
 .profit-detail-formula small { color: var(--muted); font-size: 11px; line-height: 1.35; }
-.profit-detail-drawer .ant-drawer-title > div { display: flex; flex-direction: column; gap: 4px; }
+.profit-detail-drawer .ant-drawer-title > div { display: flex; flex-direction: column; gap: var(--space-1); }
 .profit-detail-drawer .ant-drawer-title small { color: var(--muted); font-size: 12px; font-weight: 500; }
 @media (max-width: 820px) {
   .profit-detail-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }

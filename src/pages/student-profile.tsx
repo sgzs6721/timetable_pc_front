@@ -1,3 +1,4 @@
+import { courseEnrollmentWarning } from './course-capacity'
 import { Button, Checkbox, Form, Input, InputNumber, Modal, Select, Switch, message } from 'antd'
 import { useEffect, useMemo, useState } from 'react'
 import { getJson, postJson } from '../api/biz'
@@ -413,16 +414,16 @@ export function cardEditBaseline(card: Card) {
   }, String(card.cardCategory || ''))
 }
 
-export function CardSaveButton(props: { card: Card; groups: Named[]; services: Named[] }) {
+export function CardSaveButton(props: { studentId?: number; card: Card; groups: Named[]; services: Named[] }) {
   const form = Form.useFormInstance()
   const watched = (Form.useWatch([], form) || {}) as CardFormValues
   const category = String(props.card.cardCategory || '').toUpperCase()
   const values = { ...watched, cardCategory: category }
-  const blocked = cardDraftError(values, props.groups, props.services) || (cardEditKey(values, category) === cardEditBaseline(props.card) ? 'unchanged' : '')
+  const blocked = cardDraftError(values, props.groups, props.services, 1, 1, 'draft', props.studentId, props.card.studentGroupId) || (cardEditKey(values, category) === cardEditBaseline(props.card) ? 'unchanged' : '')
   return <Button type="primary" htmlType="submit" disabled={!!blocked}>保存</Button>
 }
 
-export function cardDraftError(card: CardFormValues, groups: Named[], services: Named[] = [], typeIndex = 1, typeCount = 1, scene: 'draft' | 'detail-create' = 'draft'): string {
+export function cardDraftError(card: CardFormValues, groups: Named[], services: Named[] = [], typeIndex = 1, typeCount = 1, scene: 'draft' | 'detail-create' = 'draft', studentId = 0, originalCourseId = 0): string {
   const category = String(card.cardCategory || 'HOURS').toUpperCase()
   const course = category === 'HOURS' || card.courseCategory !== false
   const label = cardDraftLabel(category, course, typeIndex, typeCount)
@@ -448,6 +449,8 @@ export function cardDraftError(card: CardFormValues, groups: Named[], services: 
       return `${label}课程未设置单价，请在课程管理中设置单价`
     }
   }
+  const capacityWarning = course && card.studentGroupId ? courseEnrollmentWarning(groups.find((item) => item.id === card.studentGroupId), studentId, originalCourseId) : ''
+  if (capacityWarning) return capacityWarning
   if (course && !(card.coachMemberIds || []).length) {
     return scene === 'detail-create' ? '请至少选择一位老师' : `请为${label}选择老师`
   }

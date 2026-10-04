@@ -47,16 +47,20 @@
   box-shadow: none;
 }
 
+.schedule-head-tabs.ant-tabs .ant-tabs-tab {
+  padding-inline: var(--space-2) !important;
+}
+
 /* Full-width section headers used by list and settings cards. */
 .staff-list-head,
 .service-list-head,
 .salary-panel-head,
 .campus-affairs-card-head,
 .academic-section-head {
-  min-height: 58px;
+  min-height: var(--section-head-height);
   gap: var(--space-4);
-  margin: calc(-1 * var(--space-4)) calc(-1 * var(--space-5)) var(--space-4);
-  padding: var(--space-2) var(--space-5);
+  margin: calc(-1 * var(--card-padding)) calc(-1 * var(--card-padding)) var(--space-4);
+  padding: var(--space-2) var(--card-padding);
   border-bottom-color: var(--line-soft);
   background: linear-gradient(180deg, var(--card), var(--surface-subtle));
 }
@@ -132,22 +136,22 @@
 .checkin-course-actions .ant-btn,
 .org-form-actions .ant-btn,
 .quick-checkin-actions .ant-btn {
-  min-width: 86px;
+  min-width: 88px;
   height: var(--control-md);
   border-radius: var(--radius-control);
 }
 
 /* Modal forms without an Ant Design footer still end with a clear action. */
 .ant-modal:not(.quick-checkin-modal):not(.sheet-modal) .ant-modal-body > .ant-form > .ant-btn:last-child {
-  min-width: 96px;
+  min-width: 88px;
   display: flex;
   margin-top: var(--space-1);
   margin-left: auto;
 }
 
 .ant-modal:not(.quick-checkin-modal):not(.sheet-modal) .ant-modal-body .staff-form-actions:last-child {
-  margin-top: var(--space-5);
-  padding-top: var(--space-3);
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
   border-top: 1px solid var(--line-soft);
 }
 
@@ -170,6 +174,229 @@
 .form-label-note,
 .cell-muted {
   color: var(--muted);
+}
+
+/* A grid gap owns spacing between cards; sibling margins must not add to it. */
+:is(.section-grid, .academic-settings-grid, .org-settings-grid, .split) > .work-card {
+  min-width: 0;
+  margin-top: 0;
+}
+
+:is(.leads-page, .profit-analysis-page, .parent-page-actions, .lead-detail-actions) {
+  min-width: 0;
+}
+
+.work-head.has-title {
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+:is(.staff-list-head, .service-list-head, .salary-panel-head, .campus-affairs-card-head, .academic-section-head) {
+  flex-wrap: wrap;
+  border-radius: var(--radius-card) var(--radius-card) 0 0;
+}
+
+:is(.staff-list-title, .service-list-head > div, .salary-panel-head > div, .campus-affairs-card-title) {
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+:is(.staff-list-title, .service-list-head, .salary-panel-head, .campus-affairs-card-title, .academic-section-head) h2 {
+  margin: 0;
+}
+
+:is(.metric-grid, .lead-overview, .marketing-grid, .membership-plan-grid,
+  .parent-member-grid, .parent-fee-grid, .parent-mine-grid, .parent-home-lower,
+  .parent-stats-overview, .parent-stat-courses,
+  .platform-metrics, .platform-plan-grid, .mkt-enrollment-grid, .mkt-referral-grid) {
+  gap: var(--space-section);
+}
+
+:is(.lead-stat, .platform-panel, .platform-metric, .platform-plan, .parent-card,
+  .parent-member-card, .mkt-enrollment-card, .mkt-ref-card, .executive-card,
+  .profit-panel, .profit-campus-section) {
+  border-color: var(--line);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-sm);
+}
+
+:is(.lead-list-heading, .payment-section-head, .payment-panel-head,
+  .finance-card-head, .executive-card-head, .profit-panel-head) {
+  gap: var(--space-4);
+  align-items: center;
+}
+
+:is(.lead-list-heading, .payment-section-head, .payment-panel-head,
+  .finance-card-head, .executive-card-head, .parent-card-head, .mkt-card) :is(h2, h3),
+.profit-panel-title {
+  font-size: var(--text-title);
+  font-weight: 720;
+  line-height: 1.4;
+}
+
+.org-card-heading p,
+.account-card-heading p {
+  margin-bottom: 0;
+}
+
+.parent-record-summary > .ant-tag {
+  flex: none;
+  margin-inline-end: 0;
+}
+
+.parent-course-records > .ant-tabs > .ant-tabs-nav {
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.parent-course-records .ant-tabs-extra-content {
+  margin-left: var(--space-4);
+}
+
+/* Avoid double row spacing from CSS grids plus Form.Item's own margin. */
+:is(.form-grid, .staff-form-grid, .salary-cycle-form, .org-profile-grid,
+  .account-password-form, .student-profile-grid, .lead-form-grid,
+  .parent-form-grid, .platform-plan-form-grid, .finance-record-form__row) {
+  column-gap: var(--form-column-gap);
+  row-gap: 0;
+}
+
+:is(.form-grid, .staff-form-grid, .salary-cycle-form, .org-profile-grid,
+  .account-password-form, .student-profile-grid, .lead-form-grid,
+  .parent-form-grid, .platform-plan-form-grid, .finance-record-form__row) > * {
+  min-width: 0;
+}
+
+.ant-form-item .ant-input-number,
+.ant-form-item .ant-picker {
+  width: 100%;
+}
+
+.ant-form-vertical .ant-form-item-label {
+  padding-bottom: var(--space-2);
+}
+
+.ant-form-item-explain,
+.ant-form-item-extra {
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+/* Status colors must survive the shared neutral border/focus rules. */
+.ant-input-status-error,
+.ant-input-affix-wrapper-status-error,
+.ant-input-number-status-error,
+.ant-select-status-error .ant-select-selector,
+.ant-picker-status-error {
+  border-color: var(--red) !important;
+}
+
+.ant-form-item-has-error :is(.ant-input:focus, .ant-input-affix-wrapper-focused,
+  .ant-input-number-focused, .ant-select-focused .ant-select-selector, .ant-picker-focused) {
+  box-shadow: 0 0 0 3px rgba(220, 82, 96, 0.12) !important;
+}
+
+/* Space/flex containers own their gap; tags should not add a second margin. */
+.ant-space-item > .ant-tag,
+.ant-descriptions-item-content > .ant-tag,
+.ant-table-cell > .ant-tag:last-child {
+  margin-inline-end: 0;
+}
+
+.ant-table-wrapper .ant-table-pagination.ant-pagination {
+  align-items: center;
+  gap: var(--space-2);
+  margin: var(--space-4) 0 0 !important;
+}
+
+.ant-table-pagination > :is(.ant-pagination-item, .ant-pagination-prev, .ant-pagination-next) {
+  margin-inline-end: 0;
+}
+
+.ant-table-cell .ant-btn-link {
+  vertical-align: middle;
+}
+
+/* Feedback surfaces share typography and icon alignment, including long copy. */
+.ant-alert {
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-panel);
+  font-size: var(--text-body);
+}
+
+.ant-alert .ant-alert-icon {
+  flex: none;
+  margin-inline-end: 0;
+  margin-top: 3px;
+}
+
+.ant-alert .ant-alert-message {
+  color: var(--ink);
+  font-size: var(--text-body);
+  font-weight: 600;
+  line-height: 1.6;
+}
+
+.ant-alert .ant-alert-description {
+  margin-top: var(--space-1);
+  color: var(--ink-3);
+  font-size: var(--text-body);
+  line-height: 1.6;
+}
+
+.ant-alert-content,
+.ant-message-custom-content > span:last-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.ant-alert + :is(.ant-form, .ant-table-wrapper, .ant-descriptions),
+.ant-form + .ant-alert {
+  margin-top: var(--space-4);
+}
+
+.ant-message .ant-message-notice-content {
+  max-width: min(560px, calc(100vw - 48px));
+  font-size: var(--text-body);
+  line-height: 1.6;
+  text-align: left;
+}
+
+.ant-message-custom-content {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.ant-message-custom-content > .anticon {
+  flex: none;
+  margin: 3px 0 0;
+}
+
+.ant-notification .ant-notification-notice {
+  max-width: calc(100vw - 48px);
+  padding: var(--card-padding);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-panel);
+  box-shadow: var(--shadow-md);
+}
+
+.ant-notification .ant-notification-notice-message {
+  font-size: var(--text-title);
+  font-weight: 600;
+}
+
+.ant-notification .ant-notification-notice-description {
+  font-size: var(--text-body);
+  line-height: 1.6;
+  overflow-wrap: anywhere;
 }
 
 /* Feedback is a writing task, so keep its line length calm on wide desktops

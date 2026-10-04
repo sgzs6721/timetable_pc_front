@@ -1,10 +1,10 @@
 .student-detail-drawer .ant-drawer-body {
-  padding: 0 26px 32px;
+  padding: 0 var(--space-6) var(--space-8);
   background: #f6f8fc;
 }
 
 .student-detail-drawer .ant-drawer-header {
-  padding: 18px 26px;
+  padding: var(--space-5) var(--space-6);
 }
 
 .student-detail-drawer .ant-drawer-title {
@@ -18,8 +18,8 @@
 }
 
 .student-detail-readonly {
-  margin: 18px 0 0;
-  padding: 10px 13px;
+  margin: var(--space-5) 0 0;
+  padding: var(--space-3) var(--space-3);
   border: 1px solid #dce4f2;
   border-radius: var(--radius-control);
   color: var(--ink-3);
@@ -30,8 +30,8 @@
 .student-detail-tabs > .ant-tabs-nav {
   width: calc(100% + 52px) !important;
   max-width: none;
-  margin: 0 -26px 18px;
-  padding: 10px 26px;
+  margin: 0 calc(-1 * var(--space-6)) var(--space-5);
+  padding: var(--space-3) var(--space-6);
   border: 0;
   border-bottom: 1px solid var(--line);
   border-radius: 0;
@@ -55,7 +55,7 @@
 
 .student-detail-base {
   display: grid;
-  gap: 14px;
+  gap: var(--space-4);
 }
 
 .student-detail-overview-panel {
@@ -72,8 +72,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
-  padding: 15px 16px;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-4);
   background: linear-gradient(135deg, #fff 0%, #f8faff 100%);
 }
 
@@ -88,7 +88,7 @@
 
 .student-detail-identity {
   min-width: 0;
-  gap: 13px;
+  gap: var(--space-3);
 }
 
 .student-detail-avatar {
@@ -122,7 +122,7 @@
 .student-detail-name-row {
   min-width: 0;
   flex-wrap: wrap;
-  gap: 7px;
+  gap: var(--space-2);
 }
 
 .student-detail-name-row h2 {
@@ -155,7 +155,7 @@
 
 .student-detail-gender {
   min-width: 22px;
-  padding: 0 7px;
+  padding: 0 var(--space-2);
   color: #3c70c8;
   background: #eaf2ff;
 }
@@ -166,7 +166,7 @@
 }
 
 .student-detail-status {
-  padding: 0 9px;
+  padding: 0 var(--space-2);
   color: #08775a;
   background: #e8f7f1;
 }
@@ -184,7 +184,7 @@
 .student-detail-identity p {
   max-width: 210px;
   overflow: hidden;
-  margin: 7px 0 0;
+  margin: var(--space-2) 0 0;
   color: #7b879b;
   font-size: 12px;
   text-overflow: ellipsis;
@@ -198,7 +198,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 2px 8px;
+  padding: 2px var(--space-2);
   text-align: center;
 }
 
@@ -219,7 +219,7 @@
   display: inline-flex;
   align-items: stretch;
   overflow: hidden;
-  margin-top: 7px;
+  margin-top: var(--space-2);
   border: 1px solid #cbdaf5;
   border-radius: 6px;
   color: #315d9b;
@@ -231,7 +231,7 @@
 
 .student-single-card-summary b,
 .student-single-card-summary em {
-  padding: 0 7px;
+  padding: 0 var(--space-2);
   font-style: normal;
 }
 
@@ -247,21 +247,21 @@
 
 .student-detail-quick-actions {
   flex: 0 0 auto;
-  gap: 7px;
+  gap: var(--space-2);
 }
 
 .student-detail-quick-actions .ant-btn {
   min-width: 60px;
   height: 34px;
-  padding-inline: 14px;
+  padding-inline: var(--space-4);
   border-radius: 10px;
 }
 
 .student-card-tabs {
   display: flex;
   flex-wrap: wrap;
-  gap: 7px;
-  padding: 10px 12px 12px;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-3) var(--space-3);
   border-top: 1px solid #edf1f7;
   background: #fbfcff;
 }
@@ -272,8 +272,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 9px;
-  padding: 9px 11px;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
   border: 1px solid #e1e7f1;
   border-radius: 10px;
   color: #59667d;
@@ -326,19 +326,19 @@
 }
 
 .student-card-tabs-empty {
-  padding: 6px 3px 3px;
+  padding: var(--space-2) var(--space-1) var(--space-1);
   color: var(--muted);
   font-size: 12px;
 }
 
 .student-detail-side-stack {
   display: grid;
-  gap: 14px;
+  gap: var(--space-4);
 }
 
 .student-detail-panel {
   min-width: 0;
-  padding: 18px;
+  padding: var(--space-5);
   border: 1px solid var(--line);
   border-radius: 16px;
   background: #fff;
@@ -350,9 +350,9 @@
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 15px;
-  padding-bottom: 13px;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+  padding-bottom: var(--space-3);
   border-bottom: 1px solid var(--line-soft);
 }
 
@@ -363,7 +363,7 @@
 .student-detail-section-head h3 {
   position: relative;
   margin: 0;
-  padding-left: 11px;
+  padding-left: var(--space-3);
   color: var(--ink);
   font-size: 14px;
   line-height: 1.4;
@@ -382,7 +382,7 @@
 }
 
 .student-detail-section-head p {
-  margin: 3px 0 0 11px;
+  margin: var(--space-1) 0 0 var(--space-3);
   color: var(--muted);
   font-size: 11px;
   line-height: 1.5;
@@ -394,7 +394,7 @@
 
 .student-detail-card-type {
   flex: 0 0 auto;
-  padding: 0 9px;
+  padding: 0 var(--space-2);
   color: #315ff4;
   background: #edf2ff;
 }
@@ -403,9 +403,9 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 11px;
-  padding: 10px 12px;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+  padding: var(--space-3) var(--space-3);
   border: 1px solid #e3eaff;
   border-radius: 11px;
   color: #667694;
@@ -424,12 +424,12 @@
 .student-profile-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  column-gap: 14px;
+  column-gap: var(--space-4);
 }
 
 .student-profile-grid .ant-form-item {
   min-width: 0;
-  margin-bottom: 15px;
+  margin-bottom: var(--space-4);
 }
 
 .student-profile-grid .student-profile-wide,
@@ -465,15 +465,15 @@
 
 .student-detail-facts.is-profile {
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  column-gap: 16px;
+  column-gap: var(--space-4);
 }
 
 .student-detail-facts > div {
   min-width: 0;
   display: grid;
   grid-template-columns: 82px minmax(0, 1fr);
-  gap: 10px;
-  padding: 9px 0;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
   border-bottom: 1px solid #f0f3f8;
 }
 
@@ -510,7 +510,7 @@
 }
 
 .student-detail-facts.is-profile dd {
-  margin-top: 4px;
+  margin-top: var(--space-1);
   text-align: left;
 }
 
@@ -532,7 +532,7 @@
 .student-detail-teachers .assigned-coaches li {
   min-width: 0;
   min-height: 36px;
-  padding: 0 6px 0 11px;
+  padding: 0 var(--space-2) 0 var(--space-3);
   border-color: #e5ebf4;
   border-radius: 10px;
   background: #f8faff;
@@ -546,12 +546,12 @@
 
 .student-detail-teachers .assigned-coaches li .ant-btn {
   min-width: 28px;
-  padding-inline: 7px;
+  padding-inline: var(--space-2);
 }
 
 .student-coach-assign-link.ant-btn {
   height: auto;
-  padding: 2px 0 2px 12px;
+  padding: 2px 0 2px var(--space-3);
   color: #2563eb;
   font-size: 12px;
   font-weight: 650;
@@ -564,7 +564,7 @@
 .student-card-desk-list {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
+  gap: var(--space-3);
 }
 
 .student-card-desk-row {
@@ -572,8 +572,8 @@
   display: grid;
   grid-template-columns: 38px minmax(0, 1fr) auto;
   align-items: center;
-  gap: 11px;
-  padding: 12px;
+  gap: var(--space-3);
+  padding: var(--space-3);
   border: 1px solid #e3e9f3;
   border-radius: 13px;
   background: #fbfcff;
@@ -621,7 +621,7 @@
 .student-card-desk-info > div {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-2);
 }
 
 .student-card-desk-info strong {
@@ -635,7 +635,7 @@
 .student-card-desk-info span,
 .student-card-desk-info em {
   flex: 0 0 auto;
-  padding: 0 7px;
+  padding: 0 var(--space-2);
   color: #65728b;
   background: #edf1f7;
   line-height: 19px;
@@ -650,7 +650,7 @@
 .student-card-desk-info small {
   display: block;
   overflow: hidden;
-  margin: 5px 0 0;
+  margin: var(--space-1) 0 0;
   color: #7b879b;
   font-size: 11px;
   text-overflow: ellipsis;
@@ -662,16 +662,16 @@
 }
 
 .student-card-desk-actions {
-  gap: 5px;
+  gap: var(--space-1);
 }
 
 .student-card-desk-actions .ant-btn {
   min-width: 44px;
-  padding-inline: 9px;
+  padding-inline: var(--space-2);
 }
 
 .student-card-desk-empty {
-  padding: 24px;
+  padding: var(--space-6);
   border: 1px dashed #d8e0ee;
   border-radius: 13px;
   color: var(--muted);
@@ -685,28 +685,28 @@
 }
 
 .student-card-desk-empty p {
-  margin: 5px 0 0;
+  margin: var(--space-1) 0 0;
   font-size: 12px;
 }
 
 .student-actions-panel {
-  padding-top: 16px;
-  padding-bottom: 16px;
+  padding-top: var(--space-4);
+  padding-bottom: var(--space-4);
 }
 
 .student-actions-panel .student-detail-section-head {
   align-items: center;
-  margin-bottom: 12px;
-  padding-bottom: 11px;
+  margin-bottom: var(--space-3);
+  padding-bottom: var(--space-3);
 }
 
 .student-detail-record-actions {
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .student-detail-operation-note {
-  margin-top: 9px;
+  margin-top: var(--space-2);
 }
 
 @media (max-width: 840px) {
@@ -717,17 +717,17 @@
 
 @media (max-width: 620px) {
   .student-detail-drawer .ant-drawer-body {
-    padding-inline: 16px;
+    padding-inline: var(--space-4);
   }
 
   .student-detail-tabs > .ant-tabs-nav {
     width: calc(100% + 32px) !important;
-    margin-inline: -16px;
-    padding-inline: 16px;
+    margin-inline: calc(-1 * var(--space-4));
+    padding-inline: var(--space-4);
   }
 
   .student-detail-tabs > .ant-tabs-nav .ant-tabs-tab {
-    padding-inline: 8px !important;
+    padding-inline: var(--space-2) !important;
   }
 
   .student-profile-grid,

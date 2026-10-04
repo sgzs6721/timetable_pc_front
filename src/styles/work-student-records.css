@@ -5,15 +5,15 @@
 .student-record-card-pages,
 .student-record-card-page {
   display: grid;
-  gap: 12px;
+  gap: var(--space-3);
   min-width: 0;
 }
 
 .student-record-card-tabs {
   display: flex;
-  gap: 7px;
+  gap: var(--space-2);
   overflow-x: auto;
-  padding: 2px 1px 3px;
+  padding: 2px 1px var(--space-1);
   scrollbar-width: none;
 }
 
@@ -30,7 +30,7 @@
   align-items: flex-start;
   justify-content: center;
   gap: 2px;
-  padding: 7px 11px;
+  padding: var(--space-2) var(--space-3);
   border: 1px solid #dfe6f2;
   border-radius: 10px;
   color: #5f6d87;
@@ -82,8 +82,8 @@
 .student-record-cumulative {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: 3px 12px;
-  padding: 13px 15px;
+  gap: var(--space-1) var(--space-3);
+  padding: var(--space-3) var(--space-4);
   border: 1px solid #dfe7f7;
   border-radius: 13px;
   background: linear-gradient(135deg, #fff, #f3f6ff);
@@ -124,14 +124,14 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
-  padding: 14px 16px;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-4);
   background: linear-gradient(135deg, #fff 0%, #f6f8ff 100%);
 }
 
 .student-record-summary-name {
   display: block;
-  margin-bottom: 4px;
+  margin-bottom: var(--space-1);
   color: #50617e;
   font-size: 11px;
   font-weight: 650;
@@ -146,7 +146,7 @@
 }
 
 .student-record-summary header p {
-  margin: 3px 0 0;
+  margin: var(--space-1) 0 0;
   color: var(--muted);
   font-size: 10px;
 }
@@ -156,7 +156,7 @@
   flex: 0 0 auto;
   align-items: center;
   justify-content: flex-end;
-  gap: 9px;
+  gap: var(--space-2);
 }
 
 .student-record-summary-side > strong {
@@ -166,7 +166,7 @@
 }
 
 .student-record-summary-side > small {
-  padding: 3px 7px;
+  padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-tag);
   color: #315ff4;
   background: #eaf0ff;
@@ -191,8 +191,8 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 5px;
-  padding: 12px 10px;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-3);
   border-right: 1px solid #edf1f7;
   text-align: center;
 }
@@ -218,15 +218,15 @@
 
 .student-parent-orders {
   display: grid;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .student-parent-orders > div {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding: 10px 12px;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-3);
   border: 1px solid #f0d9ad;
   border-radius: 11px;
   background: #fffaf0;
@@ -247,13 +247,13 @@
 .student-payment-list,
 .student-check-list {
   display: grid;
-  gap: 10px;
+  gap: var(--space-3);
 }
 
 .student-payment-entry {
   position: relative;
   overflow: hidden;
-  padding: 14px 15px 13px 18px;
+  padding: var(--space-4) var(--space-4) var(--space-3) var(--space-5);
   border: 1px solid #e0e7f2;
   border-radius: 13px;
   background: #fff;
@@ -292,16 +292,16 @@
 
 .student-payment-entry > header {
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 .student-payment-entry-title {
   min-width: 0;
-  gap: 9px;
+  gap: var(--space-2);
 }
 
 .student-payment-entry-title span {
-  padding: 3px 8px;
+  padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-tag);
   color: #315ff4;
   background: #edf2ff;
@@ -321,12 +321,12 @@
 .student-payment-entry-actions .ant-btn,
 .student-payment-adjustment-row .ant-btn {
   height: 26px;
-  padding-inline: 7px;
+  padding-inline: var(--space-2);
   font-size: 11px;
 }
 
 .student-payment-course {
-  margin: 9px 0 0;
+  margin: var(--space-2) 0 0;
   color: var(--ink-2);
   font-size: 12px;
   font-weight: 650;
@@ -335,7 +335,7 @@
 .student-payment-entry-metrics {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  margin-top: 11px;
+  margin-top: var(--space-3);
   overflow: hidden;
   border: 1px solid #edf1f7;
   border-radius: 10px;
@@ -346,8 +346,8 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 5px;
-  padding: 10px;
+  gap: var(--space-1);
+  padding: var(--space-3);
   border-right: 1px solid #edf1f7;
 }
 
@@ -384,8 +384,8 @@
 
 .student-payment-entry-footer {
   justify-content: space-between;
-  gap: 12px;
-  margin-top: 9px;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
   color: #60708b;
   font-size: 10px;
 }
@@ -398,9 +398,9 @@
 
 .student-payment-note {
   display: grid;
-  gap: 3px;
-  margin-top: 9px;
-  padding: 8px 10px;
+  gap: var(--space-1);
+  margin-top: var(--space-2);
+  padding: var(--space-2) var(--space-3);
   border-radius: 8px;
   color: #67748a;
   background: #f7f9fc;
@@ -408,8 +408,8 @@
 }
 
 .student-payment-adjustments {
-  margin-top: 11px;
-  padding-top: 10px;
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
   border-top: 1px solid #edf1f7;
 }
 
@@ -437,9 +437,9 @@
 
 .student-payment-adjustment-row {
   justify-content: space-between;
-  gap: 10px;
-  margin-top: 8px;
-  padding: 8px 10px;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+  padding: var(--space-2) var(--space-3);
   border-radius: 8px;
   background: #f8faff;
 }
@@ -448,7 +448,7 @@
   min-width: 0;
   flex-direction: column;
   align-items: flex-start;
-  gap: 3px;
+  gap: var(--space-1);
 }
 
 .student-payment-adjustment-row strong {
@@ -464,15 +464,15 @@
 .student-record-filter-chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 7px;
+  gap: var(--space-2);
 }
 
 .student-record-filter-chips button {
   min-height: 34px;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 0 12px;
+  gap: var(--space-2);
+  padding: 0 var(--space-3);
   border: 1px solid #dfe6f2;
   border-radius: var(--radius-tag);
   color: #53627d;
@@ -494,8 +494,8 @@
 }
 
 .student-check-list.check-timeline article {
-  padding-top: 13px;
-  padding-bottom: 13px;
+  padding-top: var(--space-3);
+  padding-bottom: var(--space-3);
   border-radius: 13px;
 }
 
@@ -505,7 +505,7 @@
   align-items: center;
   justify-content: center;
   min-height: 140px;
-  padding: 24px;
+  padding: var(--space-6);
   border: 1px dashed #d8e1f0;
   border-radius: 13px;
   color: var(--muted);
@@ -519,7 +519,7 @@
 }
 
 .student-record-empty span {
-  margin-top: 5px;
+  margin-top: var(--space-1);
   font-size: 10px;
 }
 

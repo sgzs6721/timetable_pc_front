@@ -1,3 +1,4 @@
+import { courseEnrollmentFull, courseEnrollmentWarning } from './course-capacity'
 import { Button, Form, Input, Modal, Popconfirm, Select, Switch, Tabs, message } from 'antd'
 import { useContext, useRef, useState } from 'react'
 import { postJson, putJson } from '../api/biz'
@@ -91,30 +92,34 @@ export function CardDesk(props: { student: Student; coaches: Named[]; services: 
                 message.warning('时段卡已有缴费记录，不能修改卡类型')
                 return
               }
-              const reason = cardDraftError({ ...values, cardCategory: category }, props.groups, props.services)
+              const reason = cardDraftError({ ...values, cardCategory: category }, props.groups, props.services, 1, 1, 'draft', props.student.id, editing.studentGroupId)
               if (reason) {
                 message.warning(reason)
                 return
               }
               const rights = category === 'STORED_VALUE' ? serviceRightPayload(values, props.services) : undefined
-              await putJson(`/student-cards/${editing.id}`, {
-                cardCategory: editing.cardCategory,
-                cardName: values.cardName,
-                periodType: category === 'PERIOD' ? values.periodType : undefined,
-                courseCategory: category === 'HOURS' ? true : values.courseCategory,
-                studentGroupId: course ? values.studentGroupId || 0 : 0,
-                coachMemberIds: course ? values.coachMemberIds || [] : [],
-                serviceItemIds: category === 'HOURS' ? [] : values.serviceItemIds || [],
-                serviceRights: rights,
-              })
-              message.success('课时卡已更新')
-              setEditing(null)
-              await props.onChanged()
+              try {
+                await putJson(`/student-cards/${editing.id}`, {
+                  cardCategory: editing.cardCategory,
+                  cardName: values.cardName,
+                  periodType: category === 'PERIOD' ? values.periodType : undefined,
+                  courseCategory: category === 'HOURS' ? true : values.courseCategory,
+                  studentGroupId: course ? values.studentGroupId || 0 : 0,
+                  coachMemberIds: course ? values.coachMemberIds || [] : [],
+                  serviceItemIds: category === 'HOURS' ? [] : values.serviceItemIds || [],
+                  serviceRights: rights,
+                })
+                message.success('课时卡已更新')
+                setEditing(null)
+                await props.onChanged()
+              } catch (error) {
+                message.error(tell(error, '更新失败'))
+              }
             }}
           >
             <Form.Item name="cardName" label="名称"><Input /></Form.Item>
-            <CardEditBindingFields card={editing} coaches={props.coaches} services={props.services} groups={props.groups} />
-            <CardSaveButton card={editing} groups={props.groups} services={props.services} />
+            <CardEditBindingFields studentId={props.student.id} card={editing} coaches={props.coaches} services={props.services} groups={props.groups} />
+            <CardSaveButton studentId={props.student.id} card={editing} groups={props.groups} services={props.services} />
           </Form>
         ) : null}
       </Modal>
@@ -122,7 +127,7 @@ export function CardDesk(props: { student: Student; coaches: Named[]; services: 
   )
 }
 
-function CardEditBindingFields(props: { card: Card; coaches: Named[]; services: Named[]; groups: Named[] }) {
+function CardEditBindingFields(props: { studentId: number; card: Card; coaches: Named[]; services: Named[]; groups: Named[] }) {
   const category = String(props.card.cardCategory || '').toUpperCase()
   const courseFlag = Form.useWatch('courseCategory')
   const course = category === 'HOURS' || courseFlag !== false
@@ -130,7 +135,7 @@ function CardEditBindingFields(props: { card: Card; coaches: Named[]; services: 
     <>
       {category === 'PERIOD' ? <Form.Item name="periodType" label="时段"><PeriodTypeSelect locked={props.card.periodTypeEditable === false} /></Form.Item> : null}
       {category !== 'HOURS' ? <Form.Item name="courseCategory" label="包含课程" valuePropName="checked"><Switch /></Form.Item> : null}
-      {course ? <CourseField groups={props.groups} category={category} name="studentGroupId" coachField="coachMemberIds" courseFlag="courseCategory" originalId={props.card.studentGroupId} /> : null}
+      {course ? <CourseField groups={props.groups} category={category} name="studentGroupId" coachField="coachMemberIds" courseFlag="courseCategory" originalId={props.card.studentGroupId} studentId={props.studentId} /> : null}
       {course ? <Form.Item name="coachMemberIds" label="选择老师"><CoachMultiSelect coaches={props.coaches} /></Form.Item> : null}
       {category !== 'HOURS' ? <Form.Item name="serviceItemIds" label="适用服务（多选）"><ServiceMultiSelect services={props.services.filter((item) => (item.enabled !== 0 && item.enabled !== false) || (props.card.serviceItemIds || []).includes(item.id))} /></Form.Item> : null}
       {category === 'STORED_VALUE' ? <StoredRights services={props.services} /> : null}
@@ -268,6 +273,7 @@ export function CourseField(props: {
   coachField: string | Array<string | number>
   courseFlag?: string | Array<string | number>
   originalId?: number
+  studentId?: number
   variant?: 'select' | 'chips'
 }) {
   const form = Form.useFormInstance()
@@ -286,6 +292,7 @@ export function CourseField(props: {
       form.setFieldValue(props.name, selectedRef.current ?? null)
       return
     }
+    if (courseEnrollmentWarning(course, props.studentId, props.originalId)) return
     const previous = props.groups.find((item) => item.id === selectedRef.current)
     const current = (form.getFieldValue(props.coachField) || []) as number[]
     form.setFieldValue(props.coachField, coachesAfterCourse(current, previous, course))
@@ -295,8 +302,17 @@ export function CourseField(props: {
     <Form.Item
       name={props.name}
       label={props.variant === 'chips' ? '选择课程（单选）' : '课程'}
+      rules={[{ validator: (_, value) => {
+        const warning = courseEnrollmentWarning(props.groups.find((item) => item.id === value), props.studentId, props.originalId)
+        return warning ? Promise.reject(new Error(warning)) : Promise.resolve()
+      } }]}
       normalize={(next, prev) => {
         const course = props.groups.find((item) => item.id === next)
+        const capacityWarning = courseEnrollmentWarning(course, props.studentId, props.originalId)
+        if (capacityWarning) {
+          message.warning(capacityWarning)
+          return prev ?? null
+        }
         if (props.category === 'STORED_VALUE' && next && !courseUnitPriceConfigured(course)) {
           message.warning('请在课程管理中设置单价')
           return prev ?? null
@@ -306,13 +322,14 @@ export function CourseField(props: {
     >
       {catalog.groups === 'ready' && props.groups.length > 0 ? (
         props.variant === 'chips' ? (
-          <CourseChipSelect groups={visibleCourses(props.groups, props.originalId || selected)} category={props.category} onPick={handleCourseChange} />
+          <CourseChipSelect groups={visibleCourses(props.groups, props.originalId || selected)} category={props.category} studentId={props.studentId} originalId={props.originalId} onPick={handleCourseChange} />
         ) : (
           <Select
             allowClear
             options={visibleCourses(props.groups, props.originalId || selected).map((item) => {
               const missingPrice = props.category === 'STORED_VALUE' && !courseUnitPriceConfigured(item)
-              return { value: item.id, label: missingPrice ? `${courseOptionLabel(item)} · 未设置单价` : courseOptionLabel(item), disabled: missingPrice }
+              const label = [courseOptionLabel(item), courseEnrollmentFull(item) ? '人数已满' : '', missingPrice ? '未设置单价' : ''].filter(Boolean).join(' · ')
+              return { value: item.id, label, disabled: missingPrice }
             })}
             onChange={handleCourseChange}
           />
@@ -328,7 +345,7 @@ export function CourseField(props: {
   )
 }
 
-function CourseChipSelect(props: { value?: number; onChange?: (value: number) => void; onPick?: (value: number) => void; groups: Named[]; category: string }) {
+function CourseChipSelect(props: { value?: number; onChange?: (value: number) => void; onPick?: (value: number) => void; groups: Named[]; category: string; studentId?: number; originalId?: number }) {
   const [expanded, setExpanded] = useState(false)
   const selectedId = Number(props.value || 0)
   const selected = props.groups.find((item) => Number(item.id) === selectedId)
@@ -345,15 +362,21 @@ function CourseChipSelect(props: { value?: number; onChange?: (value: number) =>
           const coaches = (item.coachNames || []).filter(Boolean).join('、') || item.coachName || ''
           const status = courseInactiveText(item.inactiveReason)
           const price = props.category !== 'HOURS' && courseUnitPriceConfigured(item) ? `¥${money(item.unitPrice)}/小时` : ''
-          const meta = [coaches, status, disabled ? '未设置单价' : price].filter(Boolean).join(' · ')
+          const capacityWarning = courseEnrollmentWarning(item, props.studentId, props.originalId)
+          const meta = [coaches, status, courseEnrollmentFull(item) ? '人数已满' : '', disabled ? '未设置单价' : price].filter(Boolean).join(' · ')
           return (
             <button
               key={id}
               type="button"
               aria-pressed={active}
               disabled={disabled}
+              aria-disabled={disabled || !!capacityWarning}
               className={`student-choice-chip${active ? ' is-selected' : ''}`}
               onClick={() => {
+                if (capacityWarning) {
+                  message.warning(capacityWarning)
+                  return
+                }
                 props.onChange?.(id)
                 props.onPick?.(id)
               }}
@@ -396,7 +419,7 @@ export function CardCreate(props: { student: Student; coaches: Named[]; services
         const nextCourse = nextCategory === 'HOURS' || values.courseCategory !== false
         const coachIds = Array.from(new Set((values.coachMemberIds || []).map((id) => Number(id)).filter(Boolean)))
         const serviceIds = nextCategory === 'HOURS' ? [] : Array.from(new Set((values.serviceItemIds || []).map((id) => Number(id)).filter(Boolean)))
-        const reason = cardDraftError({ ...values, cardCategory: nextCategory, coachMemberIds: coachIds, serviceItemIds: serviceIds }, props.groups, services, 1, 1, 'detail-create')
+        const reason = cardDraftError({ ...values, cardCategory: nextCategory, coachMemberIds: coachIds, serviceItemIds: serviceIds }, props.groups, services, 1, 1, 'detail-create', props.student.id)
         if (reason) {
           message.warning(reason)
           return
@@ -461,7 +484,7 @@ export function CardCreate(props: { student: Student; coaches: Named[]; services
       </Form.Item>
       {category === 'PERIOD' ? <Form.Item name="periodType" label="时段"><Select options={PERIOD_OPTIONS} /></Form.Item> : null}
       {category !== 'HOURS' ? <Form.Item name="courseCategory" label="包含课程" valuePropName="checked"><Switch /></Form.Item> : null}
-      {course ? <CourseField groups={props.groups} category={category} name="studentGroupId" coachField="coachMemberIds" courseFlag="courseCategory" /> : null}
+      {course ? <CourseField groups={props.groups} category={category} name="studentGroupId" coachField="coachMemberIds" courseFlag="courseCategory" studentId={props.student.id} /> : null}
       {course ? (
         <Form.Item name="coachMemberIds" label="选择老师">
           <CoachMultiSelect coaches={props.coaches} />

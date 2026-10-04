@@ -2,9 +2,9 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 14px;
-  margin-bottom: 16px;
-  padding: 10px 12px;
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
+  padding: var(--space-3) var(--space-3);
   border: 1px solid #e3e9f2;
   border-radius: 13px;
   background: #f8faff;
@@ -13,7 +13,7 @@
 .hours-overview-stats.stat-line {
   flex: none;
   flex-wrap: nowrap;
-  gap: 5px;
+  gap: var(--space-1);
   margin: 0;
 }
 
@@ -22,8 +22,8 @@
   height: var(--control-md);
   display: flex;
   align-items: center;
-  gap: 7px;
-  padding: 0 10px;
+  gap: var(--space-2);
+  padding: 0 var(--space-3);
   border-radius: 9px;
   font-size: 10px;
   white-space: nowrap;
@@ -52,7 +52,7 @@
   flex: 1;
   justify-content: flex-end;
   flex-wrap: nowrap;
-  gap: 7px;
+  gap: var(--space-2);
   margin: 0;
   padding: 0;
   border: 0;
@@ -60,7 +60,7 @@
 }
 
 .hours-campus-panel {
-  margin-bottom: 16px;
+  margin-bottom: var(--space-4);
   overflow: hidden;
   border: 1px solid #dce6f8;
   border-radius: 13px;
@@ -70,8 +70,8 @@
 .hours-campus-panel-head {
   display: flex;
   align-items: baseline;
-  gap: 10px;
-  padding: 12px 15px;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
   border-bottom: 1px solid #e8edf5;
 }
 
@@ -94,8 +94,8 @@
   display: flex;
   min-width: 0;
   flex-direction: column;
-  gap: 5px;
-  padding: 13px 15px;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-4);
   border-right: 1px solid #edf1f7;
 }
 

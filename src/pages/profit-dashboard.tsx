@@ -17,7 +17,6 @@ import {
   type DetailMetricKey,
   type ProfitCampusSection,
 } from './profit-model'
-import './ProfitDashboard.css'
 
 type ComparisonMetric = 'profit' | 'revenue' | 'margin'
 type TrendMetric = 'revenue' | 'cost' | 'profit'

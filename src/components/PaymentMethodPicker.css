@@ -1,9 +1,9 @@
-.payment-method-picker { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; width: 100%; }
-.payment-method-picker .ant-radio-button-wrapper { display: flex; align-items: center; justify-content: center; height: 68px; padding: 0 4px; border: 1px solid #dfe6f2 !important; border-radius: 10px !important; color: #526078; box-shadow: none !important; transition: border-color .2s ease, background .2s ease, box-shadow .2s ease; }
+.payment-method-picker { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: var(--space-2); width: 100%; }
+.payment-method-picker .ant-radio-button-wrapper { display: flex; align-items: center; justify-content: center; height: 68px; padding: 0 var(--space-1); border: 1px solid #dfe6f2 !important; border-radius: 10px !important; color: #526078; box-shadow: none !important; transition: border-color .2s ease, background .2s ease, box-shadow .2s ease; }
 .payment-method-picker .ant-radio-button-wrapper::before { display: none; }
 .payment-method-picker .ant-radio-button-wrapper:hover { border-color: #9db0ff !important; color: #2f5ff3; }
 .payment-method-picker .ant-radio-button-wrapper-checked { border-color: #5276ff !important; background: #f1f4ff; color: #244fd8; box-shadow: 0 0 0 2px rgba(82, 118, 255, .12) !important; }
-.payment-method-picker__option { display: inline-flex; align-items: center; flex-direction: column; gap: 5px; min-width: 0; font-size: 12px; line-height: 1; }
+.payment-method-picker__option { display: inline-flex; align-items: center; flex-direction: column; gap: var(--space-1); min-width: 0; font-size: 12px; line-height: 1; }
 .payment-method-picker__option > .anticon { flex: none; font-size: 21px; }
 .payment-method-picker__option.is-alipay > .anticon { color: #1677ff; }
 .payment-method-picker__option.is-wechat > .anticon { color: #07b83b; }

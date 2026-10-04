@@ -1,6 +1,6 @@
 .legal-page {
   min-height: 100vh;
-  padding: 56px 24px 84px;
+  padding: 56px var(--space-6) 84px;
   background:
     radial-gradient(circle at 12% 0%, rgba(49, 95, 244, 0.13), transparent 27%),
     radial-gradient(circle at 90% 100%, rgba(18, 167, 199, 0.09), transparent 25%),
@@ -20,9 +20,9 @@
 .legal-back {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  margin-bottom: 30px;
-  padding: 7px 11px;
+  gap: var(--space-2);
+  margin-bottom: var(--space-8);
+  padding: var(--space-2) var(--space-3);
   border-radius: 9px;
   color: var(--ink-3);
   background: #f4f6fa;
@@ -48,7 +48,7 @@
 }
 
 .legal-card h1 {
-  margin: 10px 0 14px;
+  margin: var(--space-3) 0 var(--space-4);
   color: var(--ink);
   font-size: 38px;
   font-weight: 760;
@@ -56,8 +56,8 @@
 }
 
 .legal-lead {
-  margin-bottom: 28px;
-  padding-bottom: 24px;
+  margin-bottom: var(--space-8);
+  padding-bottom: var(--space-6);
   border-bottom: 1px solid var(--line);
 }
 
@@ -70,8 +70,8 @@
 
 .legal-card h2 {
   position: relative;
-  margin: 34px 0 11px;
-  padding-left: 13px;
+  margin: 34px 0 var(--space-3);
+  padding-left: var(--space-3);
   color: var(--ink);
   font-size: 19px;
   font-weight: 720;

@@ -18,7 +18,6 @@ import { parentApi } from '../api/parent'
 import type { UserInfo } from '../api/types'
 import { clearSession } from '../session'
 import type { ParentHome } from './parent-model'
-import './parent.css'
 
 interface ParentContextValue {
   user: UserInfo | null

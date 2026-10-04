@@ -1,14 +1,14 @@
 .course-list-card > h2 {
-  margin: 0 0 16px;
+  margin: 0 0 var(--space-4);
 }
 
 .course-list-actionbar {
   display: grid;
   grid-template-columns: auto auto minmax(0, 1fr);
   align-items: center;
-  gap: 12px;
-  margin-bottom: 16px;
-  padding: 10px;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+  padding: var(--space-3);
   border: 1px solid #e4eaf3;
   border-radius: 13px;
   background: #f8faff;
@@ -16,13 +16,13 @@
 
 .course-create-button.ant-btn {
   height: var(--control-md);
-  padding-inline: 18px;
+  padding-inline: var(--space-5);
 }
 
 .course-list-stats.stat-line {
   display: flex;
   flex-wrap: nowrap;
-  gap: 6px;
+  gap: var(--space-2);
   margin: 0;
 }
 
@@ -31,8 +31,8 @@
   height: var(--control-md);
   display: flex;
   align-items: center;
-  gap: 7px;
-  padding: 0 11px;
+  gap: var(--space-2);
+  padding: 0 var(--space-3);
   border-radius: 9px;
   font-size: 11px;
   white-space: nowrap;
@@ -48,7 +48,7 @@
   min-width: 0;
   justify-content: flex-end;
   flex-wrap: nowrap;
-  gap: 8px;
+  gap: var(--space-2);
   margin: 0;
   padding: 0;
   border: 0;
@@ -58,10 +58,24 @@
 @media (max-width: 1280px) {
   .course-list-actionbar {
     grid-template-columns: auto 1fr;
-  }
+
+  padding: var(--space-3);
+}
 
   .course-list-filters.work-toolbar {
     grid-column: 1 / -1;
     justify-content: flex-start;
   }
+}
+
+.course-open-range {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: start;
+  gap: var(--space-3);
+}
+
+.course-open-range-separator {
+  padding-top: 36px;
+  color: var(--muted);
 }

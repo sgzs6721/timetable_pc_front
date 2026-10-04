@@ -17,7 +17,6 @@ import {
   type ProfitDetailRequest,
 } from './profit-model'
 import { monthKey, NeedOrg, PageHead, periodChoices, tell, todayIso, useShell } from './kit'
-import './ProfitPage.css'
 
 type TimeMode = 'today' | 'this_week' | 'salary_cycle' | 'natural_month' | 'custom_range'
 
