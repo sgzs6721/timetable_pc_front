@@ -1,11 +1,11 @@
-import { EditOutlined, HistoryOutlined, PlusOutlined, ReloadOutlined } from '@ant-design/icons'
-import { Alert, Button, Descriptions, Drawer, Empty, Form, Input, Modal, Select, Space, Spin, Tag, Timeline, message } from 'antd'
+import { DownOutlined, EditOutlined, PlusOutlined, ReloadOutlined } from '@ant-design/icons'
+import { Alert, Button, Drawer, Empty, Form, Input, Modal, Select, Space, Spin, Tag, Timeline, message } from 'antd'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { getJson, postJson } from '../api/biz'
 import { BusinessDateTimePicker } from '../components/BusinessDatePicker'
-import { tell } from './kit'
+import { PhoneCopyButton, copyPlainText, tell } from './kit'
 import { LeadEditor } from './leads-editor'
-import { FOLLOW_CHANNELS, LEAD_STATUSES, isLeadClosed, leadTime, statusInfo, type Lead, type LeadEvent, type LeadPage, type LeadSalesperson } from './leads-model'
+import { FOLLOW_CHANNELS, LEAD_STATUSES, isLeadClosed, isLeadDue, leadTime, statusInfo, type Lead, type LeadEvent, type LeadPage, type LeadSalesperson } from './leads-model'
 
 function FollowEditor({ lead, onClose, onSaved }: { lead: Lead; onClose: () => void; onSaved: (lead: Lead) => void }) {
   const [form] = Form.useForm()
@@ -27,7 +27,7 @@ function FollowEditor({ lead, onClose, onSaved }: { lead: Lead; onClose: () => v
       if (!(error && typeof error === 'object' && 'errorFields' in error)) setSaveError(tell(error, '保存失败，请重试'))
     } finally { submitting.current = false; setSaving(false) }
   }
-  return <Modal open title={`记录跟进 · ${lead.name}`} width={560} onCancel={onClose} onOk={save} okText="保存跟进" cancelText="取消"
+  return <Modal open className="lead-editor-modal" title={`记录跟进 · ${lead.name}`} width={560} onCancel={onClose} onOk={save} okText="保存跟进" cancelText="取消"
     maskClosable={false} keyboard={!saving} closable={!saving} cancelButtonProps={{ disabled: saving }} confirmLoading={saving}>
     <Form layout="vertical" form={form} onValuesChange={() => setSaveError('')} initialValues={{ status: lead.status === 'NEW' ? 'CONTACTED' : lead.status, channel: 'PHONE', nextFollowAt: '' }}>
       <div className="lead-form-grid">
@@ -54,6 +54,7 @@ export function LeadDetail({ id, salespeople, onClose, onChanged }: {
   const [moreLoading, setMoreLoading] = useState(false)
   const [error, setError] = useState('')
   const [editor, setEditor] = useState<'profile' | 'follow' | null>(null)
+  const [archiveOpen, setArchiveOpen] = useState(true)
   const sequence = useRef(0)
   const morePending = useRef(false)
   const load = useCallback(async () => {
@@ -83,24 +84,55 @@ export function LeadDetail({ id, salespeople, onClose, onChanged }: {
   return <Drawer open width={680} title="客源详情" onClose={onClose} className="lead-drawer"
     extra={<Button icon={<ReloadOutlined />} onClick={load} disabled={loading}>刷新</Button>}>
     {error ? <Alert type="error" showIcon message={error} action={<Button onClick={load}>重试</Button>} /> : loading ? <div className="lead-loading"><Spin /></div> : lead && <>
-      <div className="lead-detail-head"><div className="lead-avatar">{lead.name.slice(0, 1)}</div><div><h2>{lead.name} <Tag color={statusInfo(lead.status).color}>{statusInfo(lead.status).label}</Tag></h2><span>{lead.phone} · {lead.contactName || '未填写联系人'}</span></div></div>
-      <div className="lead-detail-actions"><Button icon={<EditOutlined />} onClick={() => setEditor('profile')}>编辑资料 / 分配销售</Button><Button type="primary" icon={<PlusOutlined />} onClick={() => setEditor('follow')} disabled={!lead.ownerId}>记录跟进</Button></div>
+      <div className="lead-identity">
+        <div className="lead-identity-top">
+          <div className="lead-avatar">{lead.name.slice(0, 1)}</div>
+          <div>
+            <h2>{lead.name} <Tag color={statusInfo(lead.status).color}>{statusInfo(lead.status).label}</Tag></h2>
+            {lead.contactName ? <span>联系人：{lead.contactName}</span> : null}
+          </div>
+        </div>
+        <div className="lead-identity-facts">
+          {lead.phone ? <div className="lead-info-row">
+            <span className="lead-info-label">电话</span>
+            <Space size={4}><a href={`tel:${lead.phone}`}>{lead.phone}</a><span className="lead-copy-dot">·</span><PhoneCopyButton onClick={async () => { if (await copyPlainText(lead.phone)) message.success('已复制'); else message.error('复制失败') }} /></Space>
+          </div> : null}
+          <div className="lead-info-row"><span className="lead-info-label">负责人</span><em className={lead.ownerName ? undefined : 'lead-info-muted'}>{lead.ownerName || '待分配'}</em></div>
+          {lead.nextFollowAt ? <div className="lead-info-row">
+            <span className="lead-info-label">下次跟进</span>
+            <em className={isLeadDue(lead) ? 'lead-info-time lead-due' : 'lead-info-time'}>{leadTime(lead.nextFollowAt)}</em>
+          </div> : null}
+        </div>
+      </div>
+      <div className="lead-detail-actions"><Button icon={<EditOutlined />} onClick={() => setEditor('profile')}>编辑资料</Button><Button type="primary" icon={<PlusOutlined />} onClick={() => setEditor('follow')} disabled={!lead.ownerId}>记录跟进</Button></div>
       {!lead.ownerId && <Alert className="lead-form-note" type="info" showIcon message="先分配销售负责人，即可开始记录跟进。" />}
-      <Descriptions title="客源档案" column={2} size="small">
-        <Descriptions.Item label="客源渠道">{lead.source}</Descriptions.Item><Descriptions.Item label="销售负责人">{lead.ownerName || '待分配'}</Descriptions.Item>
-        <Descriptions.Item label="微信号">{lead.wechat || '—'}</Descriptions.Item><Descriptions.Item label="性别 / 年龄">{lead.gender === 'MALE' ? '男' : lead.gender === 'FEMALE' ? '女' : '未填写'} / {lead.age == null ? '未填写' : `${lead.age}岁`}</Descriptions.Item>
-        <Descriptions.Item label="录入时间">{leadTime(lead.createTime)}</Descriptions.Item><Descriptions.Item label="下次跟进">{leadTime(lead.nextFollowAt)}</Descriptions.Item>
-        <Descriptions.Item label="来源说明" span={2}>{lead.sourceDetail || '—'}</Descriptions.Item><Descriptions.Item label="需求备注" span={2}><span className="lead-prewrap">{lead.remark || '—'}</span></Descriptions.Item>
-      </Descriptions>
-      <div className="lead-section-title"><h3><HistoryOutlined /> 跟进时间线</h3><span>已跟进 {lead.followCount} 次 · {total} 条记录</span></div>
+      <section className={archiveOpen ? 'lead-pane' : 'lead-pane lead-pane--folded'}>
+        <button type="button" className="lead-pane-head" aria-expanded={archiveOpen} onClick={() => setArchiveOpen((open) => !open)}>
+          <strong>客源档案</strong>
+          <DownOutlined className={archiveOpen ? 'lead-pane-chevron' : 'lead-pane-chevron lead-pane-chevron--folded'} />
+        </button>
+        {archiveOpen ? <div className="lead-pane-body"><div className="lead-info-list">
+          {lead.source ? <div className="lead-info-row"><span className="lead-info-label">客源渠道</span><em>{lead.source}</em></div> : null}
+          {lead.sourceDetail ? <div className="lead-info-row"><span className="lead-info-label">来源说明</span><em>{lead.sourceDetail}</em></div> : null}
+          {lead.wechat ? <div className="lead-info-row"><span className="lead-info-label">微信号</span><Space size={4}><em>{lead.wechat}</em><span className="lead-copy-dot">·</span><PhoneCopyButton onClick={async () => { if (await copyPlainText(lead.wechat)) message.success('已复制'); else message.error('复制失败') }} /></Space></div> : null}
+          {lead.gender === 'MALE' || lead.gender === 'FEMALE' ? <div className="lead-info-row"><span className="lead-info-label">性别</span><em>{lead.gender === 'MALE' ? '男' : '女'}</em></div> : null}
+          {lead.age != null ? <div className="lead-info-row"><span className="lead-info-label">年龄</span><em>{lead.age}岁</em></div> : null}
+          <div className="lead-info-row"><span className="lead-info-label">录入时间</span><em className="lead-info-time">{leadTime(lead.createTime)}</em></div>
+          {lead.remark ? <div className="lead-info-row lead-info-row--split lead-info-row--remark"><span className="lead-info-label lead-info-label--wide">需求与备注</span><em className="lead-prewrap lead-info-remark">{lead.remark}</em></div> : null}
+        </div></div> : null}
+      </section>
+      <section className="lead-pane">
+        <div className="lead-pane-head lead-pane-head--static"><strong>跟进时间线</strong><span>已跟进 {lead.followCount} 次</span></div>
+        <div className="lead-pane-body">
       {!events.length ? <Empty description="暂无记录" /> : <Timeline items={events.map((event) => ({ color: event.type === 'FOLLOW' ? 'blue' : 'gray', children: <div className="lead-event">
-        <div className="lead-event-head"><strong>{event.type === 'CREATE' ? '录入客源' : event.type === 'UPDATE' ? '更新资料 / 分配' : FOLLOW_CHANNELS.find((item) => item.value === event.channel)?.label || '跟进记录'}</strong><span>{leadTime(event.createTime)}</span></div>
+        <div className="lead-event-head"><strong>{event.type === 'CREATE' ? '录入客源' : event.type === 'UPDATE' ? '更新资料' : FOLLOW_CHANNELS.find((item) => item.value === event.channel)?.label || '跟进记录'}</strong><span>{leadTime(event.createTime)}</span></div>
         {event.type === 'FOLLOW' && <Space size={4}>{event.fromStatus !== event.toStatus && <><Tag>{statusInfo(event.fromStatus).label}</Tag><span>→</span></>}<Tag color={statusInfo(event.toStatus).color}>{statusInfo(event.toStatus).label}</Tag></Space>}
-        <p className="lead-prewrap">{event.type === 'CREATE' ? event.content.replace(/^录入客源\n/, '') : event.content}</p>
-        {event.nextFollowAt && <div className="lead-next">下次跟进：{leadTime(event.nextFollowAt)}</div>}
-        <small>{event.operatorName} · 负责人：{event.ownerName || '待分配'}</small>
+        {event.type !== 'CREATE' && event.content ? <p className="lead-prewrap">{event.content}</p> : null}
+        {event.nextFollowAt ? <div className="lead-event-meta lead-event-meta--follow">下次跟进：{leadTime(event.nextFollowAt)}</div> : null}
       </div> }))} />}
       {events.length < total && <Button block loading={moreLoading} onClick={more}>加载更早记录</Button>}
+        </div>
+      </section>
       {editor === 'profile' && <LeadEditor lead={lead} salespeople={salespeople} onClose={() => setEditor(null)} onSaved={saved} />}
       {editor === 'follow' && <FollowEditor lead={lead} onClose={() => setEditor(null)} onSaved={saved} />}
     </>}

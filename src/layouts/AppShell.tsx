@@ -370,7 +370,7 @@ export function AppShell() {
                   <span className="shell-campus-switch-action" aria-hidden="true"><DownOutlined /></span>
                 </button>
               </Dropdown>
-              {location.pathname !== '/leads' && <Dropdown
+              <Dropdown
                 disabled={!campuses.length}
                 trigger={['click']}
                 placement="bottomRight"
@@ -390,7 +390,7 @@ export function AppShell() {
                   <strong>{currentCampus?.name || '请选择校区'}</strong>
                   <span className="shell-campus-switch-action" aria-hidden="true"><DownOutlined /></span>
                 </button>
-              </Dropdown>}
+              </Dropdown>
             </div>
             <button className="profile" type="button" onClick={() => navigate('/account')}>
               <span className="profile-copy">

@@ -1,4 +1,5 @@
 const TOKEN_KEY = 'timetable_pc_token'
+const SESSION_DAY_KEY = 'timetable_pc_session_day'
 const ORG_KEY = 'timetable_pc_org_id'
 const CAMPUS_KEY = 'timetable_pc_campus_id'
 const LOGIN_REDIRECT_KEY = 'timetable_pc_login_redirect'
@@ -31,13 +32,28 @@ function safeLoginRedirect(candidate: string): string {
   }
 }
 
+/** 登录态只在写入当天有效，按浏览器本地日历日计算。 */
+function todaySessionDay(): string {
+  const now = new Date()
+  const month = String(now.getMonth() + 1).padStart(2, '0')
+  const day = String(now.getDate()).padStart(2, '0')
+  return `${now.getFullYear()}-${month}-${day}`
+}
+
 export function getToken(): string {
-  return localStorage.getItem(TOKEN_KEY) || ''
+  const token = localStorage.getItem(TOKEN_KEY) || ''
+  if (!token) return ''
+  if (localStorage.getItem(SESSION_DAY_KEY) !== todaySessionDay()) {
+    clearAuthentication()
+    return ''
+  }
+  return token
 }
 
 export function setToken(token: string): void {
   clearMarketingAuthentication()
   localStorage.setItem(TOKEN_KEY, token)
+  localStorage.setItem(SESSION_DAY_KEY, todaySessionDay())
 }
 
 /** 营销身份独立于主 JWT，但账号切换时必须同步失效，避免跨账号复用。 */
@@ -50,6 +66,7 @@ export function clearMarketingAuthentication(): void {
 /** 清除持久登录上下文，但保留本次登录流程的深链和 OAuth state。 */
 export function clearAuthentication(): void {
   localStorage.removeItem(TOKEN_KEY)
+  localStorage.removeItem(SESSION_DAY_KEY)
   localStorage.removeItem(ORG_KEY)
   localStorage.removeItem(CAMPUS_KEY)
 }
