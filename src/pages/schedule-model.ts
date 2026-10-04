@@ -102,6 +102,7 @@ export interface CardChoice {
   courseCategory?: boolean
   totalHours?: number
   remainingHours?: number
+  expiredHours?: number
   remainingAmount?: number
   validEndDate?: string
   available?: boolean
@@ -127,6 +128,7 @@ export interface TargetOption {
   oneToOne?: boolean
   gender?: number
   remainingHours?: number
+  expiredHours?: number
   totalHours?: number
   cardTypeLabels?: string[]
   coachIds?: number[]

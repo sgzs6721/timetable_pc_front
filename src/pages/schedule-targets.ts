@@ -19,7 +19,7 @@ export function cardTypeOrder(option: TargetOption): number {
 
 export function optionBlocked(option: TargetOption): boolean {
   if (option.targetType === 'course') return !!courseTargetWarning(option) || !!option.selectionBlockedReason
-  if (option.targetType === 'student') return !!option.selectionBlockedReason
+  if (option.targetType === 'student') return !!studentScheduleBlock(option)
   return false
 }
 
@@ -86,16 +86,58 @@ export function isHoursCard(card: CardChoice): boolean {
   return String(card.cardCategory || '').toUpperCase() === 'HOURS' || String(card.cardTypeLabel || '').trim() === '课时卡'
 }
 
+export function usableCardHours(card?: { remainingHours?: number | null; expiredHours?: number | null } | null): number {
+  const remaining = Number(card?.remainingHours)
+  const expired = Number(card?.expiredHours || 0)
+  if (!Number.isFinite(remaining)) return Number.NaN
+  return Math.max(0, remaining - (Number.isFinite(expired) ? Math.max(expired, 0) : 0))
+}
+
+function hasUsableNonHoursCard(option: TargetOption): boolean {
+  return (option.cardOptions || []).some((card) => {
+    if (isHoursCard(card)) return false
+    const category = String(card.cardCategory || '').toUpperCase()
+    if (category === 'STORED_VALUE') return card.available !== false && Number(card.remainingAmount || 0) > 0
+    if (category === 'PERIOD') return card.available !== false
+    return card.available !== false
+  })
+}
+
+export function studentHoursExpired(option: TargetOption): boolean {
+  if (option.targetType !== 'student') return false
+  if (option.hoursExpired) return true
+  const hoursCards = (option.cardOptions || []).filter(isHoursCard)
+  if (hoursCards.length > 0 && hoursCards.some((card) => card.expiredHours != null)) {
+    const everyExpired = hoursCards.every((card) => {
+      const usable = usableCardHours(card)
+      return Number.isFinite(usable) && usable <= 0
+    })
+    const marked = hoursCards.some((card) => Number(card.expiredHours) > 0) || Number(option.expiredHours) > 0
+    return everyExpired && marked
+  }
+  const expired = Number(option.expiredHours)
+  const remaining = hoursCards.length
+    ? hoursCards.reduce((sum, card) => sum + Math.max(Number(card.remainingHours) || 0, 0), 0)
+    : Number(option.remainingHours)
+  const category = String(option.cardCategory || '').toUpperCase()
+  if (!hoursCards.length && (category === 'STORED_VALUE' || category === 'PERIOD')) return false
+  return Number.isFinite(expired) && expired > 0 && Number.isFinite(remaining) && remaining <= expired
+}
+
+export function studentScheduleBlock(option: TargetOption): string {
+  if (option.targetType !== 'student') return ''
+  if (studentHoursExpired(option) && !hasUsableNonHoursCard(option)) return '课时已过期，无法排课'
+  return String(option.selectionBlockedReason || '').trim()
+}
+
 export function scheduleHoursLabel(option: TargetOption): string {
   const cards = option.cardOptions || []
   const hoursCards = cards.filter(isHoursCard)
-  const selectableHours = hoursCards.filter((card) => card.available !== false && !(Number.isFinite(Number(card.remainingHours)) && Number(card.remainingHours) <= 0))
-  const otherSelectable = cards.some((card) => !isHoursCard(card) && card.available !== false)
+  const selectableHours = hoursCards.filter((card) => card.available !== false && usableCardHours(card) > 0)
   if (hoursCards.length > 0) {
-    if (!selectableHours.length) {
-      if (otherSelectable) return ''
-    } else if (selectableHours.some((card) => Number.isFinite(Number(card.remainingHours)))) {
-      const remaining = selectableHours.reduce((sum, card) => sum + Math.max(Number(card.remainingHours) || 0, 0), 0)
+    if (!selectableHours.length) return ''
+    if (selectableHours.some((card) => Number.isFinite(Number(card.remainingHours)))) {
+      const remaining = selectableHours.reduce((sum, card) => sum + usableCardHours(card), 0)
       const total = selectableHours.reduce((sum, card) => sum + Math.max(Number(card.totalHours) || 0, 0), 0)
       return `${hoursAmount(remaining)}/${hoursAmount(total)}`
     }
@@ -118,6 +160,7 @@ export interface RosterStudent {
     cardCategory?: string
     periodType?: string
     remainingHours?: number | null
+    expiredHours?: number | null
     remainingAmount?: number | null
     validStartDate?: string
     validEndDate?: string
@@ -142,8 +185,8 @@ export function scheduleCardOrder(label: string): number {
   return order[label] ?? 99
 }
 
-export function scheduleCardChoices(cards: RosterStudent['cards'], groupId: number, unitPrice: number): CardChoice[] {
-  const today = todayIso()
+export function scheduleCardChoices(cards: RosterStudent['cards'], groupId: number, unitPrice: number, asOfDate = todayIso()): CardChoice[] {
+  const today = String(asOfDate || '').slice(0, 10) || todayIso()
   const minimum = unitPrice > 0 ? Math.round(unitPrice * 50) / 100 : 0
   return (cards || [])
     .filter((card) => Number(card.status ?? 1) === 1 && Number(card.studentGroupId || 0) === groupId && card.courseCategory !== false)
@@ -157,12 +200,14 @@ export function scheduleCardChoices(cards: RosterStudent['cards'], groupId: numb
         periodType: card.periodType,
         courseCategory: card.courseCategory,
         remainingHours: card.remainingHours == null ? undefined : Number(card.remainingHours),
+        expiredHours: card.expiredHours == null ? undefined : Number(card.expiredHours),
         remainingAmount: card.remainingAmount == null ? undefined : Number(card.remainingAmount),
         validEndDate: card.validEndDate,
       }
       if (category === 'HOURS') {
-        choice.available = Number(card.remainingHours || 0) > 0
-        if (!choice.available) choice.unavailableReason = '余额不足'
+        const expired = Number(card.expiredHours || 0)
+        choice.available = usableCardHours(card) > 0
+        if (!choice.available) choice.unavailableReason = expired > 0 ? '课时已过期' : '余额不足'
       } else if (category === 'STORED_VALUE') {
         const remain = Number(card.remainingAmount || 0)
         if (minimum <= 0) {
@@ -244,7 +289,7 @@ export function cardSummary(card: CardChoice | undefined, member: CourseMember):
   if (!card) return { text: '无可扣费卡', low: true }
   const category = String(card.cardCategory || member.cardCategory || '').toUpperCase()
   if (category === 'HOURS' || card.cardTypeLabel === '课时卡') {
-    const hours = Number(card.remainingHours ?? member.remainingHours)
+    const hours = usableCardHours({ remainingHours: Number(card.remainingHours ?? member.remainingHours), expiredHours: card.expiredHours })
     return {
       text: `课时卡 · 剩余 ${hoursAmount(hours)} 课时`,
       low: card.available === false || (Number.isFinite(hours) && hours < 5),
@@ -275,7 +320,7 @@ export const CARD_MARKER = '#card:'
 export function pricingCardDetail(card: CardChoice): string {
   const category = String(card.cardCategory || '').toUpperCase()
   if (category === 'HOURS' || card.cardTypeLabel === '课时卡') {
-    return `剩余 ${hoursAmount(card.remainingHours)} 课时`
+    return `剩余 ${hoursAmount(usableCardHours(card))} 课时`
   }
   if (category === 'STORED_VALUE') return `余额 ¥${amountLabel(card.remainingAmount)}`
   const end = String(card.validEndDate || '').slice(0, 10)

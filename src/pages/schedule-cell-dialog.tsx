@@ -1,7 +1,7 @@
 import { Modal, Select, Switch, message } from 'antd'
 import { AppIcon, tell } from './kit'
 import type { Schedule } from './schedule-model'
-import { cardSummary, courseMembersWarning, courseTargetWarning, hoursAmount, scheduleHoursLabel } from './schedule-targets'
+import { cardSummary, courseMembersWarning, courseTargetWarning, hoursAmount, scheduleHoursLabel, studentHoursExpired, studentScheduleBlock } from './schedule-targets'
 import { DAY_LABELS, clockText, durationLabel, fromMinutes, genderIconName, toMinutes } from './schedule-board-helpers'
 import { useCellDialogController } from './schedule-cell-controller'
 
@@ -143,7 +143,7 @@ export function CellDialog(input: CellDialogProps) {
                   {searchOpen ? (
                     <div className="sheet-menu">
                       {optionsLoading ? <p>候选项加载中...</p> : optionsError ? <p>{optionsError}</p> : !visibleOptions.length ? <p>{trialOn ? '当前校区尚未设置体验类型，请前往校区设置的「体验类型」中添加' : keyword ? '没有找到匹配学员或课程，请换个关键词试试' : '暂无学员或课程，请换老师或校区'}</p> : visibleOptions.map((item) => {
-                        const blocked = !!courseTargetWarning(item) || !!item.selectionBlockedReason
+                        const blocked = !!courseTargetWarning(item) || !!studentScheduleBlock(item)
                         const icon = genderIconName(item.gender)
                         const hoursLabel = scheduleHoursLabel(item)
                         return (
@@ -161,7 +161,7 @@ export function CellDialog(input: CellDialogProps) {
                                   <em>{trialOn ? '体验' : '学员'}</em>
                                   {hoursLabel ? <em>课时 {hoursLabel}</em> : null}
                                   {(item.cardTypeLabels || []).map((label) => <em key={label}>{label}</em>)}
-                                  {item.hoursExpired ? <em className="is-expired">过期</em> : null}
+                                  {studentHoursExpired(item) ? <em className="is-expired">过期</em> : null}
                                 </span>
                                 <b>{item.displayName || item.name}</b>
                               </>

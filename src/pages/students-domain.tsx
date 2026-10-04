@@ -172,8 +172,10 @@ export function listCardHasBalance(card: Card, field: 'remainingHours' | 'remain
 export function listCardEffective(card: Card, student: Student): boolean {
   const category = listCardCategory(card)
   if (category === 'HOURS') {
-    if (listCardHasBalance(card, 'remainingHours')) return Number(card.remainingHours || 0) > 0
-    return Number(student.remainingHours || 0) > 0
+    const remaining = listCardHasBalance(card, 'remainingHours') ? Number(card.remainingHours || 0) : Number(student.remainingHours || 0)
+    const expiredSource = card.expiredHours ?? (listCardHasBalance(card, 'remainingHours') ? 0 : student.expiredHours)
+    const expired = Number(expiredSource || 0)
+    return remaining - (Number.isFinite(expired) ? Math.max(expired, 0) : 0) > 0
   }
   if (category === 'STORED_VALUE') {
     if (listCardHasBalance(card, 'remainingAmount')) return Number(card.remainingAmount || 0) > 0
@@ -244,7 +246,7 @@ export function orderedStudentCards(cards: Card[], today = todayIso()): Card[] {
     const category = String(card.cardCategory || '').toUpperCase()
     if (category === 'PERIOD') return !card.validEndDate || card.validEndDate < today
     if (category === 'STORED_VALUE') return Number(card.remainingAmount || 0) <= 0
-    return Number(card.remainingHours || 0) <= 0
+    return Number(card.remainingHours || 0) - Math.max(0, Number(card.expiredHours || 0)) <= 0
   }
   return cards.filter((card) => card.id).slice().sort((left, right) => (
     Number(exhausted(left)) - Number(exhausted(right))
@@ -270,8 +272,9 @@ export function cardBalanceView(card: Card): { value: string; tag: string; metri
     return { value, tag, metric: expired ? '已过期' : '有效期' }
   }
   const remain = Math.max(0, Number(card.remainingHours || 0))
+  const expired = Math.max(0, Number(card.expiredHours || 0))
   const total = Math.max(0, Number(card.totalHours ?? (Number(card.regularHours || 0) + Number(card.bonusHours || 0))))
-  return { value: `${format(remain)}/${format(total)}`, tag: '课时卡', metric: '剩余/总课时' }
+  return { value: `${format(remain)}/${format(total)}`, tag: '课时卡', metric: expired > 0 ? `${format(expired)}课时过期` : '剩余/总课时' }
 }
 
 export function cardValidityLine(card: Card): { label: string; text: string } | null {

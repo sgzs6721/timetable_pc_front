@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { getJson } from '../api/biz'
 import { tell } from './kit'
 import type { CourseMember, Schedule, TargetOption } from './schedule-model'
-import { CARD_MARKER, cardIdFromPricing, courseMembersWarning, courseTargetWarning, fallbackCourseMembers, minOpenWarning, pricingChoices, resolveMinOpen, resolveMaxOpen, sortTargetOptions } from './schedule-targets'
+import { CARD_MARKER, cardIdFromPricing, courseMembersWarning, courseTargetWarning, fallbackCourseMembers, minOpenWarning, pricingChoices, resolveMinOpen, resolveMaxOpen, sortTargetOptions, studentScheduleBlock } from './schedule-targets'
 import { DAY_LABELS, durationLabel, freeUntil, fromMinutes, parseTrialConfig, toMinutes } from './schedule-board-helpers'
 import type { CellDialogProps } from './schedule-cell-dialog'
 
@@ -86,6 +86,7 @@ export function useCellDialogController(props: CellDialogProps) {
       coachMemberId: props.coachMemberId,
       scheduleId: cell.schedule?.id,
       durationMinutes: duration,
+      scheduleDate: cell.date,
     })
       .then((list) => {
         if (!alive) return
@@ -219,7 +220,7 @@ export function useCellDialogController(props: CellDialogProps) {
       ? instances.filter((item) => Number(item.status) !== 3 && !excluded.includes(item.studentId)).length
       : members.filter((item) => !excluded.includes(item.studentId)).length
   const openWarning = selected?.targetType === 'course' && (sameCourse || membersLoaded) ? minOpenWarning(courseAttending, minOpenCount, maxOpenCount) : ''
-  const saveBlocked = occupied || !selected || !!courseTargetWarning(selected) || !!selected.selectionBlockedReason || !!pricing?.disabled
+  const saveBlocked = occupied || !selected || !!courseTargetWarning(selected) || !!studentScheduleBlock(selected) || !!pricing?.disabled
     || (selected.targetType === 'course' && !sameCourse && membersLoaded && !!courseMembersWarning(members, excluded))
     || !!openWarning
     || (selected.targetType === 'student' && choices.length > 1 && !pricingKey)
@@ -367,9 +368,9 @@ export function useCellDialogController(props: CellDialogProps) {
       message.warning('该课程已取消，请另选课程')
       return
     }
-    const warning = courseTargetWarning(option)
-    if (warning || option.selectionBlockedReason) {
-      message.warning(warning || option.selectionBlockedReason)
+    const warning = courseTargetWarning(option) || studentScheduleBlock(option)
+    if (warning) {
+      message.warning(warning)
       return
     }
     setTarget(`${option.targetType}:${option.targetId}`)
