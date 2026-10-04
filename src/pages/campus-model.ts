@@ -27,5 +27,6 @@ export interface Position {
   id?: number
   name: string
   campusAdmin?: boolean
+  sales?: boolean
   campusId?: number
 }

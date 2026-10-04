@@ -33,6 +33,8 @@ export interface UserInfo {
   positionCampusId?: number
   campusAdmin?: boolean
   campusAdminCampusIds?: number[]
+  canViewAllLeads?: boolean
+  leadCampusIds?: number[]
   isSubstituteTeacher?: boolean
   webPasswordSet?: boolean
   orgMemberId?: number

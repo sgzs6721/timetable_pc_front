@@ -5,7 +5,7 @@ import { getJson, postJson } from '../api/biz'
 import { BusinessDateTimePicker } from '../components/BusinessDatePicker'
 import { PhoneCopyButton, copyPlainText, tell } from './kit'
 import { LeadEditor } from './leads-editor'
-import { FOLLOW_CHANNELS, LEAD_STATUSES, isLeadClosed, isLeadDue, leadTime, statusInfo, type Lead, type LeadEvent, type LeadPage, type LeadSalesperson } from './leads-model'
+import { FOLLOW_CHANNELS, LEAD_STATUSES, isLeadClosed, isLeadDue, leadTime, statusInfo, type Lead, type LeadCampus, type LeadEvent, type LeadPage, type LeadSalesperson } from './leads-model'
 
 function FollowEditor({ lead, onClose, onSaved }: { lead: Lead; onClose: () => void; onSaved: (lead: Lead) => void }) {
   const [form] = Form.useForm()
@@ -43,8 +43,8 @@ function FollowEditor({ lead, onClose, onSaved }: { lead: Lead; onClose: () => v
   </Modal>
 }
 
-export function LeadDetail({ id, salespeople, onClose, onChanged }: {
-  id: number; salespeople: LeadSalesperson[]; onClose: () => void; onChanged: () => void
+export function LeadDetail({ id, salespeople, campuses, onClose, onChanged }: {
+  id: number; salespeople: LeadSalesperson[]; campuses: LeadCampus[]; onClose: () => void; onChanged: () => void
 }) {
   const [lead, setLead] = useState<Lead | null>(null)
   const [events, setEvents] = useState<LeadEvent[]>([])
@@ -97,6 +97,7 @@ export function LeadDetail({ id, salespeople, onClose, onChanged }: {
             <span className="lead-info-label">电话</span>
             <Space size={4}><a href={`tel:${lead.phone}`}>{lead.phone}</a><span className="lead-copy-dot">·</span><PhoneCopyButton onClick={async () => { if (await copyPlainText(lead.phone)) message.success('已复制'); else message.error('复制失败') }} /></Space>
           </div> : null}
+          <div className="lead-info-row"><span className="lead-info-label">所属校区</span><em className={lead.campusId ? undefined : 'lead-info-muted'}>{campuses.find((item) => item.id === lead.campusId)?.name || (lead.campusId ? '—' : '未分配校区')}</em></div>
           <div className="lead-info-row"><span className="lead-info-label">负责人</span><em className={lead.ownerName ? undefined : 'lead-info-muted'}>{lead.ownerName || '待分配'}</em></div>
           {lead.nextFollowAt ? <div className="lead-info-row">
             <span className="lead-info-label">下次跟进</span>
@@ -105,6 +106,7 @@ export function LeadDetail({ id, salespeople, onClose, onChanged }: {
         </div>
       </div>
       <div className="lead-detail-actions"><Button icon={<EditOutlined />} onClick={() => setEditor('profile')}>编辑资料</Button><Button type="primary" icon={<PlusOutlined />} onClick={() => setEditor('follow')} disabled={!lead.ownerId}>记录跟进</Button></div>
+      {!lead.campusId && <Alert className="lead-form-note" type="info" showIcon message="这条客源还没有校区。请编辑资料并选择校区，对应校区的管理员和销售才能看到。" />}
       {!lead.ownerId && <Alert className="lead-form-note" type="info" showIcon message="先分配销售负责人，即可开始记录跟进。" />}
       <section className={archiveOpen ? 'lead-pane' : 'lead-pane lead-pane--folded'}>
         <button type="button" className="lead-pane-head" aria-expanded={archiveOpen} onClick={() => setArchiveOpen((open) => !open)}>
@@ -133,7 +135,7 @@ export function LeadDetail({ id, salespeople, onClose, onChanged }: {
       {events.length < total && <Button block loading={moreLoading} onClick={more}>加载更早记录</Button>}
         </div>
       </section>
-      {editor === 'profile' && <LeadEditor lead={lead} salespeople={salespeople} onClose={() => setEditor(null)} onSaved={saved} />}
+      {editor === 'profile' && <LeadEditor lead={lead} salespeople={salespeople} campuses={campuses} onClose={() => setEditor(null)} onSaved={saved} />}
       {editor === 'follow' && <FollowEditor lead={lead} onClose={() => setEditor(null)} onSaved={saved} />}
     </>}
   </Drawer>

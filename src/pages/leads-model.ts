@@ -14,6 +14,7 @@ export const FOLLOW_CHANNELS = [
 export interface Lead {
   id: number; name: string; phone: string; contactName: string; wechat: string; gender: string; age: number | null
   source: string; sourceDetail: string; remark: string; status: string; ownerId: number | null; ownerName: string
+  campusId: number | null
   nextFollowAt: string | null; lastFollowAt: string | null; followCount: number; version: number; createTime: string; updateTime: string
 }
 export interface LeadEvent {
@@ -22,6 +23,7 @@ export interface LeadEvent {
 }
 export interface LeadPage<T> { records: T[]; total: number; current: number; pages: number }
 export interface LeadSalesperson { id: number; userId: number | null; name: string }
+export interface LeadCampus { id: number; name: string }
 export interface LeadSummary { total: number; fresh: number; active: number; won: number; due: number; unassigned: number }
 export const statusInfo = (status: string) => LEAD_STATUSES.find((item) => item.value === status) || LEAD_STATUSES[0]
 export const leadTime = (value?: string | null) => value ? value.replace('T', ' ').slice(0, 16) : '未安排'

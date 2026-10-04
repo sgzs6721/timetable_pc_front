@@ -6,7 +6,7 @@ import { setOrgId } from '../session'
 import { loadHome } from '../api/home'
 import type { HomeBootstrap, Organization, ScheduleItem, UserInfo } from '../api/types'
 import { subscriptionBlocksPath, subscriptionExpiredText } from '../access'
-import { navForUser } from '../nav'
+import { canViewLeads, navForUser } from '../nav'
 import { AppIcon, EmptyState, PageHead, money, todayIso, useShell } from './kit'
 import { OrganizationCreateModal, type OrganizationCreateValues } from './organization-create-modal'
 
@@ -44,7 +44,6 @@ const MANAGER_QUICK_ACTIONS: HomeQuickAction[] = [
 ]
 
 const TEACHER_QUICK_ACTIONS: HomeQuickAction[] = [
-  { key: 'leads', label: '客源管理', description: '客源录入与销售跟进', icon: 'icon-leads', tone: 'blue', path: '/leads' },
   { key: 'schedule', label: '我的课表', description: '查看授课安排', icon: 'icon-schedule', tone: 'blue', path: '/schedule' },
   { key: 'students', label: '我的学员', description: '查看所带学员', icon: 'icon-students', tone: 'cyan', path: '/students' },
   { key: 'hours', label: '我的课时', description: '查看授课课时', icon: 'icon-hours', tone: 'purple', path: '/hours' },
@@ -53,16 +52,19 @@ const TEACHER_QUICK_ACTIONS: HomeQuickAction[] = [
 ]
 
 const MEMBER_QUICK_ACTIONS: HomeQuickAction[] = [
-  { key: 'leads', label: '客源管理', description: '客源录入与销售跟进', icon: 'icon-leads', tone: 'blue', path: '/leads' },
   { key: 'salary', label: '我的工资', description: '查看工资明细', icon: 'icon-salary', tone: 'green', path: '/salary' },
   { key: 'account', label: '个人中心', description: '账户与机构信息', icon: 'icon-account', tone: 'slate', path: '/account' },
 ]
 
-function quickActionsFor(view: HomeView): HomeQuickAction[] {
-  if (view === 'manager') return MANAGER_QUICK_ACTIONS
-  if (view === 'campus') return MANAGER_QUICK_ACTIONS.filter((item) => item.key !== 'org')
-  if (view === 'substitute') return TEACHER_QUICK_ACTIONS
-  return MEMBER_QUICK_ACTIONS
+function quickActionsFor(view: HomeView, user: UserInfo | null, org: Organization | null): HomeQuickAction[] {
+  const actions = view === 'manager'
+    ? MANAGER_QUICK_ACTIONS
+    : view === 'campus'
+      ? MANAGER_QUICK_ACTIONS.filter((item) => item.key !== 'org')
+      : view === 'substitute'
+        ? TEACHER_QUICK_ACTIONS
+        : MEMBER_QUICK_ACTIONS
+  return canViewLeads(user, org) ? actions : actions.filter((item) => item.key !== 'leads')
 }
 
 function campusIsOffline(campus: unknown): boolean {
@@ -212,7 +214,7 @@ export function HomePage() {
     const permittedPaths = new Set(navForUser(user || null, currentOrg).map((item) => item.path))
     permittedPaths.add('/account')
     const campus = shell.campuses.find((item) => item.id === campusId)
-    return quickActionsFor(view)
+    return quickActionsFor(view, user || null, currentOrg)
       .filter((item) => permittedPaths.has(item.path))
       .map((item) => {
         let disabledReason = ''

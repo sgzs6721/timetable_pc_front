@@ -31,7 +31,6 @@ const MANAGER_NAV: NavItem[] = [
 const CAMPUS_ADMIN_NAV = MANAGER_NAV.filter((item) => item.key !== 'org')
 
 const TEACHER_NAV: NavItem[] = [
-  LEADS_NAV,
   { key: 'home', label: '首页', path: '/home' },
   { key: 'schedule', label: '我的课表', path: '/schedule' },
   { key: 'students', label: '我的学员', path: '/students' },
@@ -42,13 +41,27 @@ const TEACHER_NAV: NavItem[] = [
 ]
 
 const MEMBER_NAV: NavItem[] = [
-  LEADS_NAV,
   { key: 'home', label: '首页', path: '/home' },
   { key: 'salary', label: '我的工资', path: '/salary' },
   { key: 'account', label: '个人中心', path: '/account' },
   { key: 'guide', label: '需要帮助', path: '/guide' },
   { key: 'feedback', label: '问题反馈', path: '/feedback' },
 ]
+
+/** 网页端客源只开放给机构创建者、协同管理员和校区管理员。销售在小程序跟进。 */
+export function canViewLeads(user: UserInfo | null, org?: Organization | null): boolean {
+  if (!user) return false
+  const role = (user.role || '').toLowerCase()
+  const owner = role === 'owner' || role === 'admin'
+    || (Number(user.id || 0) > 0 && Number(org?.ownerId || 0) === Number(user.id))
+  if (owner || user.canViewAllLeads === true) return true
+  if (user.campusAdmin === true) return true
+  return (user.campusAdminCampusIds || []).some((id) => Number(id) > 0)
+}
+
+function withoutLeads(items: NavItem[], user: UserInfo | null, org?: Organization | null): NavItem[] {
+  return canViewLeads(user, org) ? items : items.filter((item) => item.key !== 'leads')
+}
 
 export function navForUser(user: UserInfo | null, org?: Organization | null): NavItem[] {
   if (!user) {
@@ -59,10 +72,10 @@ export function navForUser(user: UserInfo | null, org?: Organization | null): Na
   const role = (user.role || '').toLowerCase()
   const owner = role === 'owner' || (Number(user.id || 0) > 0 && Number(org?.ownerId || 0) === Number(user.id))
   if (owner || role === 'admin') {
-    return MANAGER_NAV
+    return withoutLeads(MANAGER_NAV, user, org)
   }
-  if (user.campusAdmin) {
-    return CAMPUS_ADMIN_NAV
+  if (user.campusAdmin || (user.campusAdminCampusIds || []).some((id) => Number(id) > 0)) {
+    return withoutLeads(CAMPUS_ADMIN_NAV, user, org)
   }
   if (user.isSubstituteTeacher) {
     return TEACHER_NAV
@@ -70,5 +83,9 @@ export function navForUser(user: UserInfo | null, org?: Organization | null): Na
   if (role === 'coach') {
     return MEMBER_NAV
   }
-  return [LEADS_NAV, { key: 'home', label: '首页', path: '/home' }, { key: 'guide', label: '需要帮助', path: '/guide' }, { key: 'feedback', label: '问题反馈', path: '/feedback' }]
+  return [
+    { key: 'home', label: '首页', path: '/home' },
+    { key: 'guide', label: '需要帮助', path: '/guide' },
+    { key: 'feedback', label: '问题反馈', path: '/feedback' },
+  ]
 }

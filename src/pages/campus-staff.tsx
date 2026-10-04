@@ -611,7 +611,7 @@ export function Positions({ campusId }: { campusId: number | null }) {
       <header className="service-list-head">
         <div>
           <h2>职位设置</h2>
-          <span>配置当前校区人员可选择的职位</span>
+          <span>系统管理和销售为预设职位，不可删除。销售职位人员在小程序查看本校区客源。</span>
         </div>
         <Button type="primary" onClick={() => setCreating(true)}>新增职位</Button>
       </header>
@@ -622,15 +622,19 @@ export function Positions({ campusId }: { campusId: number | null }) {
         locale={{ emptyText: '还没有职位，请先新增' }}
         columns={[
           { title: '职位', dataIndex: 'name' },
-          { title: '说明', render: (_: unknown, row: Position) => row.campusAdmin ? '系统管理职位，不可删除' : '' },
+          { title: '说明', render: (_: unknown, row: Position) => row.campusAdmin ? '系统管理职位，不可删除' : row.sales ? '系统销售职位，不可删除' : '' },
           {
             title: '操作',
             render: (_: unknown, row: Position) => (
               <Space>
                 <Button type="link" onClick={() => setEditing(row)}>改名</Button>
-                <Button type="link" danger onClick={async () => {
+                <Button type="link" danger disabled={!!row.campusAdmin || !!row.sales} onClick={async () => {
                   if (row.campusAdmin) {
                     message.warning('校区管理员职位不能删除')
+                    return
+                  }
+                  if (row.sales) {
+                    message.warning('销售职位不能删除')
                     return
                   }
                   if (rows.length <= 1) {
