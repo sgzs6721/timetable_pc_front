@@ -167,6 +167,11 @@ export function timetableWeeks(start?: string, end?: string): number {
   return Math.max(Math.ceil(days / 7), 0)
 }
 
+export function weekRangeLabel(weekStart: string): string {
+  const end = addDays(weekStart, 6)
+  return `${weekStart.slice(5)} 至 ${end.slice(5)}`
+}
+
 export function weekChipLabel(weekStart: string): string {
   if (weekStart === mondayOf(todayIso())) return '本周'
   const end = addDays(weekStart, 6)

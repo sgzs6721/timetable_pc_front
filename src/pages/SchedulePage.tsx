@@ -8,6 +8,7 @@ import {
   ownerGenderIcon, scheduleInstanceKey, templateEchoForCell, timetableMeta,
   timetableWeeks, toMinutes,
   weekChipLabel,
+  weekRangeLabel,
 } from './schedule-board-helpers'
 import {
   batchKey, blankSegments, cardFrame, dragPlacement, lessonClass, lessonOverlaps, mergeRanges,
@@ -152,7 +153,7 @@ export function SchedulePage() {
                     disabled={!limits.canPrev}
                     onClick={() => limits.canPrev && setWeekStart(addDays(weekStart, -7))}
                   />
-                  <strong>{weekStart.slice(5)} 起</strong>
+                  <strong>{weekRangeLabel(weekStart)}</strong>
                   <Button
                     className="tt-week-arrow"
                     type="text"

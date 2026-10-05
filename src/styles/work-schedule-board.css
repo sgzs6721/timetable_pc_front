@@ -160,10 +160,12 @@
 }
 
 .tt-week strong {
-  min-width: 92px;
+  min-width: 148px;
   text-align: center;
   font-size: 13px;
   font-weight: 680;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .tt-week .tt-week-arrow.ant-btn {
