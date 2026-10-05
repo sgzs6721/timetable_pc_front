@@ -98,6 +98,7 @@ export interface ShellContext {
   campusId: number | null
   reload: () => void
   setPageDescription: (description: string) => void
+  leadsEnabled: boolean
 }
 
 export function AppShell() {
@@ -112,6 +113,7 @@ export function AppShell() {
   const [ready, setReady] = useState(false)
   const [bootstrapError, setBootstrapError] = useState('')
   const [marketingEnabled, setMarketingEnabled] = useState(true)
+  const [leadsEnabled, setLeadsEnabled] = useState(true)
   const [pageContext, setPageContext] = useState({ path: '', description: '' })
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => localStorage.getItem('timetable-sidebar-collapsed') === '1')
 
@@ -169,9 +171,15 @@ export function AppShell() {
 
   useEffect(() => {
     bootstrap()
-    getJson<{ marketingEnabled?: boolean }>('/platform-features')
-      .then((features) => setMarketingEnabled(features?.marketingEnabled !== false))
-      .catch(() => setMarketingEnabled(true))
+    getJson<{ marketingEnabled?: boolean; leadsEnabled?: boolean }>('/platform-features')
+      .then((features) => {
+        setMarketingEnabled(features?.marketingEnabled !== false)
+        setLeadsEnabled(features?.leadsEnabled !== false)
+      })
+      .catch(() => {
+        setMarketingEnabled(true)
+        setLeadsEnabled(true)
+      })
   }, [])
 
   const currentOrg = organizations.find((item) => item.id === currentOrgId) || null
@@ -187,8 +195,9 @@ export function AppShell() {
       ]
       : navForUser(user, currentOrg)
         .filter((item) => item.path !== '/marketing' || marketingEnabled)
+        .filter((item) => item.path !== '/leads' || leadsEnabled)
         .map((item) => ({ key: item.path, label: item.label }))),
-    [user, currentOrg, noOrganization, marketingEnabled],
+    [user, currentOrg, noOrganization, marketingEnabled, leadsEnabled],
   )
 
   useEffect(() => {
@@ -202,6 +211,12 @@ export function AppShell() {
     message.info('营销功能当前未开放')
     navigate('/home', { replace: true })
   }, [marketingEnabled, location.pathname, navigate])
+
+  useEffect(() => {
+    if (leadsEnabled || location.pathname !== '/leads') return
+    message.info('客源管理当前未开放')
+    navigate('/home', { replace: true })
+  }, [leadsEnabled, location.pathname, navigate])
 
   async function changeOrg(orgId: number) {
     if (!orgId || orgId === currentOrgId) return
@@ -268,6 +283,7 @@ export function AppShell() {
       refresh().catch(() => undefined)
     },
     setPageDescription,
+    leadsEnabled,
   }
 
   function openPath(path: string) {

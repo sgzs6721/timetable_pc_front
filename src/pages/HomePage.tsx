@@ -213,6 +213,7 @@ export function HomePage() {
   const quickActions = useMemo(() => {
     const permittedPaths = new Set(navForUser(user || null, currentOrg).map((item) => item.path))
     permittedPaths.add('/account')
+    if (shell.leadsEnabled === false) permittedPaths.delete('/leads')
     const campus = shell.campuses.find((item) => item.id === campusId)
     return quickActionsFor(view, user || null, currentOrg)
       .filter((item) => permittedPaths.has(item.path))
@@ -227,7 +228,7 @@ export function HomePage() {
         }
         return { ...item, disabledReason }
       })
-  }, [campusId, currentOrg, shell.campuses, user, view])
+  }, [campusId, currentOrg, shell.campuses, shell.leadsEnabled, user, view])
 
   async function fetchMemberDay(nextUser: UserInfo | null | undefined, nextCampusId: number | null, nextDay: DayTab): Promise<ScheduleItem[]> {
     const coachId = Number(nextUser?.orgMemberId || 0)

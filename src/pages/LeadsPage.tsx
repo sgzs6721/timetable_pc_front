@@ -14,6 +14,9 @@ type Filters = { keyword?: string; status?: string; ownerId?: string; due?: stri
 export function LeadsPage() {
   const shell = useShell()
   const org = shell.organizations.find((item) => item.id === shell.currentOrgId) || null
+  if (shell.leadsEnabled === false) {
+    return <div className="work-page leads-page"><Alert type="warning" showIcon message="客源管理当前未开放。" /></div>
+  }
   if (!canViewLeads(shell.user, org)) {
     return <div className="work-page leads-page"><Alert type="warning" showIcon message="客源管理只对机构管理员和校区管理员开放。" /></div>
   }

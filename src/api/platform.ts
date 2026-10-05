@@ -11,8 +11,9 @@ export const platformApi = {
   updateFeedback: (ticket: string, id: number, data: unknown) => putJson<PlatformFeedback>(`/platform-admin/feedbacks/${id}?ticket=${encodeURIComponent(ticket)}`, data),
   plans: (ticket: string) => getJson<PlatformPlan[]>('/platform-admin/membership-plans', { ticket }),
   updatePlan: (ticket: string, id: number, data: unknown) => putJson<PlatformPlan>(`/platform-admin/membership-plans/${id}?ticket=${encodeURIComponent(ticket)}`, data),
-  features: (ticket: string) => getJson<{ marketingEnabled?: boolean }>('/platform-admin/features', { ticket }),
-  setMarketing: (ticket: string, enabled: boolean) => putJson<{ marketingEnabled?: boolean }>(`/platform-admin/features/marketing?ticket=${encodeURIComponent(ticket)}`, { enabled }),
+  features: (ticket: string) => getJson<{ marketingEnabled?: boolean; leadsEnabled?: boolean }>('/platform-admin/features', { ticket }),
+  setMarketing: (ticket: string, enabled: boolean) => putJson<{ marketingEnabled?: boolean; leadsEnabled?: boolean }>(`/platform-admin/features/marketing?ticket=${encodeURIComponent(ticket)}`, { enabled }),
+  setLeads: (ticket: string, enabled: boolean) => putJson<{ marketingEnabled?: boolean; leadsEnabled?: boolean }>(`/platform-admin/features/leads?ticket=${encodeURIComponent(ticket)}`, { enabled }),
   settlements: (ticket: string) => getJson<PlatformSettlement[]>('/platform-admin/marketing-settlements', { ticket }),
   payout: (ticket: string, orgId: number, remark?: string) => postJson(`/platform-admin/marketing-settlements/payout?ticket=${encodeURIComponent(ticket)}`, { orgId, remark }),
 }

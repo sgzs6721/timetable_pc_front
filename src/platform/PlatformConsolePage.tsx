@@ -194,10 +194,42 @@ function MoneyField(props: { name: string; label: string }) { return <Form.Item 
 function NumberField(props: { name: string; label: string }) { return <Form.Item name={props.name} label={props.label} rules={[{ required: true }]}><InputNumber min={0} precision={0} style={{ width: '100%' }} /></Form.Item> }
 
 function FeaturesWorkspace({ ticket }: { ticket: string }) {
-  const [enabled, setEnabled] = useState(true)
+  const [marketingEnabled, setMarketingEnabled] = useState(true)
+  const [leadsEnabled, setLeadsEnabled] = useState(true)
   const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
-  useEffect(() => { platformApi.features(ticket).then((data) => setEnabled(data.marketingEnabled !== false)).finally(() => setLoading(false)) }, [ticket])
-  async function change(value: boolean) { setSaving(true); try { const result = await platformApi.setMarketing(ticket, value); setEnabled(result.marketingEnabled !== false); message.success(value ? '营销中心已开放' : '营销中心已关闭') } catch (reason) { if (reason instanceof Error) message.error(reason.message) } finally { setSaving(false) } }
-  return <div className="platform-feature-grid"><section className="platform-panel platform-feature-card"><div className="platform-feature-icon"><SettingOutlined /></div><div><h2>营销中心</h2><p>统一控制机构端营销活动、报名、推广奖励和结算功能的入口。关闭后已有数据保留，机构暂时不可见。</p></div><Switch checked={enabled} loading={loading || saving} onChange={(value) => void change(value)} checkedChildren="开放" unCheckedChildren="关闭" /></section><section className="platform-panel platform-feature-note"><h3>功能开关说明</h3><p>平台级开关对全部机构生效。变更后 Web 与微信小程序入口会同步刷新；进行中的活动数据和订单不会被删除。</p></section></div>
+  const [savingMarketing, setSavingMarketing] = useState(false)
+  const [savingLeads, setSavingLeads] = useState(false)
+  useEffect(() => {
+    platformApi.features(ticket).then((data) => {
+      setMarketingEnabled(data.marketingEnabled !== false)
+      setLeadsEnabled(data.leadsEnabled !== false)
+    }).finally(() => setLoading(false))
+  }, [ticket])
+  async function changeMarketing(value: boolean) {
+    setSavingMarketing(true)
+    try {
+      const result = await platformApi.setMarketing(ticket, value)
+      setMarketingEnabled(result.marketingEnabled !== false)
+      setLeadsEnabled(result.leadsEnabled !== false)
+      message.success(value ? '营销中心已开放' : '营销中心已关闭')
+    } catch (reason) {
+      if (reason instanceof Error) message.error(reason.message)
+    } finally {
+      setSavingMarketing(false)
+    }
+  }
+  async function changeLeads(value: boolean) {
+    setSavingLeads(true)
+    try {
+      const result = await platformApi.setLeads(ticket, value)
+      setMarketingEnabled(result.marketingEnabled !== false)
+      setLeadsEnabled(result.leadsEnabled !== false)
+      message.success(value ? '客源管理已开放' : '客源管理已关闭')
+    } catch (reason) {
+      if (reason instanceof Error) message.error(reason.message)
+    } finally {
+      setSavingLeads(false)
+    }
+  }
+  return <div className="platform-feature-grid"><section className="platform-panel platform-feature-card"><div className="platform-feature-icon"><SettingOutlined /></div><div><h2>营销中心</h2><p>统一控制机构端营销活动、报名、推广奖励和结算功能的入口。关闭后已有数据保留，机构暂时不可见。</p></div><Switch checked={marketingEnabled} loading={loading || savingMarketing} onChange={(value) => void changeMarketing(value)} checkedChildren="开放" unCheckedChildren="关闭" /></section><section className="platform-panel platform-feature-card"><div className="platform-feature-icon"><SettingOutlined /></div><div><h2>客源管理</h2><p>统一控制机构端客源录入、分配和跟进入口。关闭后已有客源保留，首页和“我的”暂时不可见。</p></div><Switch checked={leadsEnabled} loading={loading || savingLeads} onChange={(value) => void changeLeads(value)} checkedChildren="开放" unCheckedChildren="关闭" /></section><section className="platform-panel platform-feature-note"><h3>功能开关说明</h3><p>平台级开关对全部机构生效。变更后 Web 与微信小程序入口会同步刷新；已有活动和客源数据不会被删除。</p></section></div>
 }
