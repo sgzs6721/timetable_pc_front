@@ -2,7 +2,7 @@
 
 ## 范围
 
-Web 端覆盖 `miniprogram/app.json` 注册的全部 65 个页面，不再只验收机构管理角色。机构管理、家长/学员、平台运营、营销公开页和只读分享页按角色拆分为不同 Web 工作区，但继续复用同一业务数据与后端规则。
+Web 端覆盖 `miniprogram/app.json` 中除待办以外的注册页面，不再只验收机构管理角色。机构管理、家长/学员、平台运营、营销公开页和只读分享页按角色拆分为不同 Web 工作区，但继续复用同一业务数据与后端规则。subpackages/todo/pages/todo-list/todo-list 与 subpackages/todo/pages/todo-edit/todo-edit 只在小程序提供，不进入 Web 验收矩阵。
 
 移动端为了单手操作拆开的页面，可以在 Web 合并为标签、抽屉或弹窗；家长端与平台运营端则使用独立导航，避免角色菜单混杂。支付能力在 Web 保留订单和状态逻辑，微信 JSAPI 唤起改为扫码或提示继续在微信完成。
 
@@ -185,7 +185,7 @@ Web 端覆盖 `miniprogram/app.json` 注册的全部 65 个页面，不再只验
 
 - 页面按领域拆分；`npm run check:source-size` 强制 `src` 中所有 TypeScript、TSX 和 CSS 文件不超过 800 行。
 - 视觉合同：`npm run check:ui-contract`
-- 页面与行为合同：`npm run check:parity` 会读取小程序 `app.json`，保证每一个注册页面都出现在逐页验收矩阵中，并校验机构端角色路由、登录回跳、OAuth state、新增学员多卡和营销续付等关键实现没有回退。
+- 页面与行为合同：`npm run check:parity` 会读取小程序 `app.json`，保证除待办列表和待办编辑外的每一个注册页面都出现在逐页验收矩阵中，并校验机构端角色路由、登录回跳、OAuth state、新增学员多卡和营销续付等关键实现没有回退。
 - 浏览器回归：登录/协议页和 17 个机构业务路由按真实数据加载；可见 Tab 实测统一为 32px 高、13px 字号，并抽查普通表单 Modal、长表单、Confirm、快捷打卡、学员详情、校区设置和标准桌面完整周视图。
 - 路由页面使用懒加载，避免所有业务页一次性进入首屏。
 - Web 生产构建：`npm run build`

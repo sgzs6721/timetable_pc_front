@@ -284,7 +284,7 @@
   border-radius: 9px;
 }
 
-.account-org-heading > .ant-btn {
+.account-management-tabs > .ant-tabs-nav .ant-tabs-extra-content .ant-btn {
   height: 32px;
   flex: none;
   padding-inline: var(--space-3);
@@ -527,10 +527,6 @@
   }
 
   .account-password-state {
-    margin-left: 52px;
-  }
-
-  .account-org-heading > .ant-btn {
     margin-left: 52px;
   }
 

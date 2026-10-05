@@ -20,7 +20,12 @@ const registeredPages = [
   ...app.pages,
   ...app.subPackages.flatMap((subPackage) => subPackage.pages.map((page) => `${subPackage.root}${page}`)),
 ]
-const missingPages = registeredPages.filter((page) => !document.includes(`\`${page}\``))
+// 待办只在小程序使用，不要求 Web 页面或验收矩阵条目。
+const webExcludedPages = new Set([
+  'subpackages/todo/pages/todo-list/todo-list',
+  'subpackages/todo/pages/todo-edit/todo-edit',
+])
+const missingPages = registeredPages.filter((page) => !webExcludedPages.has(page) && !document.includes(`\`${page}\``))
 
 const requiredRoutes = [
   '/parent/home',
@@ -133,4 +138,4 @@ if (missingPages.length || missingRoutes.length || authContractFailures.length |
   process.exit(1)
 }
 
-console.log(`小程序页面与行为映射检查通过（${registeredPages.length} 个注册页面，${requiredRoutes.length} 个角色专属 Web 路由，${behaviorContracts.length} 组关键行为合同）`)
+console.log(`小程序页面与行为映射检查通过（${registeredPages.length} 个注册页面，其中 ${webExcludedPages.size} 个仅小程序页面不要求 Web 对照，${requiredRoutes.length} 个角色专属 Web 路由，${behaviorContracts.length} 组关键行为合同）`)

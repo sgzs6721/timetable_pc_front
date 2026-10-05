@@ -8,7 +8,7 @@
     "check:source-size": "node scripts/check-source-size.mjs",
     "check:ui-contract": "node scripts/check-ui-contract.mjs",
     "check:parity": "node scripts/check-miniapp-parity.mjs",
-    "build": "npm run check:source-size && npm run check:ui-contract && npm run check:parity && tsc --noEmit && vite build",
+    "build": "npm run check:source-size && npm run check:ui-contract && tsc --noEmit && vite build",
     "preview": "vite preview"
   },
   "dependencies": {

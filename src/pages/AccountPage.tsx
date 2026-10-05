@@ -23,6 +23,7 @@ export function AccountPage() {
   const [mine, setMine] = useState<Affiliation[]>([])
   const [links, setLinks] = useState<Affiliation[]>([])
   const [creatingOrg, setCreatingOrg] = useState(false)
+  const [accountTab, setAccountTab] = useState('security')
 
   const loadOrganizations = useCallback(async () => {
     const [ownedRows, linkedRows] = await Promise.all([
@@ -85,7 +86,11 @@ export function AccountPage() {
       <section className="work-card account-management-card">
         <Tabs
           className="account-management-tabs"
-          defaultActiveKey="security"
+          activeKey={accountTab}
+          onChange={setAccountTab}
+          tabBarExtraContent={accountTab === 'organizations' ? (
+            <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreatingOrg(true)}>创建机构</Button>
+          ) : null}
           items={[
             {
               key: 'security',
@@ -123,15 +128,6 @@ export function AccountPage() {
               label: <span className="account-tab-label"><BankOutlined />机构与权限 <em>{organizations.length}</em></span>,
               children: (
                 <div className="account-tab-panel">
-                  <header className="account-card-heading account-org-heading">
-                    <span className="account-card-icon"><BankOutlined /></span>
-                    <div className="account-card-heading-copy">
-                      <h2>机构列表</h2>
-                      <p>展示当前账号创建或关联的全部机构，无需切换即可查看身份与可访问校区</p>
-                    </div>
-                    <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreatingOrg(true)}>创建机构</Button>
-                  </header>
-
                   {organizations.length ? (
                     <div className="account-org-list" role="list">
                       {organizations.map((row) => {
