@@ -103,12 +103,13 @@
   height: 40px;
   display: grid;
   place-items: center;
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  border-radius: 13px;
-  color: white;
-  background: linear-gradient(145deg, #6f8cff, #315ff4 62%, #224bd4);
-  box-shadow: 0 10px 26px rgba(49, 95, 244, 0.38), inset 0 1px rgba(255, 255, 255, 0.34);
-  font-size: 20px;
+  flex: none;
+}
+
+.brand-mark img {
+  width: 40px;
+  height: 40px;
+  display: block;
 }
 
 .brand-copy strong {

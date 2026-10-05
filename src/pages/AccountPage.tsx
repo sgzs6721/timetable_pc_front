@@ -289,8 +289,8 @@ function PasswordForm(props: { phone?: string; alreadySet: boolean; onSaved: () 
           <Form.Item name="newPassword" label="新密码" rules={[{ required: true, message: '请输入新密码' }]}><Input.Password /></Form.Item>
           <Form.Item name="confirm" label="确认密码" rules={[{ required: true, message: '请再次输入新密码' }]}><Input.Password /></Form.Item>
           <Space className="account-security-actions">
-            <Button type="primary" htmlType="submit" loading={saving}>{saving ? '保存中' : resetting ? '重置密码' : props.alreadySet ? '修改密码' : '设置密码'}</Button>
             {resetting ? <Button htmlType="button" disabled={saving} onClick={() => { form.resetFields(); setResetting(false) }}>返回修改密码</Button> : null}
+            <Button type="primary" htmlType="submit" loading={saving}>{saving ? '保存中' : resetting ? '重置密码' : props.alreadySet ? '修改密码' : '设置密码'}</Button>
           </Space>
         </Form>
       )}

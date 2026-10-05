@@ -310,7 +310,7 @@ export function AppShell() {
       <Sider className="app-sider" width={236} collapsedWidth={72} collapsed={sidebarCollapsed} trigger={null} theme="dark">
         <div className="app-brand">
           <div className="brand-mark" aria-hidden="true">
-            <CalendarOutlined />
+            <img src="/icons/app-icon-timetable.svg" width="40" height="40" alt="" />
           </div>
           <div className="brand-copy">
             <strong>云效课时</strong>
