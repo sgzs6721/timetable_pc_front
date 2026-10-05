@@ -46,7 +46,6 @@ function expireAccountSession(): void {
   const { pathname, search, hash } = window.location
   const keepsOriginalLoginLanding = pathname === '/parent'
     || pathname.startsWith('/parent/')
-    || pathname === '/platform'
   const shouldNavigate = !pathname.startsWith('/login')
   const returnTarget = `${pathname}${search}${hash}`
   clearAuthentication()

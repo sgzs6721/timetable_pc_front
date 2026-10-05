@@ -38,7 +38,6 @@ const ParentCoursePage = lazy(() => import('./parent/ParentCoursePage').then((mo
 const ParentPayPage = lazy(() => import('./parent/ParentPayPage').then((module) => ({ default: module.ParentPayPage })))
 const SharedTimetablePage = lazy(() => import('./parent/ParentSharedPages').then((module) => ({ default: module.SharedTimetablePage })))
 const SharedCourseStatsPage = lazy(() => import('./parent/ParentSharedPages').then((module) => ({ default: module.SharedCourseStatsPage })))
-const PlatformConsolePage = lazy(() => import('./platform/PlatformConsolePage').then((module) => ({ default: module.PlatformConsolePage })))
 const MarketingLandingPage = lazy(() => import('./marketing-public/MarketingLandingPage').then((module) => ({ default: module.MarketingLandingPage })))
 const MarketingEnrollmentsPage = lazy(() => import('./marketing-public/MarketingMyPages').then((module) => ({ default: module.MarketingEnrollmentsPage })))
 const MarketingReferralPage = lazy(() => import('./marketing-public/MarketingMyPages').then((module) => ({ default: module.MarketingReferralPage })))
@@ -48,7 +47,6 @@ function RequireAuth() {
   if (!getToken()) {
     const keepsOriginalLoginLanding = location.pathname === '/parent'
       || location.pathname.startsWith('/parent/')
-      || location.pathname === '/platform'
     if (keepsOriginalLoginLanding) {
       discardLoginRedirect()
       return <Navigate to="/login" replace />
@@ -100,7 +98,6 @@ export function App() {
         </Route>
         <Route path="/parent/share/timetable/:shareCode" element={<Suspense fallback={<div className="route-loading">正在打开分享课表…</div>}><SharedTimetablePage /></Suspense>} />
         <Route path="/parent/share/course-stats/:shareCode" element={<Suspense fallback={<div className="route-loading">正在打开课程统计…</div>}><SharedCourseStatsPage /></Suspense>} />
-        <Route path="/platform" element={<Suspense fallback={<div className="route-loading">正在验证平台运营权限…</div>}><PlatformConsolePage /></Suspense>} />
         <Route path="/campaign/:shareCode" element={<Suspense fallback={<div className="route-loading">正在打开活动…</div>}><MarketingLandingPage /></Suspense>} />
         <Route path="/my-enrollments" element={<Suspense fallback={<div className="route-loading">正在加载报名记录…</div>}><MarketingEnrollmentsPage /></Suspense>} />
         <Route path="/my-referral/:shareCode" element={<Suspense fallback={<div className="route-loading">正在加载推广数据…</div>}><MarketingReferralPage /></Suspense>} />

@@ -35,7 +35,6 @@ const requiredRoutes = [
   '/parent/mine',
   '/parent/share/timetable/:shareCode',
   '/parent/share/course-stats/:shareCode',
-  '/platform',
   '/campaign/:shareCode',
   '/my-enrollments',
   '/my-referral/:shareCode',

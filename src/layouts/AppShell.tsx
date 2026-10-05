@@ -39,8 +39,7 @@ import { clearSession, getCampusId, getOrgId, setCampusId, setOrgId } from '../s
 const { Sider, Header, Content } = Layout
 
 const NAV_GROUPS = [
-  { caption: '客户跟进', paths: ['/leads'] },
-  { caption: '工作台', paths: ['/home', '/students', '/schedule', '/courses', '/hours'] },
+  { caption: '工作台', paths: ['/home', '/leads', '/students', '/schedule', '/courses', '/hours'] },
   { caption: '校务管理', paths: ['/org', '/campus', '/daily', '/payments', '/salary', '/finance', '/profit', '/marketing'] },
   { caption: '系统', paths: ['/membership', '/account', '/guide', '/feedback'] },
 ]
@@ -296,7 +295,7 @@ export function AppShell() {
 
   const grouped = NAV_GROUPS.map((group) => ({
     ...group,
-    items: items.filter((item) => group.paths.includes(item.key)),
+    items: group.paths.flatMap((path) => items.filter((item) => item.key === path)),
   })).filter((group) => group.items.length > 0)
   const listed = new Set(grouped.flatMap((group) => group.items.map((item) => item.key)))
   const rest = items.filter((item) => !listed.has(item.key))

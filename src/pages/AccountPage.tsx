@@ -1,4 +1,4 @@
-import { BankOutlined, BarChartOutlined, CheckCircleFilled, LockOutlined, PlusOutlined, SafetyCertificateOutlined, UserOutlined } from '@ant-design/icons'
+import { BankOutlined, CheckCircleFilled, LockOutlined, PlusOutlined, SafetyCertificateOutlined, UserOutlined } from '@ant-design/icons'
 import { Button, Form, Input, Modal, Space, Tabs, message } from 'antd'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -81,14 +81,6 @@ export function AccountPage() {
   return (
     <section className="account-page">
       <PageHead title="账号设置" extra="管理 Web 登录安全与机构权限。" />
-
-      {user?.platformAdmin ? (
-        <section className="work-card account-platform-entry">
-          <span className="account-card-icon"><BarChartOutlined /></span>
-          <div><h2>平台运营中心</h2><p>查看全平台用户、机构、订单、反馈、套餐与营销结算。</p></div>
-          <Button type="primary" onClick={() => navigate('/platform')}>进入运营中心</Button>
-        </section>
-      ) : null}
 
       <section className="work-card account-management-card">
         <Tabs

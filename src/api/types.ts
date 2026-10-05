@@ -17,7 +17,6 @@ export interface LoginVO {
   campusAdmin?: boolean
   isSubstituteTeacher?: boolean
   subscriptionActive?: boolean
-  platformAdmin?: boolean
 }
 
 export interface UserInfo {
@@ -39,7 +38,6 @@ export interface UserInfo {
   webPasswordSet?: boolean
   orgMemberId?: number
   subscriptionActive?: boolean
-  platformAdmin?: boolean
   subscriptionStatus?: string
   accessExpireDate?: string
 }
