@@ -1,4 +1,4 @@
-import { BankOutlined, CheckCircleFilled, LockOutlined, PlusOutlined, SafetyCertificateOutlined, UserOutlined } from '@ant-design/icons'
+import { BankOutlined, CheckCircleFilled, CopyOutlined, LockOutlined, PlusOutlined, SafetyCertificateOutlined, UserOutlined } from '@ant-design/icons'
 import { Button, Form, Input, Modal, Space, Tabs, message } from 'antd'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -115,6 +115,7 @@ export function AccountPage() {
                       <small>Web 端登录账号</small>
                       <strong>{user?.phone || '尚未绑定手机号'}</strong>
                       <p>手机号作为登录账号使用。如需修改绑定手机号，请在微信小程序内完成。</p>
+                      <WebPortalAddress />
                     </aside>
                     <div className="account-password-panel">
                       <PasswordForm phone={user?.phone} alreadySet={!!user?.webPasswordSet} onSaved={shell.reload} />
@@ -193,6 +194,52 @@ export function AccountPage() {
         onMembership={() => navigate('/membership')}
       />
     </section>
+  )
+}
+
+function WebPortalAddress() {
+  const [url, setUrl] = useState('')
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let active = true
+    getJson<{ webPortalUrl?: string }>('/platform-features')
+      .then((features) => {
+        if (active) setUrl(String(features?.webPortalUrl || '').trim())
+      })
+      .catch(() => {
+        if (active) setUrl('')
+      })
+      .finally(() => {
+        if (active) setLoading(false)
+      })
+    return () => {
+      active = false
+    }
+  }, [])
+
+  async function copyUrl() {
+    if (!url) {
+      message.warning('网页端地址暂未配置')
+      return
+    }
+    try {
+      await navigator.clipboard.writeText(url)
+      message.success('地址已复制')
+    } catch {
+      message.error('复制失败，请手动选择地址复制')
+    }
+  }
+
+  return (
+    <div className="account-web-portal">
+      <small>网页端地址</small>
+      <span className={`account-web-portal-url${url && !loading ? '' : ' is-muted'}`}>
+        {loading ? '正在获取地址...' : url || '运营中心暂未配置'}
+      </span>
+      <p>{url ? '在电脑浏览器打开后，使用手机号和网页密码登录。' : '请联系平台管理员在运营中心完成配置。'}</p>
+      {url ? <Button size="small" icon={<CopyOutlined />} onClick={() => void copyUrl()}>复制地址</Button> : null}
+    </div>
   )
 }
 

@@ -68,8 +68,8 @@ export function ParentChildrenPage() {
         ))}
       </div>
       {!home.children?.length ? <div className="parent-card parent-empty"><Empty description="还没有成员，先新建一位成员吧" /></div> : null}
-      <Modal open={editing !== undefined} title={editing ? (editing.source === 'INSTITUTION' ? '修改家长端显示名' : '编辑成员') : '新建成员'} okText="保存" cancelText="取消" confirmLoading={saving} onOk={() => void save()} onCancel={() => setEditing(undefined)}>
-        <p className="parent-modal-intro">{editing?.source === 'INSTITUTION' ? `机构正式姓名仍是“${editing.officialName || editing.name}”，这里只改家长端显示。` : '姓名用于课表、课程和记录归属，创建后仍可修改。'}</p>
+      <Modal open={editing !== undefined} title={editing ? (editing.source === 'INSTITUTION' ? '修改学员端显示名' : '编辑成员') : '新建成员'} okText="保存" cancelText="取消" confirmLoading={saving} onOk={() => void save()} onCancel={() => setEditing(undefined)}>
+        <p className="parent-modal-intro">{editing?.source === 'INSTITUTION' ? `机构正式姓名仍是“${editing.officialName || editing.name}”，这里只改你在学员端看到的名字。` : '姓名用于课表、课程和记录归属，创建后仍可修改。'}</p>
         <Form form={form} layout="vertical"><Form.Item name="name" label="成员姓名" rules={[{ required: true, whitespace: true, message: '请输入成员姓名' }, { max: 20, message: '最多20个字' }]}><Input autoFocus placeholder="请输入成员姓名" /></Form.Item></Form>
       </Modal>
     </div>

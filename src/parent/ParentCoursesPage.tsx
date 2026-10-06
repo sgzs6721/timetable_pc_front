@@ -112,7 +112,7 @@ export function ParentCoursesPage() {
         </Form>
       </Modal>
       <Modal open={Boolean(aliasEditing)} title="课程显示名" okText="保存" cancelText="取消" confirmLoading={saving} onOk={() => void saveAlias()} onCancel={() => setAliasEditing(null)}>
-        <p className="parent-modal-intro">只改家长端显示名，对应的机构课程关系不会改变。机构原名：{aliasEditing?.officialCourseName || '未提供'}</p>
+        <p className="parent-modal-intro">只改学员端显示名，对应的机构课程关系不会改变。机构原名：{aliasEditing?.officialCourseName || '未提供'}</p>
         <Form form={aliasForm} layout="vertical"><Form.Item name="name" label="显示名称"><Input maxLength={40} placeholder="留空则跟随机构名称" /></Form.Item></Form>
       </Modal>
     </div>

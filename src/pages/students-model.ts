@@ -35,6 +35,7 @@ export interface Student {
   canDelete?: boolean
   deleteBlockedReason?: string
   cards?: Card[]
+  oneToOne?: boolean
 }
 
 export interface Card {

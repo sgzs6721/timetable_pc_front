@@ -128,7 +128,7 @@ function PaymentEntry(props: {
     <article className={`student-payment-entry is-${row.type || 'new'}`}>
       <header>
         <div className="student-payment-entry-title">
-          <span>{row.typeText || '缴费'}{props.parentPaid ? ' · 家长缴费' : ''}</span>
+          <span>{props.parentPaid ? '学员端在线缴费' : (row.typeText || '缴费')}</span>
           <time>{row.paymentDate || ''}</time>
         </div>
         {props.manage ? <div className="student-payment-entry-actions">

@@ -143,6 +143,7 @@ export interface ParentPayment {
   paymentDate?: string
   payDate?: string
   typeText?: string
+  parentPaid?: boolean
   cardName?: string
   cardCategory?: string
   courseType?: string
@@ -204,8 +205,32 @@ export interface ParentCourseStats {
 
 export interface ParentFeeItem {
   id: number
+  coursePricingId?: number
+  studentCardId?: number
   name: string
   amount: number
+  hours?: number
+  giftHours?: number
+  unitPrice?: number
   enabled?: boolean
+  payable?: boolean
+  standardPricing?: boolean
+  sourceType?: string
+  cardCategory?: string
+  periodType?: string
+  cardName?: string
+  scopeText?: string
+  description?: string
+  paymentDeadline?: unknown
+  validStartDate?: unknown
+  validEndDate?: unknown
   chargeSnapshot?: string
+}
+
+export interface ParentPayOrder {
+  orderNo: string
+  itemName?: string
+  amount?: number
+  status?: string
+  createTime?: string
 }

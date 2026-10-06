@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { delJson, getJson, postJson, putJson } from '../api/biz'
 import { NeedOrg, PageHead, PhoneCopyButton, clampDecimalInput, copyPlainText, tell, useShell } from './kit'
+import { CoursePricings } from './campus-course-pricing'
 import { CampusAffairs } from './campus-affairs'
 import { AcademicSettings } from './campus-academic'
 import { CampusSalary } from './campus-salary'
@@ -22,7 +23,7 @@ function canManageCampusSalary(user: { id?: number; role?: string; campusAdminCa
 function campusTabKey(value: string | null): string {
   if (value === 'teacher' || value === 'teachers' || value === 'position' || value === 'positions') return 'staff'
   if (value === 'permission' || value === 'permissions' || value === 'rules' || value === 'rewards') return 'affairs'
-  if (value === 'services' || value === 'trial') return 'service'
+  if (value === 'services' || value === 'trial' || value === 'pricing') return 'service'
   return ['campus', 'service', 'staff', 'salary', 'academic', 'affairs'].includes(String(value || '')) ? String(value) : 'campus'
 }
 
@@ -31,6 +32,7 @@ function campusStaffTabKey(value: string | null): string {
 }
 
 function campusServiceTabKey(value: string | null): string {
+  if (value === 'pricing') return 'pricing'
   return value === 'trial' ? 'trial' : 'services'
 }
 
@@ -71,6 +73,7 @@ export function CampusPage() {
           { key: 'campus', label: '校区', children: <CampusList /> },
           { key: 'service', label: '校区服务', children: <Tabs className="campus-sub-tabs" activeKey={serviceTab} onChange={setServiceTab} items={[
             { key: 'services', label: '服务项目', children: <Services campusId={campusId} /> },
+            { key: 'pricing', label: '课程定价', children: <CoursePricings campusId={campusId} /> },
             { key: 'trial', label: '体验类型', children: <AcademicSettings campusId={campusId} section="trial" /> },
           ]} /> },
           { key: 'staff', label: '人员设置', children: <Tabs className="campus-sub-tabs" activeKey={staffTab} onChange={setStaffTab} items={[

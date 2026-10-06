@@ -1,4 +1,4 @@
-import { BarChartOutlined, CommentOutlined, IdcardOutlined, LogoutOutlined, ReadOutlined, SafetyCertificateOutlined, TeamOutlined } from '@ant-design/icons'
+import { BarChartOutlined, CommentOutlined, CreditCardOutlined, IdcardOutlined, LogoutOutlined, ReadOutlined, SafetyCertificateOutlined, TeamOutlined } from '@ant-design/icons'
 import { Avatar, Button } from 'antd'
 import { useNavigate } from 'react-router-dom'
 import { logout } from '../api/auth'
@@ -22,11 +22,12 @@ export function ParentMinePage() {
       <section>
         {user?.orgMemberId ? <MenuCard icon={<IdcardOutlined />} tone="blue" title="进入机构端" text="返回教务管理工作台" onClick={() => navigate('/home')} /> : null}
         <MenuCard icon={<BarChartOutlined />} tone="violet" title="课程统计" text="查看课时、缴费与出勤趋势" onClick={() => navigate('/parent/course-stats')} />
+        <MenuCard icon={<CreditCardOutlined />} tone="blue" title="缴费报名" text="选择机构发布的项目并在线缴费" onClick={() => navigate('/parent/pay')} />
         <MenuCard icon={<TeamOutlined />} tone="cyan" title="成员管理" text="管理自建成员与机构关联学员" onClick={() => navigate('/parent/children')} />
         <MenuCard icon={<CommentOutlined />} tone="green" title="问题反馈" text="提交建议、异常与体验问题" onClick={() => navigate('/feedback')} />
       </section>
       <section className="parent-card parent-about-card">
-        <h3>关于家长端</h3>
+        <h3>关于学员端</h3>
         <div><span><SafetyCertificateOutlined /></span><p><strong>机构学员</strong><small>手机号一致且机构开放查看后，会自动出现在成员列表。</small></p></div>
         <div><span><ReadOutlined /></span><p><strong>自建课表</strong><small>个人课表、缴费和打卡仅自己可见，机构端不会读取。</small></p></div>
       </section>

@@ -201,6 +201,43 @@
   line-height: 1.7;
 }
 
+.account-web-portal {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+  margin-top: var(--space-5);
+  padding-top: var(--space-4);
+  border-top: 1px solid rgba(66, 111, 246, .12);
+}
+
+.account-web-portal small {
+  color: #8491a7;
+  font-size: 11px;
+}
+
+.account-web-portal-url {
+  max-width: 100%;
+  color: #1e2d46;
+  font-size: 13px;
+  line-height: 1.5;
+  word-break: break-all;
+}
+
+.account-web-portal-url.is-muted {
+  color: #8a96a9;
+}
+
+.account-web-portal p {
+  margin: 0;
+}
+
+.account-web-portal .ant-btn {
+  margin-top: var(--space-2);
+}
+
 .account-password-panel {
   min-width: 0;
   max-width: 720px;

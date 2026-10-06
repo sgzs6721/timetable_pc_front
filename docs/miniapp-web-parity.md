@@ -12,7 +12,7 @@ Web 端覆盖 `miniprogram/app.json` 中除待办以外的注册页面，不再�
 | --- | --- | --- |
 | 登录、协议、隐私 | `/login`、`/legal/agreement`、`/legal/privacy` | 手机号密码、微信扫码登录、协议与隐私页 |
 | 首页工作台 | `/home` | 角色工作台、今日/明日课程、指标、老师分组、学员上课记录、快捷入口 |
-| 我的 | `/account` | Web 登录密码、全部关联机构与权限、创建新机构 |
+| 我的 | `/account` | Web 登录密码、运营中心配置的网页端地址展示与复制、全部关联机构与权限、创建新机构 |
 | 创建机构、初始化 | `/home`、`/account` | 机构额度、资料、权限、协同管理员、创建后切换与校区引导 |
 | 学员列表、添加学员 | `/students` | 校区汇总、状态/老师筛选、搜索、分页、容量预检、新增与编辑 |
 | 学员详情 | `/students?studentId=...` | 基本资料、多个学员卡、缴费、销课、费用项、老师调整、结业/恢复/删除 |
@@ -56,7 +56,7 @@ Web 端覆盖 `miniprogram/app.json` 中除待办以外的注册页面，不再�
 | `pages/students/students` | `/students` | 校区汇总、筛选、搜索、排序、分页、新增、详情、老师调整、快捷打卡一致 |
 | `pages/schedule/schedule` | `/schedule` | 人员课表、归档课表、默认课表、周视图和排课入口一致 |
 | `pages/class-manage/class-manage` | `/courses` | 一对一/班课、老师、简称、单价、开课人数区间（最少/最多）、学员权益、删除保护一致 |
-| `pages/mine/mine` | `/account` 及左侧业务菜单 | 资料、密码、机构/校区切换、创建机构、会员与帮助入口一致 |
+| `pages/mine/mine` | `/account` 及左侧业务菜单 | 资料、密码、网页端地址展示与复制、机构/校区切换、创建机构、会员与帮助入口一致。图标样式只在小程序切换 |
 | `subpackages/account/pages/entry-role/entry-role` | 登录后角色路由 | Web 仅承载机构管理端，按账号角色直接收敛菜单，不重复展示家长端入口选择 |
 | `subpackages/account/pages/legal/user-agreement/user-agreement` | `/legal/agreement` | 用户协议一致 |
 | `subpackages/account/pages/legal/privacy-policy/privacy-policy` | `/legal/privacy` | 隐私政策一致 |

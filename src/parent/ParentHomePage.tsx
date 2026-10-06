@@ -47,7 +47,7 @@ export function ParentHomePage() {
   return (
     <div>
       <div className="parent-home-hero">
-        <div><span>{greeting}，{user?.nickname || user?.realName || '家长'}</span><h2>把这一周的学习安排，看得更清楚。</h2><p>{dayjs().format('YYYY年M月D日')} {weekday} · 共 {members.length} 位成员</p></div>
+        <div><span>{greeting}，{user?.nickname || user?.realName || '学员'}</span><h2>把这一周的学习安排，看得更清楚。</h2><p>{dayjs().format('YYYY年M月D日')} {weekday} · 共 {members.length} 位成员</p></div>
         <ParentMemberTabs members={members} value={selection.selectedKey} onChange={selection.select} />
       </div>
       <section className="parent-card parent-home-board">
@@ -87,7 +87,7 @@ function ActivityRow({ item }: { item: Activity }) {
 }
 
 export function buildActivities(payments: ParentPayment[], classes: ParentClassRecord[]): Activity[] {
-  const payRows = payments.map((item) => ({ key: `p-${item.id}`, kind: 'payment' as const, title: `${item.courseName || item.cardName || '课程'}缴费`, meta: [item.orgName, item.paymentDate || item.payDate].filter(Boolean).join(' · '), value: `¥${Number(item.amount || 0).toFixed(2)}`, date: item.eventTime || item.paymentDate || item.payDate || '' }))
+  const payRows = payments.map((item) => ({ key: `p-${item.id}`, kind: 'payment' as const, title: item.typeText || (item.parentPaid ? '学员端缴费' : `${item.courseName || item.cardName || '课程'}缴费`), meta: [item.orgName, item.paymentDate || item.payDate].filter(Boolean).join(' · '), value: `¥${Number(item.amount || 0).toFixed(2)}`, date: item.eventTime || item.paymentDate || item.payDate || '' }))
   const classRows = classes.map((item) => ({ key: `c-${item.id}`, kind: 'class' as const, title: `${item.courseName || '课程'}上课`, meta: [item.orgName, item.classDate, item.coachName].filter(Boolean).join(' · '), value: item.hours ? `${item.hours}课时` : '已到课', date: item.eventTime || item.classDate || '' }))
   return [...payRows, ...classRows].sort((a, b) => b.date.localeCompare(a.date))
 }

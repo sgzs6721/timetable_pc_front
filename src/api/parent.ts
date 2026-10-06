@@ -8,6 +8,7 @@ import type {
   ParentCourseStats,
   ParentFeeItem,
   ParentHome,
+  ParentPayOrder,
   ParentPayment,
 } from '../parent/parent-model'
 
@@ -43,6 +44,9 @@ export const parentApi = {
   sharedStats: (shareCode: string) => getJson<ParentCourseStats>(`/parent/shares/${encodeURIComponent(shareCode)}/course-stats`),
   feeItems: (studentId: number) => getJson<ParentFeeItem[]>(`/parent/institution-students/${studentId}/fee-items`),
   createPayOrder: (feeItemId: number) => postJson<{ orderNo: string; itemName?: string; amount?: number; status?: string }>(`/parent/fee-items/${feeItemId}/orders`),
+  createStandardPricingOrder: (studentId: number, pricingId: number, studentCardId: number) => postJson<{ orderNo: string; itemName?: string; amount?: number; status?: string }>(`/parent/institution-students/${studentId}/course-pricings/${pricingId}/orders`, { studentCardId }),
+  payOrders: (studentId: number) => getJson<ParentPayOrder[]>(`/parent/institution-students/${studentId}/pay-orders`),
+  confirmPayOrder: (orderNo: string) => postJson<ParentPayOrder>(`/parent/orders/${orderNo}/confirm`, {}),
   setupTimetable: (id: number, data: unknown) => putJson(`/parent/timetables/${id}/setup`, data),
   createEntry: (data: unknown) => postJson('/parent/timetable-entries', data),
   updateEntry: (id: number, data: unknown) => putJson(`/parent/timetable-entries/${id}`, data),

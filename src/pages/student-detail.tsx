@@ -1,7 +1,8 @@
 import { Button, Form, Input, Modal, Popconfirm, Space, Switch, Tabs, message } from 'antd'
 import { useEffect, useState } from 'react'
 import { delJson, postJson, putJson } from '../api/biz'
-import { AppIcon, genderText, money, studentStatusText, tell } from './kit'
+import { ShareAltOutlined } from '@ant-design/icons'
+import { AppIcon, copyPlainText, genderText, money, studentStatusText, tell } from './kit'
 import type { Student, Named, PayRecord, PayLaunch, CheckRecord } from './students-model'
 import { CardDesk } from './student-card-desk'
 import { CampusTransfer } from './student-campus-transfer'
@@ -166,10 +167,10 @@ export function StudentDetail(props: {
                           {student.phone && props.accessVisible ? <button
                             className="student-parent-access-info"
                             type="button"
-                            aria-label="允许家长查看说明"
+                            aria-label="允许学员端查看说明"
                             onClick={() => Modal.info({
-                              title: '允许家长查看',
-                              content: '打开右侧开关后，使用该联系电话登录的家长可在家长端查看本学员的课表、缴费记录和上课记录。默认关闭。',
+                              title: '允许学员端查看',
+                              content: '打开右侧开关后，使用该联系电话登录即可在学员端查看本学员的课表、缴费记录和上课记录。默认关闭。',
                               okText: '我知道了',
                             })}
                           >i</button> : null}
@@ -186,11 +187,15 @@ export function StudentDetail(props: {
                       <div className="student-contact-access-row">
                         <span>联系电话</span>
                         <div>
+                          {props.accessVisible && props.accessOn ? <Button type="text" icon={<ShareAltOutlined />} aria-label="分享给学员" onClick={() => {
+                            const invite = `邀请你查看${student.name || '学员'}的学习信息。请使用该联系电话登录学员端。`
+                            copyPlainText(invite).then((copied) => message[copied ? 'success' : 'warning'](copied ? '邀请文案已复制，可发给学员' : '复制失败，请手动发送邀请'))
+                          }} /> : null}
                           <a href={`tel:${student.phone}`}>{student.phone}</a>
-                          {props.accessVisible && props.manage ? <Switch aria-label="允许家长查看" checked={props.accessOn} onChange={(checked) => props.onAccess(checked).catch((error) => message.error(tell(error, '更新失败')))} /> : null}
+                          {props.accessVisible && props.manage ? <Switch aria-label="允许学员端查看" checked={props.accessOn} onChange={(checked) => props.onAccess(checked).catch((error) => message.error(tell(error, '更新失败')))} /> : null}
                         </div>
                       </div>
-                      {props.accessVisible && props.manage && props.accessOn ? <Button className="student-parent-fee-entry" type="text" onClick={() => setFeeItemsOpen(true)}><span>家长可缴项目</span><em>管理</em></Button> : null}
+                      {props.accessVisible && props.manage && props.accessOn ? <Button className="student-parent-fee-entry" type="text" onClick={() => setFeeItemsOpen(true)}><span>专属缴费方案</span><em>管理</em></Button> : null}
                     </div> : null}
                   </section>
 
@@ -270,7 +275,7 @@ export function StudentDetail(props: {
             <Space direction="vertical" style={{ width: '100%' }}>
               {props.manage && props.orders.length ? <div className="student-parent-orders">{props.orders.map((order) => (
                 <div key={String(order.orderNo)}>
-                  <span><strong>家长已支付，尚未入账</strong>{String(order.itemName || order.orderNo)} · ¥{money(order.amount)}</span>
+                  <span><strong>学员端已支付，尚未入账</strong>{String(order.itemName || order.orderNo)} · ¥{money(order.amount)}</span>
                   <Button onClick={async () => {
                     try {
                       await postJson(`/parent-admin/orders/${order.orderNo}/book`)
@@ -355,8 +360,8 @@ export function StudentDetail(props: {
         <CardDesk student={student} coaches={props.coaches} services={props.services} groups={props.groups} onChanged={props.onChanged} />
       </div>
     </Modal>
-    <Modal className="student-parent-fee-modal" title="家长可缴项目" width={700} open={feeItemsOpen} onCancel={() => setFeeItemsOpen(false)} footer={null} destroyOnHidden>
-      <p className="student-parent-fee-intro">家长只能选择这里配置的项目，支付成功后会直接记入缴费记录。</p>
+    <Modal className="student-parent-fee-modal" title="专属缴费方案" width={760} open={feeItemsOpen} onCancel={() => setFeeItemsOpen(false)} footer={null} destroyOnHidden>
+      <p className="student-parent-fee-intro">为当前学员单独设置金额、课时和有效期。启用后会展示在学员端“专属方案”中，支付成功后直接记入缴费记录。</p>
       <FeeItems student={student} items={props.feeItems} onChanged={props.onChanged} />
     </Modal>
     <Modal
