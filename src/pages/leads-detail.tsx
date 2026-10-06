@@ -99,7 +99,7 @@ export function LeadDetail({ id, salespeople, campuses, onClose, onChanged }: {
           </div> : null}
           <div className="lead-info-row"><span className="lead-info-label">所属校区</span><em className={lead.campusId ? undefined : 'lead-info-muted'}>{campuses.find((item) => item.id === lead.campusId)?.name || (lead.campusId ? '—' : '未分配校区')}</em></div>
           <div className="lead-info-row"><span className="lead-info-label">负责人</span><em className={lead.ownerName ? undefined : 'lead-info-muted'}>{lead.ownerName || '待分配'}</em></div>
-          {lead.nextFollowAt ? <div className="lead-info-row">
+          {lead.nextFollowAt && !isLeadClosed(lead.status) ? <div className="lead-info-row">
             <span className="lead-info-label">下次跟进</span>
             <em className={isLeadDue(lead) ? 'lead-info-time lead-due' : 'lead-info-time'}>{leadTime(lead.nextFollowAt)}</em>
           </div> : null}

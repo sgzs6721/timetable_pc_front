@@ -1,7 +1,7 @@
 import { Modal, Select, Switch, message } from 'antd'
 import { AppIcon, tell } from './kit'
 import type { Schedule } from './schedule-model'
-import { cardSummary, courseMembersWarning, courseTargetWarning, hoursAmount, scheduleHoursLabel, studentHoursExpired, studentScheduleBlock } from './schedule-targets'
+import { cardSummary, courseMembersWarning, courseTargetWarning, hoursAmount, scheduleHoursLabel, scheduleInstanceCardLabel, studentHoursExpired, studentScheduleBlock } from './schedule-targets'
 import { DAY_LABELS, clockText, durationLabel, fromMinutes, genderIconName, toMinutes } from './schedule-board-helpers'
 import { useCellDialogController } from './schedule-cell-controller'
 
@@ -242,16 +242,18 @@ export function CellDialog(input: CellDialogProps) {
                   <header>
                     <b>班级学员</b>
                     <span>已选 {instances.filter((item) => Number(item.status) !== 3 && !excluded.includes(item.studentId)).length} 人</span>
-                    {instances.length > 4 ? <button type="button" onClick={() => setInstancesOpen((value) => !value)}>{instancesOpen ? '收起' : '更多'}</button> : null}
+                    {instances.length > 3 ? <button type="button" onClick={() => setInstancesOpen((value) => !value)}>{instancesOpen ? '收起' : '更多'}</button> : null}
                     <em>{instances.length} 人</em>
                   </header>
-                  {shownInstances.map((student) => (
+                  {shownInstances.map((student) => {
+                    const cardLabel = scheduleInstanceCardLabel(student)
+                    return (
                     <article key={student.studentId} className={excluded.includes(student.studentId) ? 'is-out' : ''}>
                       <button type="button" onClick={() => openStudentRecords(student.studentId)}>
                         {genderIconName(student.gender) ? <AppIcon name={genderIconName(student.gender)} size={14} /> : null}
                         <b className={Number(student.status) === 3 ? 'is-leave' : ''}>{student.studentName}</b>
                       </button>
-                      {student.remainingHours != null ? <small className={Number(student.remainingHours) <= 5 ? 'is-low' : undefined}>剩余 {hoursAmount(student.remainingHours)}</small> : null}
+                      {cardLabel ? <small>{cardLabel}</small> : student.remainingHours != null ? <small className={Number(student.remainingHours) <= 5 ? 'is-low' : undefined}>剩余 {hoursAmount(student.remainingHours)}</small> : null}
                       <span>
                         {Number(student.status) === 3 ? null : (
                           <button type="button" onClick={() => {
@@ -265,7 +267,8 @@ export function CellDialog(input: CellDialogProps) {
                         <button type="button" onClick={() => toggleStudent(Number(student.status) === 3 ? 'restore' : 'leave', student.studentId, student.studentName)}>{Number(student.status) === 3 ? '销假' : '请假'}</button>
                       </span>
                     </article>
-                  ))}
+                    )
+                  })}
                   {!target && cell.schedule?.targetType === 'course' ? <p className="sheet-warn">所有人全部请假了，那这个课就取消了。</p> : null}
                   {openWarning ? <p className="sheet-warn">{openWarning}</p> : null}
                 </section>
@@ -276,7 +279,7 @@ export function CellDialog(input: CellDialogProps) {
                   <header>
                     <b>班级学员</b>
                     <span>已选 {members.filter((item) => !excluded.includes(item.studentId)).length} 人</span>
-                    {members.length > 4 ? <button type="button" onClick={() => setMembersOpen((value) => !value)}>{membersOpen ? '收起' : '更多'}</button> : null}
+                    {members.length > 3 ? <button type="button" onClick={() => setMembersOpen((value) => !value)}>{membersOpen ? '收起' : '更多'}</button> : null}
                     <em>{membersLoaded ? `${members.length} 人` : '加载中...'}</em>
                   </header>
                   {shownMembers.map((member) => {

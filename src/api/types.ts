@@ -78,7 +78,7 @@ export interface ScheduleItem {
   primaryStudentId?: number
   studentGroupId?: number
   studentIds?: number[]
-  studentInstances?: Array<{ studentId?: number; studentName?: string }>
+  studentInstances?: Array<{ studentId?: number; studentName?: string; status?: number }>
 }
 
 export interface HomeDashboard {

@@ -67,7 +67,7 @@ export function PaymentEditor(props: {
   const coachChoiceKey = coachChoices.map((item) => item.id).join(',')
   const lockedCourseId = serviceOnlyPay ? 0 : Number(selectedCard?.studentGroupId || 0)
   const lockedCourse = lockedCourseId > 0 ? props.groups.find((item) => item.id === lockedCourseId) : undefined
-  const showValidity = payType === 'new' || payType === 'renew' || payType === 'supplement' || (payType === 'adjustment' && reason === 'transfer' && hoursCard)
+  const showValidity = payType === 'new' || payType === 'renew' || payType === 'supplement' || (payType === 'adjustment' && reason === 'transfer' && !periodCard)
   const supplementLocked = payType === 'supplement' && !periodCard && mainValidityUnlimited(refundBalance)
   const showValidityControls = showValidity && !supplementLocked
   const showTimedRange = showValidityControls && (periodCard || validityMode === 'timed')
@@ -331,7 +331,7 @@ export function PaymentEditor(props: {
               : ''
             const nextDate = String(changed.paymentDate)
             if (floor && nextDate < floor) {
-              message.warning(`调整日期不能早于原缴费日期 ${floor}`)
+              message.warning(`${paymentDateLabel(nextType, String(all.adjustmentReason || ''), String(selectedCard?.cardCategory || ''))}不能早于原缴费日期 ${floor}`)
               form.setFieldValue('paymentDate', floor)
             } else if (nextType === 'refund' && nextDate > todayIso()) {
               message.warning('退费日期不能是未来日期')
@@ -708,7 +708,7 @@ export function PaymentEditor(props: {
         {periodRefundValidity ? (
           <>
             <p>未退满时请确认这张时段卡还要保留的有效期，保存后会更新到原缴费记录。</p>
-            <ValidityStartDate />
+            <ValidityStartDate minDate={dateFloor || undefined} />
             <ValidityEndDate />
           </>
         ) : null}

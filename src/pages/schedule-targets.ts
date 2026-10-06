@@ -164,8 +164,16 @@ export interface RosterStudent {
     remainingAmount?: number | null
     validStartDate?: string
     validEndDate?: string
+    consumeDeadline?: string
     cardTypeLabel?: string
   }>
+}
+
+export function scheduleInstanceCardLabel(student?: { cardCategory?: string; periodType?: string; courseCategory?: boolean | null }): string {
+  const category = String(student?.cardCategory || '').trim().toUpperCase()
+  if (category === 'STORED_VALUE') return '储值卡'
+  if (category !== 'PERIOD' || student?.courseCategory === false) return ''
+  return scheduleCardLabel(category, student?.periodType)
 }
 
 export function scheduleCardLabel(category?: string, periodType?: string, label?: string): string {
@@ -233,6 +241,12 @@ export function scheduleCardChoices(cards: RosterStudent['cards'], groupId: numb
       } else {
         choice.available = false
         choice.unavailableReason = '不支持的卡类型'
+      }
+      const validityEnd = String(card.validEndDate || card.consumeDeadline || '').slice(0, 10)
+      if (validityEnd && today > validityEnd) {
+        choice.available = false
+        choice.unavailableReason = '已过期'
+        choice.validEndDate = validityEnd
       }
       return choice
     })

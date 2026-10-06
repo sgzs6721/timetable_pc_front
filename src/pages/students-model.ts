@@ -67,6 +67,7 @@ export interface Card {
   deleted?: number
   lastCourseDate?: string
   expiredHours?: number
+  fullyRefunded?: boolean
 }
 
 export interface ServiceRight {

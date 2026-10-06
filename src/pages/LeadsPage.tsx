@@ -7,7 +7,7 @@ import { canViewLeads } from '../nav'
 import { PageHead, PhoneCopyButton, copyPlainText, tell, useShell } from './kit'
 import { LeadDetail } from './leads-detail'
 import { LeadEditor } from './leads-editor'
-import { LEAD_STATUSES, isLeadDue, leadTime, statusInfo, type Lead, type LeadCampus, type LeadPage, type LeadSalesperson, type LeadSummary } from './leads-model'
+import { LEAD_STATUSES, isLeadClosed, isLeadDue, leadTime, statusInfo, type Lead, type LeadCampus, type LeadPage, type LeadSalesperson, type LeadSummary } from './leads-model'
 
 const PAGE_SIZE = 10
 type Filters = { keyword?: string; status?: string; ownerId?: string; due?: string; campusId?: number }
@@ -90,7 +90,7 @@ function LeadWorkspace({ userId }: { userId?: number }) {
           ...(campuses.length > 1 ? [{ title: '校区', dataIndex: 'campusId', width: 120, render: (id: number | null) => campuses.find((item) => item.id === id)?.name || (id ? '—' : '未分配校区') }] : []),
           { title: '客户状态', dataIndex: 'status', width: 100, render: (status) => <Tag color={statusInfo(status).color}>{statusInfo(status).label}</Tag> },
           { title: '销售负责人', dataIndex: 'ownerName', width: 110, render: (name) => name || <span className="lead-muted">待分配</span> },
-          { title: '下次跟进', key: 'next', width: 175, render: (_, row) => <span className={isLeadDue(row) ? 'lead-due' : 'lead-muted'}>{isLeadDue(row) && <ClockCircleOutlined />} {leadTime(row.nextFollowAt)}</span> },
+          { title: '下次跟进', key: 'next', width: 175, render: (_, row) => isLeadClosed(row.status) ? <span className="lead-muted">—</span> : <span className={isLeadDue(row) ? 'lead-due' : 'lead-muted'}>{isLeadDue(row) && <ClockCircleOutlined />} {leadTime(row.nextFollowAt)}</span> },
         ]} />
     </section>
     {creating && <LeadEditor salespeople={salespeople} campuses={campuses} onClose={() => setCreating(false)} onSaved={(lead) => { setCreating(false); select(lead.id); void load() }} />}

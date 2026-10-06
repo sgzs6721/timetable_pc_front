@@ -8,6 +8,7 @@ import type { HomeBootstrap, Organization, ScheduleItem, UserInfo } from '../api
 import { subscriptionBlocksPath, subscriptionExpiredText } from '../access'
 import { canViewLeads, navForUser } from '../nav'
 import { AppIcon, EmptyState, PageHead, money, todayIso, useShell } from './kit'
+import { OVERVIEW_SLOT_LIMIT, countDistinctStudents } from './home-overview'
 import { OrganizationCreateModal, type OrganizationCreateValues } from './organization-create-modal'
 
 type HomeView = 'manager' | 'campus' | 'substitute' | 'member'
@@ -203,6 +204,7 @@ export function HomePage() {
   const [creatingOrg, setCreatingOrg] = useState(false)
   const [creatingCampus, setCreatingCampus] = useState(false)
   const [recordStudentId, setRecordStudentId] = useState<number | null>(null)
+  const [expandedOverview, setExpandedOverview] = useState<Record<string, boolean>>({})
 
   const currentOrg = (home?.organizations || shell.organizations).find((item) => item.id === (home?.currentOrgId || shell.currentOrgId)) || null
   const user = home?.user || shell.user
@@ -291,7 +293,7 @@ export function HomePage() {
     : memberLessons
   ).filter(activeSchedule)
   const metrics = useMemo(() => {
-    const students = schedules.reduce((sum, item) => sum + Math.max(0, Number(item.currentStudents || 0)), 0)
+    const students = countDistinctStudents(schedules)
     return {
       courses: schedules.length,
       students,
@@ -502,14 +504,18 @@ export function HomePage() {
           </div>
           <h2>{managerView ? `${dayText}课程` : `我的${dayText}课程`}</h2>
           {schedules.length === 0 ? <p className="schedule-meta" style={{ padding: '8px 18px 16px' }}>{emptySchedule}</p> : null}
-          {managerView ? coachRows.map((row) => (
+          {managerView ? coachRows.map((row) => {
+            const expanded = expandedOverview[row.id] === true
+            const foldable = row.slots.length > OVERVIEW_SLOT_LIMIT
+            const slots = foldable && !expanded ? row.slots.slice(0, OVERVIEW_SLOT_LIMIT) : row.slots
+            return (
             <div className="overview-row" key={row.id}>
               <button className="overview-coach" type="button" disabled={!row.timetableId} onClick={() => row.timetableId && openPath(`/schedule?timetableId=${row.timetableId}`)}>
                 <AppIcon name="icon-person-neutral" size={14} />
                 {row.coachName}
               </button>
               <div>
-                {row.slots.map((item) => {
+                {slots.map((item) => {
                   const studentId = slotStudentId(item)
                   const linked = singleStudent(item, studentId)
                   return (
@@ -523,9 +529,18 @@ export function HomePage() {
                     </div>
                   )
                 })}
+                {foldable ? (
+                  <button
+                    className="overview-link"
+                    type="button"
+                    aria-label={expanded ? '收起课程' : '展开更多课程'}
+                    onClick={() => setExpandedOverview((current) => ({ ...current, [row.id]: !current[row.id] }))}
+                  >{expanded ? '收起' : '更多'}</button>
+                ) : null}
               </div>
             </div>
-          )) : schedules.map((item) => {
+            )
+          }) : schedules.map((item) => {
             const studentId = slotStudentId(item)
             const linked = singleStudent(item, studentId)
             return (

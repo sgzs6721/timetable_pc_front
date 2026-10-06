@@ -2,7 +2,7 @@ import { Alert, Form, Input, InputNumber, Modal, Select, message } from 'antd'
 import { useEffect, useRef, useState } from 'react'
 import { getJson, postJson, putJson } from '../api/biz'
 import { tell } from './kit'
-import { LEAD_SOURCES, type Lead, type LeadCampus, type LeadSalesperson } from './leads-model'
+import { LEAD_SOURCES, leadPhoneError, normalizeLeadPhone, type Lead, type LeadCampus, type LeadSalesperson } from './leads-model'
 
 export function LeadEditor({ lead, salespeople, campuses, onClose, onSaved }: {
   lead?: Lead; salespeople: LeadSalesperson[]; campuses: LeadCampus[]; onClose: () => void; onSaved: (lead: Lead) => void
@@ -63,7 +63,7 @@ export function LeadEditor({ lead, salespeople, campuses, onClose, onSaved }: {
         <h3 className="lead-form-section-title">基本信息</h3>
         <Form.Item name="name" label="客户姓名" rules={[{ required: true, whitespace: true, message: '请输入客户姓名' }]}><Input maxLength={60} placeholder="请输入客户姓名" /></Form.Item>
         <div className="lead-form-grid">
-          <Form.Item name="phone" label="联系电话" rules={[{ validator: (_, value) => !value || /^\+?\d{6,20}$/.test(String(value || '').replace(/[\s()-]/g, '')) ? Promise.resolve() : Promise.reject(new Error('请输入有效的联系电话')) }]}><Input maxLength={32} placeholder="手机号或固定电话（选填）" /></Form.Item>
+          <Form.Item name="phone" label="联系电话" getValueFromEvent={(event) => normalizeLeadPhone(event?.target?.value ?? event)} rules={[{ validator: (_, value) => { const error = leadPhoneError(String(value || '')); return error ? Promise.reject(new Error(error)) : Promise.resolve() } }]}><Input maxLength={20} placeholder="手机号或固定电话（选填）" /></Form.Item>
           <Form.Item name="contactName" label="联系人"><Input maxLength={60} placeholder="例如：家长姓名（选填）" /></Form.Item>
           <Form.Item name="wechat" label="微信号"><Input maxLength={60} placeholder="选填" /></Form.Item>
           <Form.Item name="gender" label="性别"><Select options={[{ value: 'UNKNOWN', label: '未填写' }, { value: 'MALE', label: '男' }, { value: 'FEMALE', label: '女' }]} /></Form.Item>

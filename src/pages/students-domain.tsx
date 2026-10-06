@@ -258,6 +258,7 @@ export function orderedStudentCards(cards: Card[], today = todayIso()): Card[] {
 export function cardBalanceView(card: Card): { value: string; tag: string; metric: string } {
   const category = String(card.cardCategory || 'HOURS').toUpperCase()
   const format = (value: number) => Number.isInteger(value) ? String(value) : String(Number(value.toFixed(2)))
+  const refunded = card.fullyRefunded === true
   if (category === 'STORED_VALUE') {
     const expired = Boolean(card.validEndDate && card.validEndDate < todayIso())
     return { value: `¥${money(Math.max(0, Number(card.remainingAmount || 0)))}`, tag: '储值卡', metric: expired ? '已过期' : '剩余金额' }
@@ -266,6 +267,7 @@ export function cardBalanceView(card: Card): { value: string; tag: string; metri
     const start = String(card.validStartDate || '')
     const end = String(card.validEndDate || '')
     const tag = ({ WEEK: '周卡', MONTH: '月卡', QUARTER: '季卡', HALF_YEAR: '半年卡', YEAR: '年卡' } as Record<string, string>)[String(card.periodType || '')] || '时段卡'
+    if (refunded) return { value: '已退费', tag, metric: '已退费' }
     const dated = /^\d{4}-\d{2}-\d{2}$/.test(start) && /^\d{4}-\d{2}-\d{2}$/.test(end)
     const expired = /^\d{4}-\d{2}-\d{2}$/.test(end) && todayIso() > end
     const value = dated ? `${start.replace(/-/g, '.')} - ${end.replace(/-/g, '.')}` : '待缴费'
@@ -283,6 +285,10 @@ export function cardValidityLine(card: Card): { label: string; text: string } | 
   const end = String(card.validEndDate || '').trim()
   const deadline = String(card.consumeDeadline || '').trim()
   const dated = (value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value)
+  const hasValidity = (dated(start) && dated(end)) || dated(deadline) || dated(end)
+  if (card.fullyRefunded === true && (category === 'PERIOD' || category === 'STORED_VALUE' || hasValidity)) {
+    return { label: '状态', text: '已退费' }
+  }
   if (dated(start) && dated(end)) {
     const label = category === 'PERIOD' ? '有效期' : category === 'STORED_VALUE' ? '限时消费' : '限时销课'
     return { label, text: `${start} 至 ${end}` }

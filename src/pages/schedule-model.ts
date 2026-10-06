@@ -59,7 +59,7 @@ export interface Schedule {
   serviceQuantity?: number
   excludedStudentIds?: number[]
   currentStudents?: number
-  studentInstances?: Array<{ studentId: number; studentName?: string; status?: number; studentCardId?: number; remainingHours?: number; gender?: number }>
+  studentInstances?: Array<{ studentId: number; studentName?: string; status?: number; studentCardId?: number; remainingHours?: number; gender?: number; cardCategory?: string; periodType?: string; courseCategory?: boolean }>
   createTime?: string
   updateTime?: string
   leaveReason?: string

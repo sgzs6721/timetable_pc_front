@@ -209,7 +209,25 @@ export function paymentRemainingText(record: PayRecord, card: Card | undefined, 
   return (record.supplements || []).length ? `共计剩余${text}` : `剩余${text}`
 }
 
+function paymentLotFullyRefunded(record: PayRecord, card: Card | undefined, student: Student): boolean {
+  const records = [record, ...(record.supplements || [])]
+  if (!records.some((item) => item.type === 'refund')) return false
+  const category = String(card?.cardCategory || student.cardCategory || 'HOURS').toUpperCase()
+  if (category === 'PERIOD' || category === 'STORED_VALUE') {
+    const net = records.reduce((sum, item) => sum + signedPaymentAmount(item), 0)
+    return Math.round(net * 100) <= 0
+  }
+  const netHours = records.reduce((sum, item) => {
+    const delta = teacherHourDelta(item)
+    return sum + delta.regular + delta.gift
+  }, 0)
+  const remaining = record.remainingHours
+  const remainingKnown = remaining !== undefined && remaining !== null && String(remaining) !== ''
+  return netHours <= 0 || (remainingKnown && Number(remaining) <= 0)
+}
+
 export function paymentValidityCell(record: PayRecord, card: Card | undefined, student: Student, kind: 'main' | 'child'): { text: string; tone: '' | 'expired' | 'soon' } {
+  if (kind === 'main' && paymentLotFullyRefunded(record, card, student)) return { text: '已退费', tone: '' }
   if (kind === 'child') {
     if (record.type === 'adjustment' && record.adjustmentReason !== 'transfer') return { text: '', tone: '' }
     const phrase = paymentValidityPhrase(record)
@@ -740,7 +758,9 @@ export function paymentFormError(values: Record<string, unknown>, student: Stude
   if (!date) return `请选择${paymentDateLabel(type, reason, category)}`
   const main = payments.find((item) => item.id === Number(values.mainRecordId))
   const originalDate = String(main?.paymentDate || '').slice(0, 10)
-  if ((type === 'adjustment' || type === 'supplement' || type === 'refund') && originalDate && date < originalDate) return `调整日期不能早于原缴费日期 ${originalDate}`
+  if ((type === 'adjustment' || type === 'supplement' || type === 'refund') && originalDate && date < originalDate) {
+    return `${paymentDateLabel(type, reason, category)}不能早于原缴费日期 ${originalDate}`
+  }
   if (type === 'refund' && date > todayIso()) return '退费日期不能是未来日期'
   const start = String(values.validStartDate || '').slice(0, 10)
   const end = String(values.validEndDate || '').slice(0, 10)
@@ -755,6 +775,7 @@ export function paymentFormError(values: Record<string, unknown>, student: Stude
   if (type === 'refund' && period && values.belowRefundMax) {
     if (!start || !end) return '请选择更改后的有效期'
     if (end < start) return '有效期结束不能早于开始'
+    if (originalDate && start < originalDate) return `有效期开始不能早于原缴费日期 ${originalDate}`
   }
   if ((type === 'supplement' || type === 'adjustment') && !values.mainRecordId) return '缺少主缴费记录，请返回重新点击调整'
   return ''

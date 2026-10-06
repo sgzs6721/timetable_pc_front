@@ -528,8 +528,8 @@ export function useCellDialogController(props: CellDialogProps) {
   const durationMax = Math.min(240, Math.floor(Math.max(room, 0) / step) * step)
   const durationHint = !trialOn && durationMax > step ? `最多${durationLabel(durationMax)}` : !trialOn && room < step ? '下方空间不足' : ''
   const recordRows = recordsScope === 'week' ? weekRecords : records
-  const shownMembers = membersOpen ? members : members.slice(0, 4)
-  const shownInstances = instancesOpen ? instances : instances.slice(0, 4)
+  const shownMembers = membersOpen ? members : members.slice(0, 3)
+  const shownInstances = instancesOpen ? instances : instances.slice(0, 3)
   const cardMember = members.find((item) => item.studentId === cardStudentId)
 
   function openCardPicker(member: CourseMember) {

@@ -145,7 +145,7 @@ function PaymentEntry(props: {
           <div><span>赠课</span><strong>{Number(row.giftHours || 0)}</strong></div>
           {avg ? <div><span>折合均价</span><strong>{avg}</strong></div> : null}
         </> : null}
-        {category === 'PERIOD' && validity.text ? <div className="is-wide"><span>有效期</span><strong className={validity.tone ? `is-${validity.tone}` : ''}>{validity.text}</strong></div> : null}
+        {category === 'PERIOD' && validity.text ? <div className="is-wide"><span>{validity.text === '已退费' ? '已退费' : '有效期'}</span>{validity.text === '已退费' ? null : <strong className={validity.tone ? `is-${validity.tone}` : ''}>{validity.text}</strong>}</div> : null}
         {category === 'STORED_VALUE' ? <div className="is-wide"><span>{props.card?.courseCategory === false ? '适用服务' : '课程权益'}</span><strong>{props.card?.courseCategory === false ? (services || '未配置服务') : (course || '未配置课程权益')}</strong></div> : null}
       </div>
       {remaining || (category !== 'PERIOD' && validity.text) ? <div className="student-payment-entry-footer"><span>{remaining}</span>{category !== 'PERIOD' && validity.text ? <em className={validity.tone ? `is-${validity.tone}` : ''}>{validity.text}</em> : null}</div> : null}

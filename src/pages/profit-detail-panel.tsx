@@ -78,7 +78,8 @@ function RevenueDetail(props: {
   const allRows = rowsOf(props.data)
   const rows = props.filter ? allRows.filter((row) => Number(row.studentId) === props.filter?.id) : allRows
   const total = props.filter ? rows.reduce((sum, row) => sum + numberOf(row.amount), 0) : numberOf(props.data.totalRevenue)
-  const hours = props.filter ? rows.reduce((sum, row) => sum + numberOf(row.consumedHours), 0) : numberOf(props.data.totalConsumedHours)
+  const hours = rows.reduce((sum, row) => isServiceConsumption(row) ? sum : sum + numberOf(row.consumedHours), 0)
+  const serviceCount = rows.reduce((sum, row) => isServiceConsumption(row) ? sum + numberOf(row.consumedHours) : sum, 0)
   const students = props.filter
     ? new Set(rows.map((row) => Number(row.studentId)).filter((id) => id > 0)).size
     : numberOf(props.data.totalStudentCount)
@@ -86,7 +87,7 @@ function RevenueDetail(props: {
     <div className="profit-detail-panel">
       <DetailSummary items={[
         ['合计', currency(total)],
-        ['销课课时', `${formatNumber(hours)} 课时`],
+        ['销课课时', serviceCount > 0 ? `${formatNumber(hours)} 课时 · ${formatNumber(serviceCount)} 次` : `${formatNumber(hours)} 课时`],
         ['涉及学员', `${students} 人`],
       ]} />
       {props.filter ? (
@@ -191,8 +192,14 @@ function consumedFormula(row: Record<string, unknown>): string {
   return `${formatNumber(row.consumedHours)} 课时 × ${currency(row.unitRate)}/课时`
 }
 
+function isServiceConsumption(row: Record<string, unknown>): boolean {
+  const value = row.serviceConsumption
+  return value === true || value === 1 || value === 'true'
+}
+
 function revenueFormula(row: Record<string, unknown>): string {
-  return `${formatNumber(row.consumedHours)} 课时 × ${currency(row.unitPrice)}/课时`
+  const unit = isServiceConsumption(row) ? '次' : '课时'
+  return `${formatNumber(row.consumedHours)} ${unit} × ${currency(row.unitPrice)}/${unit}`
 }
 
 function formatNumber(value: unknown): string {

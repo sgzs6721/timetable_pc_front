@@ -29,3 +29,17 @@ export const statusInfo = (status: string) => LEAD_STATUSES.find((item) => item.
 export const leadTime = (value?: string | null) => value ? value.replace('T', ' ').slice(0, 16) : '未安排'
 export const isLeadClosed = (status: string) => status === 'SOLD' || status === 'CLOSED'
 export const isLeadDue = (lead: Lead) => !isLeadClosed(lead.status) && !!lead.nextFollowAt && new Date(`${lead.nextFollowAt.replace(' ', 'T')}+08:00`).getTime() <= Date.now()
+
+const LEAD_MOBILE_PHONE = /^1[3-9]\d{9}$/
+const LEAD_LANDLINE_PHONE = /^0\d{2,3}-?\d{7,8}(-\d{1,5})?$/
+
+export function normalizeLeadPhone(value: string): string {
+  return String(value || '').replace(/[^\d-]/g, '').slice(0, 20)
+}
+
+export function leadPhoneError(value: string): string {
+  const phone = String(value || '').trim()
+  if (!phone) return ''
+  if (LEAD_MOBILE_PHONE.test(phone) || LEAD_LANDLINE_PHONE.test(phone)) return ''
+  return '请输入正确的联系电话，手机号或带区号的固定电话'
+}

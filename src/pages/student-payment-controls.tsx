@@ -397,16 +397,21 @@ export function PaymentStoredPricing(props: { groups: Named[]; services: Named[]
   )
 }
 
-export function ValidityStartDate() {
+export function ValidityStartDate({ minDate }: { minDate?: string }) {
   const form = Form.useFormInstance()
   return (
     <Form.Item name="validStartDate" label="有效期开始" getValueFromEvent={(event) => {
       const value = String(event?.target?.value ?? event ?? '')
+      const floor = String(minDate || '').slice(0, 10)
+      if (floor && value && value < floor) {
+        message.warning(`有效期开始不能早于原缴费日期 ${floor}`)
+        return floor
+      }
       const end = String(form.getFieldValue('validEndDate') || '').slice(0, 10)
       if (value && end && value > end) form.setFieldValue('validEndDate', value)
       return value
     }}>
-      <BusinessDatePicker />
+      <BusinessDatePicker minDate={minDate || undefined} />
     </Form.Item>
   )
 }
