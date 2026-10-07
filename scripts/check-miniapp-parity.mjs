@@ -10,6 +10,7 @@ const http = readFileSync(join(root, 'src/api/http.ts'), 'utf8')
 const session = readFileSync(join(root, 'src/session.ts'), 'utf8')
 const passwordLogin = readFileSync(join(root, 'src/pages/LoginPage.tsx'), 'utf8')
 const wechatLogin = readFileSync(join(root, 'src/pages/WechatCallbackPage.tsx'), 'utf8')
+const wechatAuth = readFileSync(join(root, 'src/wechat-auth.ts'), 'utf8')
 const institutionRouteGuard = readFileSync(join(root, 'src/routing/InstitutionRouteGuard.tsx'), 'utf8')
 
 function source(relativePath) {
@@ -74,7 +75,7 @@ if (!session.includes('window.crypto.getRandomValues(bytes)')
   || !session.includes('WECHAT_OAUTH_STATE_TTL_MS')
   || !session.includes('sessionStorage.removeItem(WECHAT_OAUTH_STATE_KEY)')
   || !passwordLogin.includes('createWechatOAuthState()')
-  || !passwordLogin.includes('state=${encodeURIComponent(oauthState)}')
+  || !wechatAuth.includes('state,')
   || !wechatLogin.includes("consumeWechatOAuthState(callbackState)")) {
   authContractFailures.push('微信扫码登录必须使用随机、限时、一次性校验的 OAuth state')
 }

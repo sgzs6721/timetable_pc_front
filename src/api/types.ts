@@ -105,4 +105,6 @@ export interface HomeBootstrap {
 export interface WechatWebConfig {
   enabled: boolean
   appId: string
+  /** 可选。后端可下发开放平台登记的完整回调地址，优先级高于前端环境变量。 */
+  redirectUri?: string
 }

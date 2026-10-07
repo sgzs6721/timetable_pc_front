@@ -3,24 +3,26 @@ import { Button, Checkbox, Form, Input, message } from 'antd'
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { getUserInfo, getWechatWebConfig, loginByPassword } from '../api/auth'
+import type { WechatWebConfig } from '../api/types'
 import { consumeLoginRedirect, createWechatOAuthState, setToken } from '../session'
+import { createWechatQrLoginUrl } from '../wechat-auth'
 
 export function LoginPage() {
   const navigate = useNavigate()
   const [submitting, setSubmitting] = useState(false)
   const [agreed, setAgreed] = useState(false)
-  const [wechatEnabled, setWechatEnabled] = useState(false)
-  const [wechatAppId, setWechatAppId] = useState('')
+  const [wechatConfig, setWechatConfig] = useState<WechatWebConfig | null>(null)
+  const [wechatConfigLoading, setWechatConfigLoading] = useState(true)
 
   useEffect(() => {
     getWechatWebConfig()
       .then((config) => {
-        setWechatEnabled(Boolean(config?.enabled && config.appId))
-        setWechatAppId(config?.appId || '')
+        setWechatConfig(config)
       })
       .catch(() => {
-        setWechatEnabled(false)
+        setWechatConfig(null)
       })
+      .finally(() => setWechatConfigLoading(false))
   }, [])
 
   async function onFinish(values: { phone: string; password: string }) {
@@ -49,13 +51,14 @@ export function LoginPage() {
       return
     }
     try {
-      const redirectUri = encodeURIComponent(`${window.location.origin}/login/wechat`)
+      if (!wechatConfig) {
+        message.error('微信登录配置加载失败，请刷新页面后重试')
+        return
+      }
       const oauthState = createWechatOAuthState()
-      window.location.assign(
-        `https://open.weixin.qq.com/connect/qrconnect?appid=${wechatAppId}&redirect_uri=${redirectUri}&response_type=code&scope=snsapi_login&state=${encodeURIComponent(oauthState)}#wechat_redirect`,
-      )
-    } catch {
-      message.error('当前浏览器无法安全发起微信登录，请升级浏览器后重试')
+      window.location.assign(createWechatQrLoginUrl(wechatConfig, oauthState))
+    } catch (reason) {
+      message.error(reason instanceof Error ? reason.message : '当前浏览器无法安全发起微信登录')
     }
   }
 
@@ -102,8 +105,15 @@ export function LoginPage() {
             </Button>
           </Form>
           <div className="login-split">或</div>
-          <Button className="login-wechat" size="large" block disabled={!wechatEnabled} onClick={startWechatLogin}>
-            <WechatOutlined /> {wechatEnabled ? '微信扫码登录' : '微信扫码需先配置开放平台网站应用'}
+          <Button
+            className="login-wechat"
+            size="large"
+            block
+            loading={wechatConfigLoading}
+            disabled={!wechatConfigLoading && !Boolean(wechatConfig?.enabled && wechatConfig.appId)}
+            onClick={startWechatLogin}
+          >
+            <WechatOutlined /> {wechatConfigLoading ? '正在加载微信登录' : wechatConfig?.enabled && wechatConfig.appId ? '微信扫码登录' : '微信扫码需先配置开放平台网站应用'}
           </Button>
         </div>
       </section>

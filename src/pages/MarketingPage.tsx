@@ -1,4 +1,4 @@
-import { Alert, Button, Form, Input, InputNumber, Modal, Popconfirm, Select, Space, Switch, Table, Tabs, Tag, message } from 'antd'
+import { Alert, Button, Form, Input, InputNumber, Modal, Popconfirm, Select, Space, Spin, Switch, Table, Tabs, Tag, message } from 'antd'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { delJson, getJson, postJson, putJson } from '../api/biz'
 import type { Campus } from '../api/types'
@@ -159,7 +159,7 @@ export function MarketingPage() {
   const campusId = shell.campusId
   const campus = shell.campuses.find((item) => item.id === campusId)
   const campusName = campus?.name || ''
-  const [activeTab, setActiveTab] = useState('campaigns')
+  const [activeTab, setActiveTab] = useState('templates')
   const [loading, setLoading] = useState(false)
   const [campaigns, setCampaigns] = useState<CampaignDto[]>([])
   const [templates, setTemplates] = useState<MarketingTemplate[]>([])
@@ -172,6 +172,8 @@ export function MarketingPage() {
   const [preview, setPreview] = useState<MarketingPreset | CampaignDto | null>(null)
   const [previewPreset, setPreviewPreset] = useState<MarketingPreset | null>(null)
   const [creatingPreset, setCreatingPreset] = useState('')
+  const [templateSaving, setTemplateSaving] = useState(false)
+  const [campaignSaving, setCampaignSaving] = useState(false)
   const [templateForm] = Form.useForm()
   const [campaignForm] = Form.useForm()
   const campaignPayMode = Form.useWatch('payMode', campaignForm)
@@ -312,25 +314,34 @@ export function MarketingPage() {
 
   return (
     <NeedCampus campusId={campusId}>
-      <PageHead title="营销中心" extra="活动模板、招生发布、报名转化与营销入账统一管理">
+      <PageHead title="营销中心" extra="从活动方案到报名转化，一站式完成校区营销">
         <Button onClick={() => void load()} loading={loading}>刷新</Button>
-        <Button onClick={() => openTemplate(null)}>新建模板</Button>
-        <Button type="primary" onClick={() => void openCampaign(null)}>新建活动</Button>
+        <Button onClick={() => openTemplate(null)}>自定义模板</Button>
+        <Button type="primary" onClick={() => void openCampaign(null)}>创建活动</Button>
       </PageHead>
 
       <section className="marketing-hero">
-        <div><span>活动总数</span><b>{overview.total}</b></div>
-        <div><span>进行中</span><b>{overview.ongoing}</b></div>
-        <div><span>草稿待发布</span><b>{overview.draft}</b></div>
-        <div><span>累计报名</span><b>{overview.enrolled}</b></div>
-        <div className="marketing-hero-note"><strong>{campusName}</strong><span>当前数据均按所选校区隔离</span></div>
+        <div className="marketing-hero-copy">
+          <span>营销工作台 · {campusName}</span>
+          <h2>快速创建招生活动</h2>
+          <p>选模板，补充时间和名额即可发布；活动数据按当前校区独立统计。</p>
+          <Button onClick={() => setActiveTab('templates')}>浏览活动方案</Button>
+        </div>
+        <div className="marketing-hero-stats">
+          <button type="button" onClick={() => setActiveTab('campaigns')}><b>{overview.ongoing}</b><span>进行中</span></button>
+          <button type="button" onClick={() => setActiveTab('campaigns')}><b>{overview.enrolled}</b><span>累计报名</span></button>
+          <button type="button" onClick={() => setActiveTab('campaigns')}><b>{overview.draft}</b><span>待发布</span></button>
+          <button type="button" onClick={() => setActiveTab('settlements')}><b>{settlements.length}</b><span>待处理</span></button>
+        </div>
       </section>
 
-      <Tabs activeKey={activeTab} onChange={setActiveTab} items={[
-        { key: 'campaigns', label: `营销活动 ${campaigns.length}` },
-        { key: 'templates', label: `活动模板 ${templates.length}` },
-        { key: 'settlements', label: `入账结算 ${settlements.length}` },
+      <Tabs className="marketing-tabs" activeKey={activeTab} onChange={setActiveTab} items={[
+        { key: 'templates', label: '模板市场' },
+        { key: 'campaigns', label: `活动管理 ${campaigns.length}` },
+        { key: 'settlements', label: '数据统计' },
       ]} />
+
+      {loading && !campaigns.length && !templates.length ? <div className="marketing-loading"><Spin size="large" /><span>正在加载营销工作台…</span></div> : null}
 
       {activeTab === 'campaigns' ? (
         <section className="marketing-grid" aria-busy={loading}>
@@ -366,14 +377,14 @@ export function MarketingPage() {
               </article>
             )
           })}
-          {!loading && campaigns.length === 0 ? <div className="marketing-empty"><b>还没有营销活动</b><span>可直接新建活动，系统会自动沉淀为可复用模板。</span><Button type="primary" onClick={() => void openCampaign(null)}>新建活动</Button></div> : null}
+          {!loading && campaigns.length === 0 ? <div className="marketing-empty"><b>还没有营销活动</b><span>从模板市场选择活动方案，补充校区信息后即可发布。</span><Button type="primary" onClick={() => setActiveTab('templates')}>去模板市场</Button></div> : null}
         </section>
       ) : null}
 
       {activeTab === 'templates' ? (
         <>
         <section className="marketing-presets">
-          <div className="marketing-presets-head"><div><h2>精选活动方案</h2><p>文案、报名配置和转化路径均已准备好，补充校区信息即可发布。</p></div><Tag color="blue">4 套</Tag></div>
+          <div className="marketing-presets-head"><div><span className="marketing-section-kicker">精选活动模板</span><h2>选一个适合校区的招生方案</h2><p>活动文案、报名配置和转化路径均已准备好，补充时间、地址和联系人即可发布。</p></div><Tag color="blue">{MARKETING_PRESETS.length} 套方案</Tag></div>
           <div className="marketing-preset-grid">
             {MARKETING_PRESETS.map((preset) => (
               <article key={preset.id} className={`marketing-preset-card theme-${preset.posterTheme.toLowerCase()}`}>
@@ -426,11 +437,12 @@ export function MarketingPage() {
         </>
       ) : null}
 
-      <Modal open={templateEdit !== undefined} title={templateEdit ? '编辑活动模板' : '新建活动模板'} width={820} onCancel={() => setTemplateEdit(undefined)} okText="保存模板" onOk={() => templateForm.submit()} destroyOnHidden>
+      <Modal open={templateEdit !== undefined} title={templateEdit ? '编辑活动模板' : '新建活动模板'} width={820} confirmLoading={templateSaving} maskClosable={!templateSaving} onCancel={() => { if (!templateSaving) setTemplateEdit(undefined) }} okText="保存模板" onOk={() => templateForm.submit()} destroyOnHidden>
         <Form form={templateForm} layout="vertical" onFinish={async (values) => {
           if (!campusId) return
           const tierError = validateReferralTiers(values, 'referralEnabledDefault', 'referralTiersDefault')
           if (tierError) { message.warning(tierError); return }
+          setTemplateSaving(true)
           try {
             const payload = templatePayload(values)
             if (templateEdit?.id) await putJson(`/marketing/templates/${templateEdit.id}?campusId=${campusId}`, payload)
@@ -438,7 +450,7 @@ export function MarketingPage() {
             message.success('模板已保存')
             setTemplateEdit(undefined)
             await load()
-          } catch (error) { message.error(tell(error, '模板保存失败')) }
+          } catch (error) { message.error(tell(error, '模板保存失败')) } finally { setTemplateSaving(false) }
         }} initialValues={templateInitial(templateEdit)}>
           <div className="form-grid form-grid-3">
             <Form.Item name="templateName" label="模板名称" rules={[{ required: true }, { max: 20 }]}><Input placeholder="例如：秋季体验课" /></Form.Item>
@@ -467,11 +479,12 @@ export function MarketingPage() {
         </Form>
       </Modal>
 
-      <Modal open={campaignEdit !== undefined} title={campaignEdit?.campaign ? '编辑营销活动' : '新建营销活动'} width={920} onCancel={() => setCampaignEdit(undefined)} okText="保存活动" onOk={() => campaignForm.submit()} destroyOnHidden>
+      <Modal open={campaignEdit !== undefined} title={campaignEdit?.campaign ? '编辑营销活动' : '新建营销活动'} width={920} confirmLoading={campaignSaving} maskClosable={!campaignSaving} onCancel={() => { if (!campaignSaving) setCampaignEdit(undefined) }} okText="保存活动" onOk={() => campaignForm.submit()} destroyOnHidden>
         <Form form={campaignForm} layout="vertical" onFinish={async (values) => {
           if (!campusId) return
           const validation = campaignValidation(values, Number(campaignEdit?.campaign?.quotaUsed || 0))
           if (validation) { message.warning(validation); return }
+          setCampaignSaving(true)
           try {
             const payload = campaignPayload(values)
             if (!(Number(payload.templateId) > 0)) {
@@ -496,7 +509,7 @@ export function MarketingPage() {
             message.success('活动已保存')
             setCampaignEdit(undefined)
             await load()
-          } catch (error) { message.error(tell(error, '活动保存失败')) }
+          } catch (error) { message.error(tell(error, '活动保存失败')) } finally { setCampaignSaving(false) }
         }} initialValues={campaignInitial(campaignEdit || null, campus)}>
           {campaignEdit?.campaign?.status && campaignEdit.campaign.status !== 'DRAFT' ? <Alert className="form-alert" type="warning" showIcon message="活动已发布：模板、报名方式、支付方式、活动价和报名开始时间不可修改；其余字段以后台实际校验为准。" /> : null}
           <div className="form-grid form-grid-3">
