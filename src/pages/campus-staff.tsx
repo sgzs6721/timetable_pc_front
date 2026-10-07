@@ -18,13 +18,11 @@ function isIdCard(value: string) {
   const sum = text.slice(0, 17).split('').reduce((total, char, index) => total + Number(char) * weights[index], 0)
   return codes[sum % 11] === text[17]
 }
-
 function birthDateFromIdCard(idCard?: string) {
   const text = String(idCard || '').trim().toUpperCase()
   if (!text || !isIdCard(text)) return ''
   return `${text.slice(6, 10)}-${text.slice(10, 12)}-${text.slice(12, 14)}`
 }
-
 function defaultOneToOneName(name?: string) {
   const trimmed = String(name || '').trim()
   return trimmed ? `${trimmed}一对一课程` : '一对一课程'
@@ -118,7 +116,7 @@ function handoverLines(check: Record<string, unknown>): string[] {
   return rows.filter((item) => Number(item[1] || 0) > 0).map((item) => `${item[0]} ${item[1]}`)
 }
 
-export function Teachers({ campusId }: { campusId: number | null }) {
+export function Teachers({ campusId, onCampusChanged }: { campusId: number | null; onCampusChanged?: () => void }) {
   const [rows, setRows] = useState<Person[]>([])
   const [positions, setPositions] = useState<Position[]>([])
   const [campuses, setCampuses] = useState<Campus[]>([])
@@ -188,6 +186,7 @@ export function Teachers({ campusId }: { campusId: number | null }) {
     setOffboard(null)
     setEditing(null)
     await load()
+    onCampusChanged?.()
   }
   async function startOffboard(person: Person, action: 'RESIGN' | 'DELETE') {
     const deleting = action === 'DELETE'

@@ -9,6 +9,7 @@ import { paymentOptionForCourse, preferredCourseForCoach } from './student-card-
 import { CheckInCoursePicker } from './student-quick-checkin'
 import { isTransferInRecord } from './student-payments'
 import { CardRecordTabs, boundedDateMax, cardBalanceView, checkInBounds, personName } from './students-domain'
+import { consumeItemReferenceKey, isCampusServiceConsumeItem, resolveConsumeItemReferenceFields } from './consume-item'
 
 export function CheckInPanel(props: { student: Student; rows: CheckRecord[]; payments: PayRecord[]; groups: Named[]; financialHidden: boolean; coaches: Named[]; focusCardId?: number; onCardChange?: (cardId?: number) => void; onCheckIn: (cardId?: number) => void; onChanged: () => Promise<void>; manage: boolean }) {
   const [cardId, setCardId] = useState<number | undefined>(props.focusCardId)
@@ -243,7 +244,7 @@ export function checkInAmountText(value: number): string {
 }
 
 export function checkInService(row: CheckRecord): boolean {
-  return String(row.courseType || '').startsWith('service:')
+  return isCampusServiceConsumeItem(row)
 }
 
 export function checkInCoachIdentity(row: CheckRecord, coaches: Named[]): { key: string; name: string; inactive: boolean; gender: '' | 'male' | 'female' } {
@@ -272,8 +273,9 @@ export function checkInCoachIdentity(row: CheckRecord, coaches: Named[]): { key:
 
 export function checkInChipKey(row: CheckRecord, special: boolean, coaches: Named[] = []): string {
   if (special) {
-    if (checkInService(row)) return `service:${String(row.courseType || row.courseName || row.courseTypeLabel || 'service')}`
-    return `course:${String(row.courseType || row.courseTypeLabel || row.courseName || 'course')}`
+    const reference = consumeItemReferenceKey(row)
+    if (checkInService(row)) return `service:${reference || row.courseName || row.courseTypeLabel || 'service'}`
+    return `course:${reference || row.courseTypeLabel || row.courseName || 'course'}`
   }
   return checkInCoachIdentity(row, coaches).key
 }
@@ -299,7 +301,7 @@ export function checkInSummary(rows: CheckRecord[], card: Card | undefined, stud
     }
     lessonCount += 1
     totalHours += hours
-    const key = String(row.courseType || row.courseName || row.courseTypeLabel || '').trim()
+    const key = String(consumeItemReferenceKey(row) || row.courseName || row.courseTypeLabel || '').trim()
     if (key) courseKeys.add(key)
   })
   const hasServices = serviceCount > 0
@@ -376,7 +378,7 @@ export function formatDeleteHours(value?: number): string {
 }
 
 export function consumptionDeleteText(row: CheckRecord): string {
-  const service = String(row.courseType || '').startsWith('service:')
+  const service = checkInService(row)
   const rollback = service ? `删除后将返还 ¥${formatDeleteAmount(row.amount)}。` : `删除后将返还 ${formatDeleteHours(row.hours)} 课时。`
   const auto = !service && Number(row.autoCheckIn) === 1
     ? '该记录为自动打卡，删除后会同步清理对应课表中的该学员；如果该节课已无其他学员，还会一并删除整条课表。'
@@ -388,7 +390,7 @@ export function CheckEditor(props: { record: CheckRecord; student: Student; card
   const [open, setOpen] = useState(false)
   const [moreHours, setMoreHours] = useState(Number(props.record.hours || 0) > 2)
   const [form] = Form.useForm()
-  const service = String(props.record.courseType || '').startsWith('service:')
+  const service = checkInService(props.record)
   const historicalName = String(props.record.coachName || '').trim()
   const coachLocked = /[、,，]/.test(historicalName)
   const card = props.card || (props.student.cards || []).find((item) => item.id === props.record.studentCardId)
@@ -411,7 +413,7 @@ export function CheckEditor(props: { record: CheckRecord; student: Student; card
   const coachChoices = props.coaches.filter((item) => !assignedCoachIds.length || assignedCoachIds.includes(item.id) || item.id === props.record.coachId)
   const editorSource = service
     ? card
-    : (selectedCourse && (selectedCourse.validStartDate || selectedCourse.validEndDate || selectedCourse.consumeDeadline) ? selectedCourse : card)
+    : (selectedCourse && (category === 'HOURS' || selectedCourse.validStartDate || selectedCourse.validEndDate || selectedCourse.consumeDeadline) ? selectedCourse : card)
   const editorBounds = checkInBounds(editorSource)
   const editorDateMax = boundedDateMax(editorBounds)
   const originHours = Number(props.record.hours || 0)
@@ -468,7 +470,7 @@ export function CheckEditor(props: { record: CheckRecord; student: Student; card
                 message.warning('请选择老师')
                 return
               }
-              const bounds = checkInBounds(payment.validStartDate || payment.validEndDate || payment.consumeDeadline ? payment : card)
+              const bounds = checkInBounds(category === 'HOURS' || payment.validStartDate || payment.validEndDate || payment.consumeDeadline ? payment : card)
               if ((bounds.min && values.consumeDate < bounds.min) || (bounds.max && values.consumeDate > bounds.max)) {
                 message.warning(bounds.min && values.consumeDate < bounds.min ? '未到有效期，不能打卡' : '已过有效期，不能打卡')
                 return
@@ -492,6 +494,8 @@ export function CheckEditor(props: { record: CheckRecord; student: Student; card
                 amount: unitPrice * hours,
                 courseType: props.record.courseType,
                 courseTypeLabel: props.record.courseTypeLabel,
+                consumeItemType: props.record.consumeItemType,
+                consumeItemId: props.record.consumeItemId,
                 consumeDate: values.consumeDate,
                 remark: String(values.remark || '').trim(),
               } : {
@@ -502,6 +506,7 @@ export function CheckEditor(props: { record: CheckRecord; student: Student; card
                 hours,
                 paymentRecordId: payment?.id || props.record.paymentRecordId || undefined,
                 courseType: payment?.courseType || props.record.courseType,
+                ...resolveConsumeItemReferenceFields(payment?.courseType || props.record.courseType),
                 consumeDate: values.consumeDate,
                 remark: String(values.remark || '').trim(),
               })

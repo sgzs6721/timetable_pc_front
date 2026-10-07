@@ -2,6 +2,7 @@ import { Button, Empty, Spin, Table } from 'antd'
 import { useEffect, useState } from 'react'
 import { genderText, todayIso } from './kit'
 import { currency, numberOf, PROFIT_METRICS, type ProfitDetailRequest } from './profit-model'
+import { isCampusServiceConsumeItem } from './consume-item'
 
 export function ProfitDetailPanel(props: {
   request: ProfitDetailRequest
@@ -193,8 +194,7 @@ function consumedFormula(row: Record<string, unknown>): string {
 }
 
 function isServiceConsumption(row: Record<string, unknown>): boolean {
-  const value = row.serviceConsumption
-  return value === true || value === 1 || value === 'true'
+  return isCampusServiceConsumeItem(row)
 }
 
 function revenueFormula(row: Record<string, unknown>): string {

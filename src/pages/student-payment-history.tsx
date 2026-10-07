@@ -11,6 +11,7 @@ import {
   deletePaymentPeerLabel,
   deletePaymentTitle,
   groupPayments,
+  isTransferInRecord,
   paymentAmountText,
   paymentAvgText,
   paymentChildLine,
@@ -24,6 +25,7 @@ import {
   supplementSectionTitle,
 } from './student-payments'
 import { CardRecordTabs, cardBalanceView, orderedStudentCards } from './students-domain'
+import { TransferRecordEditor } from './student-transfer-record-editor'
 
 export function StudentPaymentHistory(props: {
   student: Student
@@ -59,6 +61,7 @@ function PaymentCardPage(props: {
   onChanged: () => Promise<void>
 }) {
   const [openIds, setOpenIds] = useState<number[]>([])
+  const [transferRecord, setTransferRecord] = useState<PayRecord | null>(null)
   const summary = paymentSummaryMetrics(props.rows, props.card, props.student, false)
   const grouped = groupPayments(props.rows)
   const cardView = props.card ? cardBalanceView(props.card) : null
@@ -93,10 +96,12 @@ function PaymentCardPage(props: {
             open={openIds.includes(row.id)}
             onToggle={() => setOpenIds((current) => current.includes(row.id) ? current.filter((id) => id !== row.id) : [...current, row.id])}
             setPayOpen={props.setPayOpen}
+            onTransferEdit={setTransferRecord}
             onChanged={props.onChanged}
           />)}
         </div>
       )}
+      <TransferRecordEditor record={transferRecord} card={props.card} student={props.student} onClose={() => setTransferRecord(null)} onSaved={props.onChanged} />
     </div>
   )
 }
@@ -110,6 +115,7 @@ function PaymentEntry(props: {
   open: boolean
   onToggle: () => void
   setPayOpen: (value: PayLaunch | null) => void
+  onTransferEdit: (record: PayRecord) => void
   onChanged: () => Promise<void>
 }) {
   const row = props.row
@@ -133,7 +139,7 @@ function PaymentEntry(props: {
         </div>
         {props.manage ? <div className="student-payment-entry-actions">
           {canAdjustPayment(row) ? <Button type="link" onClick={() => props.setPayOpen({ adjust: row })}>调整</Button> : null}
-          {row.adjustmentReason !== 'transfer' ? <Button type="link" onClick={() => props.setPayOpen(row)}>编辑</Button> : null}
+          {row.adjustmentReason !== 'transfer' ? <Button type="link" onClick={() => props.setPayOpen(row)}>编辑</Button> : isTransferInRecord(row) ? <Button type="link" onClick={() => props.onTransferEdit(row)}>编辑</Button> : null}
           <Button type="link" danger onClick={() => confirmPaymentDelete(row, props.card, props.onChanged)}>删除</Button>
         </div> : null}
       </header>
@@ -154,7 +160,7 @@ function PaymentEntry(props: {
         <button type="button" disabled={!foldable} onClick={props.onToggle}><span>{sectionTitle}</span><em>共 {row.supplements.length} 笔{foldable ? (props.open ? ' · 收起' : ' · 展开') : ''}</em></button>
         {shownChildren.map((child) => <div key={child.id} className="student-payment-adjustment-row">
           <div><strong>{paymentChildLine(child, false)}</strong><span>{child.paymentDate}</span></div>
-          {props.manage ? <div>{canEditPayment(child) ? <Button type="link" onClick={() => props.setPayOpen(child)}>编辑</Button> : null}<Button type="link" danger onClick={() => confirmPaymentDelete(child, props.card, props.onChanged)}>删除</Button></div> : null}
+          {props.manage ? <div>{canEditPayment(child) ? <Button type="link" onClick={() => props.setPayOpen(child)}>编辑</Button> : isTransferInRecord(child) ? <Button type="link" onClick={() => props.onTransferEdit(child)}>编辑</Button> : null}<Button type="link" danger onClick={() => confirmPaymentDelete(child, props.card, props.onChanged)}>删除</Button></div> : null}
         </div>)}
       </div> : null}
     </article>

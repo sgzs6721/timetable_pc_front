@@ -4,6 +4,7 @@ import { useSearchParams } from 'react-router-dom'
 import { delJson, getJson } from '../api/biz'
 import { BusinessDateRangePicker } from '../components/BusinessDatePicker'
 import { EmptyState, NeedCampus, PageHead, money, monthKey, periodChoices, type PeriodOption, shiftPeriod, tell, todayIso, useShell } from './kit'
+import { isCampusServiceConsumeItem } from './consume-item'
 
 interface HoursResult {
   month?: string
@@ -266,7 +267,7 @@ function hoursStudentText(row: Record<string, unknown>): string {
 }
 
 function hoursServiceRecord(row: Record<string, unknown>): boolean {
-  return row.serviceRecord === true || String(row.courseType || '').trim().startsWith('service:')
+  return isCampusServiceConsumeItem(row)
 }
 
 function hoursServiceText(row: Record<string, unknown>): string {

@@ -9,6 +9,7 @@ import { money, tell, todayIso } from './kit'
 import type { Card, Student, Named, PayRecord } from './students-model'
 import { lockedCheckInCoach, paymentOptionForCourse, preferredCourseForCoach } from './student-card-desk'
 import { activeStudentCards, boundedDateMax, cardCategoryText, cardRemain, checkInBlockReason, checkInBounds, checkInCardEligible, checkInQuotaHint, confirmCheckInDates, dateOutOfBoundsMessage, noEligibleCheckInMessage, personName } from './students-domain'
+import { resolveConsumeItemReferenceFields } from './consume-item'
 
 const CHECK_IN_HOURS_MIN = 0.5
 const CHECK_IN_HOURS_MAX = 4
@@ -238,9 +239,13 @@ export function QuickCheckIn(props: {
   const selectedServices = serviceOptions.filter((item) => Number(serviceCounts[item.id] || 0) > 0)
   const serviceAmount = selectedServices.reduce((sum, item) => sum + Number(item.discountedPrice || 0) * Number(serviceCounts[item.id] || 0), 0)
   const selectedPayment = courseOptions.find((item) => item.id === watchedPaymentId) || selectableCourse
+  const selectedPaymentControlsValidity = !!selectedPayment && (
+    currentCategory === 'HOURS'
+    || !!(selectedPayment.validStartDate || selectedPayment.validEndDate || selectedPayment.consumeDeadline)
+  )
   const dateSource = useService
     ? card
-    : (selectedPayment && (selectedPayment.validStartDate || selectedPayment.validEndDate || selectedPayment.consumeDeadline) ? selectedPayment : card)
+    : (selectedPaymentControlsValidity ? selectedPayment : card)
   const dateBounds = checkInBounds(dateSource)
   const dateMax = boundedDateMax(dateBounds)
   const hasCheckedInDate = dates.some((date) => usedDates.includes(date))
@@ -371,7 +376,11 @@ export function QuickCheckIn(props: {
             return
           }
           const payment = courseOptions.find((item) => item.id === values.paymentId) || selectableCourse
-          const paymentBounds = payment && (payment.validStartDate || payment.validEndDate || payment.consumeDeadline) ? payment : card
+          const paymentControlsValidity = !!payment && (
+            category === 'HOURS'
+            || !!(payment.validStartDate || payment.validEndDate || payment.consumeDeadline)
+          )
+          const paymentBounds = paymentControlsValidity ? payment : card
           const bounds = checkInBounds(paymentBounds)
           const outOfRange = checkDates.find((date) => (bounds.min && date < bounds.min) || (bounds.max && date > bounds.max))
           if (outOfRange) {
@@ -426,6 +435,7 @@ export function QuickCheckIn(props: {
               paymentRecordId: payment.id || undefined,
               courseType: payment.courseType,
               courseTypeLabel: payment.courseLabel,
+              ...resolveConsumeItemReferenceFields(payment.courseType),
               ...datePayload,
             })
           }
@@ -458,6 +468,8 @@ export function QuickCheckIn(props: {
                 amount: price * count,
                 courseType: `service:${service.id}`,
                 courseTypeLabel: service.name,
+                consumeItemType: 'CAMPUS_SERVICE',
+                consumeItemId: service.id,
                 ...datePayload,
               })
             })

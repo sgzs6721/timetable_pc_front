@@ -1,3 +1,5 @@
+import { isCampusServiceConsumeItem } from './consume-item'
+
 export interface CheckInRight {
   serviceItemId?: number
   id?: number
@@ -20,6 +22,8 @@ export interface CheckInRecord {
   giftHours?: number
   totalHours?: number
   remainingHours?: number
+  consumeItemType?: string
+  consumeItemId?: number
   courseType?: string
   courseTypeLabel?: string
   paymentDate?: string
@@ -34,6 +38,8 @@ export interface CheckInRecord {
   serviceRights?: CheckInRight[]
   storedValueRights?: CheckInRight[]
   displayMode?: string
+  serviceRecord?: boolean
+  isServiceConsumption?: boolean
 }
 
 export interface CheckInPaymentOption {
@@ -344,9 +350,9 @@ function flattenPaymentRecords(records: CheckInRecord[] = []): CheckInRecord[] {
 }
 
 function isServiceRecord(record: CheckInRecord | undefined): boolean {
+  if (record?.consumeItemType || record?.consumeItemId) return isCampusServiceConsumeItem(record)
   const courseType = String(record?.courseType || '').trim()
-  if (courseType.startsWith('service:')) return true
-  if (courseType) return false
+  if (courseType) return isCampusServiceConsumeItem(record)
   return (Array.isArray(record?.serviceRights) && record.serviceRights.length > 0)
     || (Array.isArray(record?.storedValueRights) && record.storedValueRights.some((right) => String(right?.courseType || '').trim().startsWith('service:')))
     || String(record?.displayMode || '').trim() === 'stored_service'
@@ -584,7 +590,7 @@ function displayValidityRange(records: CheckInRecord[]): { validStartDate: strin
 }
 
 export function clampQuickCheckInDate(date: string, input: {
-  card?: { id?: number; validStartDate?: string; validEndDate?: string; consumeDeadline?: string }
+  card?: { id?: number; cardCategory?: string; remainingHours?: number; validStartDate?: string; validEndDate?: string; consumeDeadline?: string }
   records?: CheckInRecord[]
   singleCard?: boolean
   today: string
@@ -596,26 +602,39 @@ export function clampQuickCheckInDate(date: string, input: {
   let start = normalizeDate(card?.validStartDate)
   let end = normalizeDate(card?.validEndDate)
   let deadline = normalizeDate(card?.consumeDeadline)
-  if (!start && !end && !deadline) {
+  const hoursCard = String(card?.cardCategory || '').trim().toUpperCase() === 'HOURS'
+  if (hoursCard || (!start && !end && !deadline)) {
     const scoped = flattenPaymentRecords(input.records || []).filter((record) => {
       const recordCardId = Number(record.studentCardId || 0)
       if (cardId > 0) return recordCardId === cardId || (allowUnscoped && recordCardId <= 0)
       return recordCardId <= 0
     })
-    const range = displayValidityRange(scoped)
-    if (range) {
-      start = range.validStartDate
-      end = range.validEndDate
+    const preferredPayment = hoursCard ? buildCheckInPaymentRecordOptions(scoped, {
+      remainingHoursCap: card?.remainingHours,
+      allowZeroRemainingHours: false,
+    })[0] : undefined
+    if (preferredPayment) {
+      // The selected hours lot is authoritative. Empty dates mean unlimited;
+      // do not inherit an older validity range summarized on the card.
+      start = preferredPayment.validStartDate
+      end = preferredPayment.validEndDate
+      deadline = preferredPayment.consumeDeadline
     } else {
-      const deadlines = scoped
-        .filter((record) => !(normalizeDate(record.validStartDate) && normalizeDate(record.validEndDate)))
-        .map((record) => normalizeDate(record.consumeDeadline))
-        .filter(Boolean)
-        .sort()
-      if (deadlines.length) deadline = deadlines[deadlines.length - 1]
-      else {
-        const endDates = scoped.map((record) => normalizeDate(record.validEndDate)).filter(Boolean).sort()
-        end = endDates.length ? endDates[endDates.length - 1] : ''
+      const range = displayValidityRange(scoped)
+      if (range) {
+        start = range.validStartDate
+        end = range.validEndDate
+      } else if (!hoursCard) {
+        const deadlines = scoped
+          .filter((record) => !(normalizeDate(record.validStartDate) && normalizeDate(record.validEndDate)))
+          .map((record) => normalizeDate(record.consumeDeadline))
+          .filter(Boolean)
+          .sort()
+        if (deadlines.length) deadline = deadlines[deadlines.length - 1]
+        else {
+          const endDates = scoped.map((record) => normalizeDate(record.validEndDate)).filter(Boolean).sort()
+          end = endDates.length ? endDates[endDates.length - 1] : ''
+        }
       }
     }
   }

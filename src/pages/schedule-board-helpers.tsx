@@ -175,7 +175,7 @@ export function weekRangeLabel(weekStart: string): string {
 export function weekChipLabel(weekStart: string): string {
   if (weekStart === mondayOf(todayIso())) return '本周'
   const end = addDays(weekStart, 6)
-  return `${Number(weekStart.slice(5, 7))}.${Number(weekStart.slice(8))}～${Number(end.slice(5, 7))}.${Number(end.slice(8))}`
+  return `${weekStart.slice(5, 7)}.${weekStart.slice(8, 10)}～${end.slice(5, 7)}.${end.slice(8, 10)}`
 }
 
 export function templateIdentity(row: Schedule): string {

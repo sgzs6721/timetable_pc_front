@@ -67,6 +67,7 @@ Web 端覆盖 `miniprogram/app.json` 中除待办以外的注册页面，不再�
 | `subpackages/student/pages/student-detail/student-detail` | `/students?studentId=...` 详情抽屉 | 档案、多卡、缴费、销课、家长权限、费用项、结业/恢复/删除一致 |
 | `subpackages/student/pages/student-coach-transfer/student-coach-transfer` | `/students` 批量换老师 | 源老师、目标老师、学员多选、校区范围和结果计数一致 |
 | `subpackages/student/pages/parent-fee-items/parent-fee-items` | 学员详情“家长端” | 费用项新增/启停/删除、支付标记、家长访问权限一致 |
+| `subpackages/student/pages/parent-fee-item-create/parent-fee-item-create` | 学员详情“家长端”费用方案弹窗 | 专属方案金额、课时、卡片、有效期、启用状态和编辑回显一致 |
 | `subpackages/parent/pages/home/home` | `/parent/home` | 成员切换、本周课表、近期动态、课程与缴费快捷入口一致 |
 | `subpackages/parent/pages/activities/activities` | `/parent/activities` | 可报名活动、状态、时间、地点和活动落地页下钻一致 |
 | `subpackages/parent/pages/courses/courses` | `/parent/courses` | 自建/机构课程、权益摘要、新增、编辑、删除和详情下钻一致 |
@@ -97,6 +98,8 @@ Web 端覆盖 `miniprogram/app.json` 中除待办以外的注册页面，不再�
 | `subpackages/schedule/pages/schedule-manage/schedule-manage` | `/schedule` 左侧课表区 | 创建、复制、编辑、默认、归档、恢复、删除和角色范围一致 |
 | `subpackages/schedule/pages/create-timetable/create-timetable` | `/schedule` 创建课表弹窗 | 工作日/周末时段、粒度、固定/单周、来源复制和数量上限一致 |
 | `subpackages/schedule/pages/timetable-detail/timetable-detail` | `/schedule?timetableId=...` | 周切换、模板/实例、半小时格、批量、拖放、请假、恢复、试听和学员状态一致 |
+| `subpackages/finance/pages/payment/payment` | 学员详情“缴费记录”编辑弹窗 | 新增、续费、补缴、退费、调整、转课时、有效期和提成分配一致 |
+| `subpackages/finance/pages/payment-manage/payment-manage` | `/payments` | 时间/类型/校区/关键字筛选、汇总、趋势、分组统计、分页和学员下钻一致 |
 | `subpackages/finance/pages/finance-manage/finance-manage` | `/finance` | 收支概览、时间范围、待支出、流水增改删和校区对比一致 |
 | `subpackages/finance/pages/finance-settings/finance-settings` | `/finance` 收支项目/周期支出 | 分类、周期计划、启停/恢复、历史项目回显和周期提示一致 |
 | `subpackages/finance/pages/profit-overview/profit-overview` | `/profit` | 校区利润对比、每日趋势、收入/成本/支出汇总和日期下钻一致 |

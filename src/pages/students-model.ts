@@ -138,6 +138,7 @@ export interface PayRecord {
   commissionAllocations?: Array<{ memberId?: number; memberName?: string; commissionRate?: number; commissionAmount?: number }>
   transferTargetStudentId?: number
   transferTargetStudentName?: string
+  transferSourceText?: string
   transferDirection?: string
   displayMode?: string
   totalHours?: number
@@ -152,6 +153,8 @@ export interface CheckRecord {
   id: number
   consumeDate?: string
   courseName?: string
+  consumeItemType?: string
+  consumeItemId?: number
   courseType?: string
   courseTypeLabel?: string
   coachName?: string
@@ -166,4 +169,6 @@ export interface CheckRecord {
   createTime?: string
   scheduleTimeText?: string
   cardTypeLabel?: string
+  serviceRecord?: boolean
+  isServiceConsumption?: boolean
 }

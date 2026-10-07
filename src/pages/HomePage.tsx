@@ -10,6 +10,7 @@ import { canViewLeads, navForUser } from '../nav'
 import { AppIcon, EmptyState, PageHead, money, todayIso, useShell } from './kit'
 import { OVERVIEW_SLOT_LIMIT, countDistinctStudents } from './home-overview'
 import { OrganizationCreateModal, type OrganizationCreateValues } from './organization-create-modal'
+import { isCampusServiceConsumeItem } from './consume-item'
 
 type HomeView = 'manager' | 'campus' | 'substitute' | 'member'
 type DayTab = 'today' | 'tomorrow'
@@ -621,7 +622,7 @@ function courseRecordView(row: Record<string, unknown>): { date: string; title: 
   return {
     date: String(row.consumeDate || row.createTime || '').slice(0, 10) || '未记录日期',
     title,
-    hours: `${formatRecordHours(row.hours)}课时`,
+    hours: `${formatRecordHours(row.hours)}${isCampusServiceConsumeItem(row) ? '次' : '课时'}`,
     meta,
     auto,
     timeText: matched ? (remarkTime || scheduleTime) : (auto ? scheduleTime : ''),

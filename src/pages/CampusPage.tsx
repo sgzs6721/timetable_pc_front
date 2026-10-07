@@ -77,7 +77,7 @@ export function CampusPage() {
             { key: 'trial', label: '体验类型', children: <AcademicSettings campusId={campusId} section="trial" /> },
           ]} /> },
           { key: 'staff', label: '人员设置', children: <Tabs className="campus-sub-tabs" activeKey={staffTab} onChange={setStaffTab} items={[
-            { key: 'teachers', label: '老师列表', children: <Teachers campusId={campusId} /> },
+            { key: 'teachers', label: '老师列表', children: <Teachers campusId={campusId} onCampusChanged={shell.reload} /> },
             { key: 'positions', label: '职位设置', children: <Positions campusId={campusId} /> },
           ]} /> },
           { key: 'salary', label: '工资设置', children: salaryAllowed ? <CampusSalary campusId={campusId} /> : <p>当前不能设置员工工资</p> },

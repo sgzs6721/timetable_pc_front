@@ -1,4 +1,4 @@
-import { Button, Checkbox, Input, InputNumber, Modal, Select, Space, Tabs, message } from 'antd'
+import { Button, Checkbox, Input, InputNumber, Modal, Radio, Select, Space, Tabs, message } from 'antd'
 import { useEffect, useState } from 'react'
 import { getJson, postJson } from '../api/biz'
 import { BusinessDatePicker } from '../components/BusinessDatePicker'
@@ -36,7 +36,7 @@ export function CampusTransfer(props: { student: Student; campuses: Named[]; onD
       const disabled = !periodTransferable(card, [])
       const selected = !disabled && !picked
       if (selected) picked = true
-      next[card.id!] = { selected, hours: Number(card.remainingHours || 0), coachIds: [], serviceIds: [], discount: {}, price: {} }
+      next[card.id!] = { selected, hours: Number(card.remainingHours || 0), coachIds: [], serviceIds: [], discount: {}, price: {}, ...transferValidityDraft(card) }
     })
     setDrafts(next)
     getJson<PayRecord[]>(`/payment-records/student/${props.student.id}`).then((rows) => {
@@ -47,7 +47,10 @@ export function CampusTransfer(props: { student: Student; campuses: Named[]; onD
         cards.forEach((card) => {
           const disabled = !periodTransferable(card, rows || [])
           const existing = refreshed[card.id!]
-          refreshed[card.id!] = { ...(existing || { hours: Number(card.remainingHours || 0), coachIds: [], serviceIds: [], discount: {}, price: {} }), selected: !disabled && !chosen }
+          refreshed[card.id!] = {
+            ...(existing || { hours: Number(card.remainingHours || 0), coachIds: [], serviceIds: [], discount: {}, price: {}, ...transferValidityDraft(card) }),
+            selected: !disabled && !chosen,
+          }
           if (!disabled && !chosen) chosen = true
         })
         return refreshed
@@ -154,6 +157,10 @@ export function CampusTransfer(props: { student: Student; campuses: Named[]; onD
         return
       }
       const moving = category === 'HOURS' ? (hours || 0) > 0 || amount > 0 : category === 'STORED_VALUE' ? amount > 0 : true
+      if (moving && !transferValidityValid(draft, category)) {
+        message.warning('请填写完整且正确的有效期')
+        return
+      }
       const course = needsTransferCourse(card)
       const service = needsTransferService(card)
       if (moving && course && !draft.courseId) {
@@ -184,6 +191,10 @@ export function CampusTransfer(props: { student: Student; campuses: Named[]; onD
         studentCardId: card.id,
         hours,
         amount,
+        validityMode: category === 'PERIOD' ? 'timed' : draft.validityMode,
+        validStartDate: draft.validityMode === 'timed' ? draft.validStartDate : undefined,
+        validEndDate: draft.validityMode === 'timed' ? draft.validEndDate : undefined,
+        consumeDeadline: draft.validityMode === 'deadline' ? (draft.consumeDeadline || undefined) : undefined,
         targetCourseType: moving && course ? String(draft.courseId) : undefined,
         targetStudentGroupId: moving && course ? draft.courseId : undefined,
         targetCoachMemberIds: moving && course ? draft.coachIds : undefined,
@@ -302,6 +313,49 @@ export function CampusTransfer(props: { student: Student; campuses: Named[]; onD
                         patch(card.id!, { amount: clampTransferAmount(value == null ? null : Number(value), cap), amountEdited: true })
                       }}
                     />
+                    <div>
+                      <strong>有效期设置</strong>
+                      {category !== 'PERIOD' ? (
+                        <Radio.Group
+                          value={draft.validityMode}
+                          onChange={(event) => {
+                            const mode = event.target.value as 'timed' | 'deadline'
+                            if (mode === 'timed') {
+                              const today = todayIso()
+                              const deadline = isoDate(draft.consumeDeadline)
+                              patch(card.id!, { validityMode: mode, validStartDate: today, validEndDate: deadline && deadline >= today ? deadline : today, consumeDeadline: '' })
+                            } else {
+                              patch(card.id!, { validityMode: mode, consumeDeadline: isoDate(draft.validEndDate), validStartDate: '', validEndDate: '' })
+                            }
+                          }}
+                          options={[
+                            { value: 'timed', label: category === 'STORED_VALUE' ? '限时消费' : '限时销课' },
+                            { value: 'deadline', label: '有效期至' },
+                          ]}
+                        />
+                      ) : null}
+                    </div>
+                    {category === 'PERIOD' || draft.validityMode === 'timed' ? (
+                      <Space wrap>
+                        <span>开始</span>
+                        <BusinessDatePicker
+                          value={draft.validStartDate}
+                          allowClear={false}
+                          onChange={(value) => patch(card.id!, {
+                            validStartDate: value,
+                            validEndDate: !isoDate(draft.validEndDate) || draft.validEndDate! < value ? value : draft.validEndDate,
+                          })}
+                        />
+                        <span>结束</span>
+                        <BusinessDatePicker value={draft.validEndDate} minDate={draft.validStartDate || undefined} allowClear={false} onChange={(value) => patch(card.id!, { validEndDate: value })} />
+                      </Space>
+                    ) : (
+                      <Space wrap>
+                        <span>有效期至</span>
+                        <BusinessDatePicker value={draft.consumeDeadline} allowClear onChange={(value) => patch(card.id!, { consumeDeadline: value })} />
+                        {!draft.consumeDeadline ? <span>不限期</span> : null}
+                      </Space>
+                    )}
                     {moving && needsTransferCourse(card) ? (
                       !targetCampusId ? <p>请先选择目标校区</p> : targetStatus === 'loading' ? <p>正在加载课程...</p> : targetStatus === 'failed' ? <p>加载校区失败</p> : !groups.length ? <p>目标校区暂无课程</p> : (
                       <>
@@ -393,11 +447,42 @@ export interface TransferDraft {
   hours: number
   amount?: number
   amountEdited?: boolean
+  validityMode: 'timed' | 'deadline'
+  validStartDate?: string
+  validEndDate?: string
+  consumeDeadline?: string
   courseId?: number
   coachIds: number[]
   serviceIds: number[]
   discount: Record<number, number>
   price: Record<number, number>
+}
+
+function isoDate(value: unknown): string {
+  const text = String(value || '').trim()
+  return /^\d{4}-\d{2}-\d{2}$/.test(text) ? text : ''
+}
+
+export function transferValidityDraft(card: Card): Pick<TransferDraft, 'validityMode' | 'validStartDate' | 'validEndDate' | 'consumeDeadline'> {
+  const start = isoDate(card.validStartDate)
+  const end = isoDate(card.validEndDate)
+  const deadline = isoDate(card.consumeDeadline)
+  const period = String(card.cardCategory || '').toUpperCase() === 'PERIOD'
+  return {
+    validityMode: period || (start && end) ? 'timed' : 'deadline',
+    validStartDate: start,
+    validEndDate: end,
+    consumeDeadline: deadline,
+  }
+}
+
+export function transferValidityValid(draft: TransferDraft, category: string): boolean {
+  if (category === 'PERIOD' || draft.validityMode === 'timed') {
+    const start = isoDate(draft.validStartDate)
+    const end = isoDate(draft.validEndDate)
+    return !!start && !!end && end >= start
+  }
+  return draft.validityMode === 'deadline' && (!draft.consumeDeadline || !!isoDate(draft.consumeDeadline))
 }
 
 export function clampTransferAmount(value: number | null, max: number): number | undefined {
