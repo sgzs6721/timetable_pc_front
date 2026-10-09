@@ -307,19 +307,144 @@ export function subtractMinuteRange(whole: { start: number; end: number }, block
   return segments
 }
 
-export function cancelledTemplates(day: number, date: string, weekLessons: Schedule[], templates: Schedule[]): Schedule[] {
-  return templates.filter((item) => {
-    if (Number(item.dayOfWeek) !== day || !scheduleName(item)) return false
-    const start = toMinutes(clockText(item.startTime))
-    const end = toMinutes(clockText(item.endTime))
-    return !weekLessons.some((lesson) => {
-      if (lesson.scheduleDate && lesson.scheduleDate !== date) return false
-      if (Number(lesson.uiChangeStatus) === 3) return false
-      const left = toMinutes(clockText(lesson.startTime))
-      const right = toMinutes(clockText(lesson.endTime))
-      return left < end && start < right
+export interface CancelledCompareSegment {
+  key: string
+  start: string
+  end: string
+  leaveScheduleId?: number
+}
+
+function comparableName(row: Schedule): string {
+  return scheduleName(row).trim().toLowerCase()
+}
+
+function explicitStudentKeys(row: Schedule): string[] {
+  const targetType = String(row.targetType || '').trim().toLowerCase()
+  const targetId = Number(row.targetId || 0)
+  if (targetType === 'student' && targetId > 0) return [`student:${targetId}`]
+  const groupId = Number(row.studentGroupId || 0)
+  if (groupId > 0) return [`group:${groupId}`]
+  const studentId = Number(row.primaryStudentId || 0)
+  if (studentId > 0) return [`student:${studentId}`]
+  if (targetId <= 0) return []
+  if (!targetType || targetType === '学员') return [`student:${targetId}`]
+  if (targetType === 'course' || targetType === '班级' || targetType === '课程') return [`group:${targetId}`]
+  if (targetType === 'preset' || targetType === '预设') return [`preset:${targetId}`]
+  return [`target:${targetId}`]
+}
+
+function studentKeys(row: Schedule): string[] {
+  const explicit = explicitStudentKeys(row)
+  if (explicit.length) return explicit
+  const ids = (row.studentInstances || []).map((item) => Number(item.studentId || 0)).filter((id) => id > 0)
+  return Array.from(new Set(ids)).sort((left, right) => left - right).map((id) => `student:${id}`)
+}
+
+function keysEqual(left: string[], right: string[]): boolean {
+  return left.length > 0 && left.length === right.length && left.every((value, index) => value === right[index])
+}
+
+function sameComparableIdentity(template: Schedule, active: Schedule): boolean {
+  if (Number(template.uiChangeStatus) === 4 || Number(active.uiChangeStatus) === 4) return false
+  const templateName = comparableName(template)
+  const activeName = comparableName(active)
+  if (templateName || activeName) return templateName === activeName
+  const templateKeys = explicitStudentKeys(template)
+  const activeKeys = explicitStudentKeys(active)
+  if (templateKeys.length || activeKeys.length) return keysEqual(templateKeys, activeKeys)
+  return keysEqual(studentKeys(template), studentKeys(active))
+}
+
+function minuteRange(row: Schedule): { start: number; end: number } | null {
+  const start = toMinutes(clockText(row.startTime))
+  const end = toMinutes(clockText(row.endTime))
+  if (!Number.isFinite(start) || !Number.isFinite(end) || !(end > start)) return null
+  return { start, end }
+}
+
+function sameSchedule(template: Schedule, active: Schedule): boolean {
+  return sameComparableIdentity(template, active)
+    && clockText(template.startTime) === clockText(active.startTime)
+    && clockText(template.endTime) === clockText(active.endTime)
+}
+
+function comparableTemplate(row: Schedule): boolean {
+  return Number(row.uiChangeStatus) !== 3 && Number(row.uiChangeStatus) !== 4 && !!(scheduleName(row) || studentKeys(row).length)
+}
+
+function compareSlotStatus(slot: string, lessons: Schedule[], templates: Schedule[]): '' | 'modified' | 'cancelled' {
+  const slotLessons = lessons.filter((item) => clockText(item.startTime) === slot)
+  const slotTemplates = templates.filter((item) => clockText(item.startTime) === slot)
+  const active = slotLessons.find((item) => Number(item.uiChangeStatus) !== 3 && Number(item.uiChangeStatus) !== 4)
+    || slotLessons.find((item) => Number(item.uiChangeStatus) === 4)
+  const leave = slotLessons.find((item) => Number(item.uiChangeStatus) === 3 && item.id != null)
+  const template = (active && Number(active.uiChangeStatus) !== 4 ? slotTemplates.find((item) => sameSchedule(item, active)) : undefined) || slotTemplates[0]
+  if (!template) return ''
+  const matched = !!active && Number(active.uiChangeStatus) !== 4 && sameSchedule(template, active)
+  if (active && !leave && matched) return ''
+  if (!active && !leave) return 'cancelled'
+  if (leave && !slotTemplates.some((item) => sameComparableIdentity(item, leave))) return ''
+  return active ? 'modified' : 'cancelled'
+}
+
+function coveringLeaveId(template: Schedule, start: number, end: number, lessons: Schedule[]): number | undefined {
+  const matched = lessons.find((lesson) => {
+    if (Number(lesson.uiChangeStatus) !== 3 || lesson.id == null || !sameComparableIdentity(template, lesson)) return false
+    const range = minuteRange(lesson)
+    return !!range && range.start < end && range.end > start
+  })
+  return matched?.id != null ? Number(matched.id) : undefined
+}
+
+export function cancelledCompareSegments(day: number, date: string, weekLessons: Schedule[], templates: Schedule[]): CancelledCompareSegment[] {
+  const dayTemplates = templates.filter((item) => Number(item.dayOfWeek) === day && comparableTemplate(item))
+  const lessons = weekLessons.filter((lesson) => !lesson.scheduleDate || lesson.scheduleDate === date)
+  const slots = new Set<string>()
+  dayTemplates.forEach((item) => slots.add(clockText(item.startTime)))
+  lessons.forEach((item) => slots.add(clockText(item.startTime)))
+  const status = new Map<string, 'modified' | 'cancelled'>()
+  slots.forEach((slot) => {
+    const mark = compareSlotStatus(slot, lessons, dayTemplates)
+    if (mark) status.set(slot, mark)
+  })
+  const segments: CancelledCompareSegment[] = []
+  dayTemplates.forEach((template) => {
+    if (!status.has(clockText(template.startTime))) return
+    const range = minuteRange(template)
+    if (!range) return
+    const blockers = lessons
+      .filter((lesson) => Number(lesson.uiChangeStatus) !== 3)
+      .map((lesson) => minuteRange(lesson))
+      .filter((item): item is { start: number; end: number } => !!item)
+      .map((item) => ({ start: Math.max(item.start, range.start), end: Math.min(item.end, range.end) }))
+      .filter((item) => item.end > item.start)
+    subtractMinuteRange(range, blockers).forEach((missing) => {
+      segments.push({
+        key: `${template.id || 'template'}|${missing.start}|${missing.end}`,
+        start: fromMinutes(missing.start),
+        end: fromMinutes(missing.end),
+        leaveScheduleId: coveringLeaveId(template, missing.start, missing.end, lessons),
+      })
     })
   })
+  return segments
+}
+
+export function visibleLeaveSlices(lesson: Schedule, weekLessons: Schedule[], segments: CancelledCompareSegment[]): Array<{ start: string; end: string }> {
+  const range = minuteRange(lesson)
+  if (!range || Number(lesson.uiChangeStatus) !== 3) return []
+  const blockers = weekLessons
+    .filter((item) => Number(item.uiChangeStatus) !== 3 && Number(item.id || 0) !== Number(lesson.id || 0))
+    .map((item) => minuteRange(item))
+    .filter((item): item is { start: number; end: number } => !!item)
+    .map((item) => ({ start: Math.max(item.start, range.start), end: Math.min(item.end, range.end) }))
+    .filter((item) => item.end > item.start)
+  let remaining = subtractMinuteRange(range, blockers)
+  segments.filter((item) => Number(item.leaveScheduleId || 0) === Number(lesson.id || 0)).forEach((item) => {
+    const claim = { start: toMinutes(item.start), end: toMinutes(item.end) }
+    remaining = remaining.flatMap((part) => subtractMinuteRange(part, [claim]))
+  })
+  return remaining.map((item) => ({ start: fromMinutes(item.start), end: fromMinutes(item.end) }))
 }
 
 export function echoActionTime(row: Schedule | undefined, status: 'leave' | 'delete'): string {

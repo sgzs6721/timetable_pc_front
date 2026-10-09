@@ -3,8 +3,8 @@ import { LeftOutlined, PlusOutlined, RightOutlined, StarFilled, StarOutlined } f
 import { postJson, putJson } from '../api/biz'
 import { AppIcon, NeedCampus, PageHead, tell, todayIso } from './kit'
 import {
-  DAY_LABELS, addDays, boardHoursText, cancelledTemplates, clockText,
-  compareDetail, formatTimetableTime, freeUntil, fromMinutes,
+  DAY_LABELS, addDays, boardHoursText, cancelledCompareSegments, clockText,
+  compareDetail, formatTimetableTime, freeUntil, fromMinutes, visibleLeaveSlices,
   ownerGenderIcon, scheduleInstanceKey, templateEchoForCell, timetableMeta,
   timetableWeeks, toMinutes,
   weekChipLabel,
@@ -23,6 +23,20 @@ export function SchedulePage() {
   const vm = useScheduleController()
   const { groups, groupsLoading, archived, setArchived, dayBand, setDayBand, selecting, setSelecting, current, setCurrent, weekStart, setWeekStart, mode, schedules, templateSchedules, setCreating, setCell, placement, setPlacement, batch, setBatch, deleting, setDeleting, deleteIds, setDeleteIds, setCampusFilter, setDragAction, dragHover, setDragHover, dragGuard, dragLessonKey, campusId, canCreate, days, splitWeekend, templateMode, boardSchedules, campusLegend, activeCampusId, boardDays, splitHead, slots, limits, loadGroups, loadWeek, switchBoardMode, removeSchedule, moveSchedule, copySchedule, openOverview, onTimetableMenu, openDay, choosePlacement } = vm
   const visibleGroups = groups.filter((group) => ((archived ? group.archivedTimetables : group.activeTimetables) || []).length > 0)
+  const restoreLeave = (scheduleId: number) => {
+    if (!scheduleId || archived || Number(current?.status) === 2) return
+    Modal.confirm({
+      title: '销假',
+      content: '确认恢复这个请假时间段吗？',
+      okText: '销假',
+      cancelText: '取消',
+      onOk: async () => {
+        await postJson(`/schedules/${scheduleId}/restore`)
+        message.success('已销假')
+        await loadWeek()
+      },
+    })
+  }
 
   return (
     <NeedCampus campusId={campusId}>
@@ -334,6 +348,7 @@ export function SchedulePage() {
                     const shown = activeCampusId
                       ? own.filter((lesson) => Number(lesson.uiChangeStatus || 0) === 4 || Number(lesson.campusId || 0) === activeCampusId)
                       : own
+                    const cancelMarks = templateMode ? [] : cancelledCompareSegments(day, date, own, templateSchedules)
                     return (
                       <div className={!templateMode && date === todayIso() ? 'tt-day is-today' : 'tt-day'} key={day} style={{ gridColumn: column + 2, gridRow: `2 / span ${slots.length}` }}>
                         {slots.map((slot) => {
@@ -534,19 +549,48 @@ export function SchedulePage() {
                             </div>
                           )
                         }) : null}
-                        {templateMode ? null : cancelledTemplates(day, date, own, templateSchedules).map((lesson) => {
-                          const frame = cardFrame(lesson, slots)
+                        {cancelMarks.map((segment) => {
+                          const frame = rangeFrame(segment.start, segment.end, slots)
+                          const actionable = !!segment.leaveScheduleId && !archived && Number(current.status) !== 2
+                          const style = { top: frame.top, height: frame.height }
+                          if (!actionable) {
+                            return <div key={`cancel-${segment.key}`} className="tt-cancel" aria-label="已删除的固定课表时段" style={style} />
+                          }
                           return (
-                            <div
-                              key={`cancel-${lesson.id}`}
-                              className="tt-cancel"
-                              aria-label="已删除的固定课表时段"
-                              style={{ top: Math.max(2, frame.top - 2), height: frame.height + 4 }}
+                            <button
+                              key={`cancel-${segment.key}`}
+                              type="button"
+                              className="tt-cancel is-action"
+                              aria-label="请假后的固定课表时段"
+                              style={style}
+                              onContextMenu={(event) => {
+                                event.preventDefault()
+                                if (segment.leaveScheduleId) restoreLeave(segment.leaveScheduleId)
+                              }}
+                              onClick={() => {
+                                const leave = own.find((item) => Number(item.id) === segment.leaveScheduleId)
+                                if (!leave || selecting || deleting || placement) return
+                                setCell({
+                                  day,
+                                  date,
+                                  start: segment.start,
+                                  end: segment.end,
+                                  slotStart: slotContaining(segment.start, slots)?.start,
+                                  slotEnd: slotContaining(segment.start, slots)?.end,
+                                  schedule: leave,
+                                  echo: templateEchoForCell(day, date, segment.start, leave, schedules, templateSchedules),
+                                })
+                              }}
                             />
                           )
                         })}
-                        {shown.map((lesson) => {
-                          const frame = cardFrame(lesson, slots)
+                        {shown.flatMap((lesson) => {
+                          const slices = Number(lesson.uiChangeStatus) === 3
+                            ? visibleLeaveSlices(lesson, own, cancelMarks)
+                            : [{ start: clockText(lesson.startTime), end: clockText(lesson.endTime) }]
+                          return slices.map((slice) => {
+                          const clipped = slice.start !== clockText(lesson.startTime) || slice.end !== clockText(lesson.endTime)
+                          const frame = clipped ? rangeFrame(slice.start, slice.end, slots) : cardFrame(lesson, slots)
                           const detail = templateMode ? { mark: '' as const, added: [], modified: [] } : compareDetail(lesson, templateSchedules.filter((item) => Number(item.dayOfWeek) === day))
                           const partial = detail.added.length > 0 && detail.modified.length > 0
                           const lessonStart = toMinutes(clockText(lesson.startTime))
@@ -554,7 +598,7 @@ export function SchedulePage() {
                           const span = Math.max(lessonEnd - lessonStart, 1)
                           return (
                             <button
-                              key={scheduleInstanceKey(lesson)}
+                              key={`${scheduleInstanceKey(lesson)}|${slice.start}`}
                               type="button"
                               className={lessonClass(lesson, `${deleting && deleteIds.includes(scheduleInstanceKey(lesson)) ? ' is-picked' : ''}${placement?.schedule && scheduleInstanceKey(placement.schedule) === scheduleInstanceKey(lesson) ? ' is-source' : ''}${!partial && detail.mark ? ` is-${detail.mark}` : ''}`)}
                               style={{ top: frame.top, height: frame.height }}
@@ -575,20 +619,9 @@ export function SchedulePage() {
                                 window.setTimeout(() => { dragGuard.current = false }, 0)
                               }}
                               onContextMenu={(event) => {
-                                if (Number(lesson.uiChangeStatus) !== 3 || !lesson.id || archived || Number(current.status) === 2) return
+                                if (Number(lesson.uiChangeStatus) !== 3 || !lesson.id) return
                                 event.preventDefault()
-                                const scheduleId = lesson.id
-                                Modal.confirm({
-                                  title: '销假',
-                                  content: '确认恢复这个请假时间段吗？',
-                                  okText: '销假',
-                                  cancelText: '取消',
-                                  onOk: async () => {
-                                    await postJson(`/schedules/${scheduleId}/restore`)
-                                    message.success('已销假')
-                                    await loadWeek()
-                                  },
-                                })
+                                restoreLeave(lesson.id)
                               }}
                               onClick={() => {
                                 if (dragGuard.current) return
@@ -627,9 +660,10 @@ export function SchedulePage() {
                                 <i key={`mod-${range.start}`} className="tt-compare is-modified" style={{ top: `${((range.start - lessonStart) / span) * 100}%`, height: `${((range.end - range.start) / span) * 100}%` }} />
                               ))] : null}
                               <b className={campusLegend.length > 1 && Number(lesson.campusId || 0) > 0 && lesson.uiChangeStatus !== 4 ? `campus-tone-${campusLegend.find((item) => item.id === Number(lesson.campusId))?.tone ?? 0}` : undefined}>{lesson.uiChangeStatus === 4 ? '占用' : lesson.displayName || lesson.courseName}</b>
-                              {lesson.uiChangeStatus !== 4 ? <small>{[lesson.coachName, clockText(lesson.startTime), clockText(lesson.endTime)].filter(Boolean).join(' ')}</small> : null}
+                              {lesson.uiChangeStatus !== 4 ? <small>{[lesson.coachName, clipped ? slice.start : clockText(lesson.startTime), clipped ? slice.end : clockText(lesson.endTime)].filter(Boolean).join(' ')}</small> : null}
                             </button>
                           )
+                          })
                         })}
                       </div>
                     )

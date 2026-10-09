@@ -574,6 +574,12 @@
   pointer-events: none;
 }
 
+.tt-cancel.is-action {
+  z-index: 3;
+  pointer-events: auto;
+  cursor: pointer;
+}
+
 .tt-legend {
   display: flex;
   flex-wrap: wrap;
