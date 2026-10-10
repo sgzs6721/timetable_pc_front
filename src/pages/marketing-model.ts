@@ -47,6 +47,8 @@ export interface Campaign {
   contactPhone?: string
   referralEnabled?: number
   referralRewardTiers?: string
+  /** 老带新立减奖励退费方式：ONLINE 原路退回 / OFFLINE 线下处理 */
+  referralRefundMode?: string
   status?: string
 }
 

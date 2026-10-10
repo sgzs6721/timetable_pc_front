@@ -1,4 +1,4 @@
-import { Alert, Button, Form, Input, InputNumber, Modal, Popconfirm, Select, Space, Spin, Switch, Table, Tabs, Tag, message } from 'antd'
+import { Alert, Button, Form, Input, InputNumber, Modal, Popconfirm, Radio, Select, Space, Spin, Switch, Table, Tabs, Tag, message } from 'antd'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { delJson, getJson, postJson, putJson } from '../api/biz'
 import type { Campus } from '../api/types'
@@ -60,6 +60,7 @@ function campaignInitial(dto: CampaignDto | null, campus?: Campus): JsonMap {
     posterTheme: content?.posterTheme || 'BLUE',
     referralEnabled: Number(item.referralEnabled || 0) === 1,
     referralTiers: parseReferralTiers(item.referralRewardTiers),
+    referralRefundMode: item.referralRefundMode === 'ONLINE' ? 'ONLINE' : 'OFFLINE',
     enrollStartTime: item.enrollStartTime?.slice(0, 16),
     enrollEndTime: item.enrollEndTime?.slice(0, 16),
   } : {
@@ -67,7 +68,7 @@ function campaignInitial(dto: CampaignDto | null, campus?: Campus): JsonMap {
     address: campus?.address || '',
     contactName: campus?.contactPerson || '',
     contactPhone: campus?.contactPhone || '',
-    signupMode: 'INTENT', payMode: 'FREE', quotaTotal: 0, referralEnabled: false,
+    signupMode: 'INTENT', payMode: 'FREE', quotaTotal: 0, referralEnabled: false, referralRefundMode: 'OFFLINE',
   }
 }
 
@@ -92,6 +93,7 @@ function campaignPayload(values: JsonMap): JsonMap {
     contactPhone: String(values.contactPhone || '').trim(),
     referralEnabled: values.referralEnabled ? 1 : 0,
     referralRewardTiers: serializeReferralTiers(values.referralTiers),
+    referralRefundMode: values.payMode === 'PAID' && values.referralRefundMode === 'ONLINE' ? 'ONLINE' : 'OFFLINE',
     contentOverride: overridePresent ? {
       headline: String(values.headline || '').trim(),
       subHeadline: String(values.subHeadline || '').trim(),
@@ -550,6 +552,15 @@ export function MarketingPage() {
           {campaignPublished ? <Alert className="form-alert" type="info" showIcon message="老带新规则发布后保持原配置；如需更换奖励规则，请结束本活动后另发一个。" /> : null}
           <Form.Item name="referralEnabled" label="开启老带新" valuePropName="checked"><Switch disabled={campaignPublished} /></Form.Item>
           <ReferralTierEditor form={campaignForm} name="referralTiers" enabledName="referralEnabled" disabled={campaignPublished} />
+          <Form.Item noStyle shouldUpdate={(prev, next) => prev.referralEnabled !== next.referralEnabled || prev.payMode !== next.payMode}>
+            {({ getFieldValue }) => getFieldValue('referralEnabled') ? <Form.Item
+              name="referralRefundMode"
+              label="立减奖励怎么退"
+              extra={getFieldValue('payMode') === 'PAID' ? '线上：发放时原路退回推荐人的微信，从机构营销入账里扣；线下：机构自己给钱，系统只记录。发布后也可以改。' : '免费活动没有可原路退回的付款，只能线下处理。'}
+            >
+              <Radio.Group disabled={getFieldValue('payMode') !== 'PAID'} options={[{ value: 'OFFLINE', label: '线下处理' }, { value: 'ONLINE', label: '线上原路退回' }]} />
+            </Form.Item> : null}
+          </Form.Item>
         </Form>
       </Modal>
 

@@ -112,20 +112,33 @@ export function CampaignDetailDrawer(props: {
     }
   }
 
-  function mutateReward(row: JsonMap, action: 'grant' | 'void') {
+  function mutateReward(row: JsonMap, action: 'grant' | 'offline' | 'void') {
     let value = ''
+    const copy = {
+      grant: { title: row.status === 'REFUNDING' ? '重试微信退款' : '确认发放奖励', tip: '付费活动的立减奖励会原路退回推广人微信，金额从机构营销入账中扣除；其他奖励只记录已发放。', placeholder: '发放备注（选填）', ok: '确认发放' },
+      offline: { title: '线下已兑现', tip: '只记录已发放，不发起微信退款。请确认已线下把奖励给到家长。', placeholder: '备注，如：现金已退 100 元', ok: '确认' },
+      void: { title: '确认作废奖励', tip: '', placeholder: '请输入作废原因', ok: '确认作废' },
+    }[action]
     Modal.confirm({
-      title: action === 'grant' ? '确认发放奖励' : '确认作废奖励',
-      content: <Input.TextArea placeholder={action === 'grant' ? '发放备注（选填）' : '请输入作废原因'} onChange={(event) => { value = event.target.value }} />,
-      okText: action === 'grant' ? '确认发放' : '确认作废',
+      title: copy.title,
+      content: <Space direction="vertical" style={{ width: '100%' }}>{copy.tip ? <span>{copy.tip}</span> : null}<Input.TextArea placeholder={copy.placeholder} onChange={(event) => { value = event.target.value }} /></Space>,
+      okText: copy.ok,
       okButtonProps: { danger: action === 'void' },
       onOk: async () => {
         if (action === 'void' && !value.trim()) {
           message.warning('请填写作废原因')
           return Promise.reject()
         }
-        await postJson(`/marketing/rewards/${row.id}/${action}?campusId=${props.campusId}`, action === 'grant' ? { remark: value } : { reason: value })
-        message.success(action === 'grant' ? '奖励已标记为发放' : '奖励已作废')
+        try {
+          if (action === 'void') {
+            await postJson(`/marketing/rewards/${row.id}/void?campusId=${props.campusId}`, { reason: value })
+          } else {
+            await postJson(`/marketing/rewards/${row.id}/grant?campusId=${props.campusId}`, { remark: value, offline: action === 'offline' ? 'true' : 'false' })
+          }
+          message.success(action === 'void' ? '奖励已作废' : '奖励已发放')
+        } catch (error) {
+          Modal.warning({ title: '操作未完成', content: tell(error, '操作失败') })
+        }
         await loadDetailData()
       },
     })
@@ -145,12 +158,13 @@ export function CampaignDetailDrawer(props: {
     })
   }
 
+  const rewardTabOf = (row: JsonMap) => row.status === 'REFUNDING' ? 'PENDING' : String(row.status || '')
   const rewardCounts = {
-    PENDING: rewards.filter((row) => row.status === 'PENDING').length,
-    GRANTED: rewards.filter((row) => row.status === 'GRANTED').length,
-    VOIDED: rewards.filter((row) => row.status === 'VOIDED').length,
+    PENDING: rewards.filter((row) => rewardTabOf(row) === 'PENDING').length,
+    GRANTED: rewards.filter((row) => rewardTabOf(row) === 'GRANTED').length,
+    VOIDED: rewards.filter((row) => rewardTabOf(row) === 'VOIDED').length,
   }
-  const visibleRewards = rewards.filter((row) => row.status === rewardStatus)
+  const visibleRewards = rewards.filter((row) => rewardTabOf(row) === rewardStatus)
 
   return (
     <Drawer open={props.open} onClose={props.onClose} width="min(1120px, 92vw)" title={content?.headline || '活动详情'} extra={<Space>
@@ -223,11 +237,11 @@ export function CampaignDetailDrawer(props: {
           { title: '来源', dataIndex: 'source', render: (value: string) => ({ DIRECT: '直接访问', SHARE: '分享', POSTER: '海报' } as Record<string, string>)[value] || value || '—' },
           { title: '报名时间', dataIndex: 'createTime', render: (value) => String(value || '—').replace('T', ' ').slice(0, 16) },
           { title: '状态', dataIndex: 'enrollStatus', render: (value) => value === 'VALID' ? <Tag color="green">有效</Tag> : <Tag>已取消</Tag> },
-          { title: '操作', render: (_, row: Enrollment) => row.enrollStatus === 'VALID' ? <Popconfirm title={row.payStatus === 'PAID' ? '确认已线下退款并作废？未发放入账会冲销，已发放金额将在下次发放时扣除。' : '确认作废报名并归还名额？此操作不能撤销。'} onConfirm={async () => { await postJson(`/marketing/campaigns/${id}/enrollments/${row.id}/void?campusId=${props.campusId}`); await loadEnrollments(); await props.onReload() }}><Button type="link" danger>{row.payStatus === 'PAID' ? '退款作废' : '作废'}</Button></Popconfirm> : null },
+          { title: '操作', render: (_, row: Enrollment) => row.enrollStatus === 'VALID' ? <Popconfirm title={row.payStatus === 'PAID' ? '确认已线下退款并作废？未发放入账会冲销，已发放金额将在下次发放时扣除；该家长已原路领到的老带新奖励不用再退。' : '确认作废报名并归还名额？此操作不能撤销。'} onConfirm={async () => { await postJson(`/marketing/campaigns/${id}/enrollments/${row.id}/void?campusId=${props.campusId}`); await loadEnrollments(); await props.onReload() }}><Button type="link" danger>{row.payStatus === 'PAID' ? '退款作废' : '作废'}</Button></Popconfirm> : null },
         ]} />
       </section> : null}
       {tab === 'rewards' ? <section className="work-card">
-        <Alert type="info" showIcon message="礼品、课时和立减均由机构线下兑现；此处用于记录发放状态。" />
+        <Alert type="info" showIcon message="付费活动的立减奖励点“发放”会原路退回推广人微信，金额从机构营销入账中扣除；礼品、课时等由机构线下兑现后点“线下已兑现”。" />
         <div className="stat-line">
           <span>待发放<strong>{rewardCounts.PENDING}</strong></span>
           <span>已发放<strong>{rewardCounts.GRANTED}</strong></span>
@@ -239,9 +253,14 @@ export function CampaignDetailDrawer(props: {
         <Table rowKey={(row) => String(row.id)} dataSource={visibleRewards} pagination={false} locale={{ emptyText: '这一栏还没有奖励记录' }} columns={[
           { title: '获奖学员', dataIndex: 'studentName' }, { title: '奖励', dataIndex: 'rewardName' },
           { title: '达成档位', render: (_, row: JsonMap) => `${row.achievedReferralCount || 0}/${row.tierThreshold || 0} 人` },
-          { title: '状态', dataIndex: 'statusText', render: (value, row: JsonMap) => <Space><Tag color={row.status === 'PENDING' ? 'orange' : row.status === 'GRANTED' ? 'green' : 'default'}>{String(value || row.status || '—')}</Tag>{row.anomaly ? <Tag color="red">人数回落</Tag> : null}</Space> },
+          { title: '状态', dataIndex: 'statusText', render: (value, row: JsonMap) => <Space><Tag color={row.status === 'PENDING' ? 'orange' : row.status === 'REFUNDING' ? 'blue' : row.status === 'GRANTED' ? 'green' : 'default'}>{String(value || row.status || '—')}</Tag>{row.anomaly ? <Tag color="red">人数回落</Tag> : null}</Space> },
+          { title: '退款', render: (_, row: JsonMap) => Number(row.refundAmount) > 0 && row.status !== 'PENDING' ? `${row.status === 'REFUNDING' ? '退款中' : '已原路退回'} ¥${money(row.refundAmount)}` : '—' },
           { title: '备注', render: (_, row: JsonMap) => String(row.grantRemark || row.voidReason || '—') },
-          { title: '操作', render: (_, row: JsonMap) => row.status === 'PENDING' ? <Space><Button type="link" onClick={() => mutateReward(row, 'grant')}>标记已发放</Button><Button type="link" danger onClick={() => mutateReward(row, 'void')}>作废</Button></Space> : null },
+          { title: '操作', render: (_, row: JsonMap) => {
+            if (row.status === 'REFUNDING') return <Button type="link" onClick={() => mutateReward(row, 'grant')}>重试退款</Button>
+            if (row.status !== 'PENDING') return null
+            return <Space><Button type="link" onClick={() => mutateReward(row, 'grant')}>发放</Button><Button type="link" onClick={() => mutateReward(row, 'offline')}>线下已兑现</Button><Button type="link" danger onClick={() => mutateReward(row, 'void')}>作废</Button></Space>
+          } },
         ]} />
       </section> : null}
       <SessionModal open={sessionEdit !== undefined} edit={sessionEdit} form={sessionForm} campaignId={id} campusId={props.campusId} onClose={() => setSessionEdit(undefined)} onSaved={loadDetailData} />
