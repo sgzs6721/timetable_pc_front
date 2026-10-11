@@ -67,5 +67,5 @@ function PaymentRow({ row }: { row: ParentPayment }) {
 }
 
 function ClassRow({ row }: { row: ParentClassRecord }) {
-  return <div className="parent-record-row"><span className="class"><ClockCircleOutlined /></span><div><strong>{row.courseName || '上课记录'}</strong><small>{[row.classDate, row.startTime && `${String(row.startTime).slice(0, 5)}–${String(row.endTime || '').slice(0, 5)}`, row.coachName, row.remark].filter(Boolean).join(' · ')}</small></div><b className="class-value">{row.hours ? `${row.hours} 课时` : '已到课'}</b></div>
+  return <div className="parent-record-row"><span className="class"><ClockCircleOutlined /></span><div><strong>{row.courseName || '上课记录'} {row.autoCheckIn ? <Tag color="blue">自动打卡</Tag> : null}</strong><small>{[row.classDate, row.startTime && `${String(row.startTime).slice(0, 5)}–${String(row.endTime || '').slice(0, 5)}`, row.coachName, row.remark].filter(Boolean).join(' · ')}</small></div><b className="class-value">{row.hours ? `${row.hours} 课时` : '已到课'}</b></div>
 }
