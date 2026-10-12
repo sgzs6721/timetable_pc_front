@@ -84,7 +84,7 @@ export function SchedulePage() {
                 .find((item) => item.createByMemberGender)?.createByMemberGender
               const memberGenderIcon = ownerGenderIcon(memberGender)
               return (
-              <div className="timetable-group" key={`${serviceGroup ? 'service' : 'member'}-${group.serviceItemId || group.memberId || group.memberName || '未分组'}`}>
+              <div className="timetable-group" key={`${serviceGroup ? 'service' : 'member'}-${group.memberId || group.memberName || '未分组'}`}>
                 <div className="timetable-group-name">
                   <AppIcon
                     className={serviceGroup ? 'timetable-group-person' : memberGenderIcon === 'icon-gender-male' ? 'timetable-group-person is-male' : memberGenderIcon === 'icon-gender-female' ? 'timetable-group-person is-female' : 'timetable-group-person'}

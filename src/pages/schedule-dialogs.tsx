@@ -46,7 +46,7 @@ export function ScheduleDialogs({ vm }: { vm: ReturnType<typeof useScheduleContr
         campusName={campusName}
         campuses={shell.campuses}
         schedulableCampuses={timetableCampuses}
-        ownerName={current?.serviceItemName || current?.createByMemberName || (serviceTimetable ? '当前服务' : '当前课表老师')}
+        ownerName={current?.createByMemberName || (serviceTimetable ? '服务课表' : '当前课表老师')}
         coachMemberId={serviceTimetable ? undefined : current?.createByMemberId}
         serviceTimetable={serviceTimetable}
         allowTrial={mode === 'instance' && !serviceTimetable}

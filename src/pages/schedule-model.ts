@@ -5,8 +5,6 @@ export interface Timetable {
   name: string
   campusId?: number
   ownerType?: 'TEACHER' | 'SERVICE' | string
-  serviceItemId?: number
-  serviceItemName?: string
   description?: string
   startDate?: string
   endDate?: string
@@ -38,7 +36,6 @@ export interface TimetableGroup {
   memberGender?: string
   positionName?: string
   ownerType?: 'TEACHER' | 'SERVICE' | string
-  serviceItemId?: number
   activeTimetables?: Timetable[]
   archivedTimetables?: Timetable[]
 }

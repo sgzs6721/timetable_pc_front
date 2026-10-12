@@ -141,14 +141,14 @@ export function CellDialog(input: CellDialogProps) {
                 <div>
                   <input
                     value={query}
-                    placeholder={trialOn ? '选择体验类型' : props.serviceTimetable ? '搜索持有本服务卡的学员' : '搜索学员姓名或非一对一课程简称'}
+                    placeholder={trialOn ? '选择体验类型' : props.serviceTimetable ? '搜索持有可用服务卡的学员' : '搜索学员姓名或非一对一课程简称'}
                     onFocus={() => setSearchOpen(true)}
                     onChange={(event) => { setQuery(event.target.value); setSearchOpen(true); if (target) setTarget('') }}
                   />
                   {query || target ? <button type="button" onClick={() => { setQuery(''); setTarget(''); setSearchOpen(true) }}>×</button> : null}
                   {searchOpen ? (
                     <div className="sheet-menu">
-                      {optionsLoading ? <p>候选项加载中...</p> : optionsError ? <p>{optionsError}</p> : !visibleOptions.length ? <p>{trialOn ? '当前校区尚未设置体验类型，请前往校区设置的「体验类型」中添加' : props.serviceTimetable ? keyword ? '没有找到持有本服务卡的学员' : '暂无持有本服务储值卡或时段卡的学员' : keyword ? '没有找到匹配学员或课程，请换个关键词试试' : '暂无学员或课程，请换老师或校区'}</p> : visibleOptions.map((item) => {
+                      {optionsLoading ? <p>候选项加载中...</p> : optionsError ? <p>{optionsError}</p> : !visibleOptions.length ? <p>{trialOn ? '当前校区尚未设置体验类型，请前往校区设置的「体验类型」中添加' : props.serviceTimetable ? keyword ? '没有找到持有可用服务卡的学员' : '暂无持有可用服务的储值卡或时段卡学员' : keyword ? '没有找到匹配学员或课程，请换个关键词试试' : '暂无学员或课程，请换老师或校区'}</p> : visibleOptions.map((item) => {
                         const blocked = !!courseTargetWarning(item) || !!studentScheduleBlock(item)
                         const icon = genderIconName(item.gender)
                         const hoursLabel = scheduleHoursLabel(item)

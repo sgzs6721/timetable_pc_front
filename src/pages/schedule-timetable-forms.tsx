@@ -15,15 +15,6 @@ interface TimetableMemberOption {
   activeCount: number
 }
 
-interface TimetableServiceOption {
-  id: number
-  serviceName?: string
-  name?: string
-  enabled?: number
-  deleted?: number
-  activeCount: number
-}
-
 export function WeekendFields(props: { disabled?: boolean }) {
   const split = Form.useWatch('splitWeekend')
   return (
@@ -83,47 +74,41 @@ export function EditTimetableForm(props: { current: Timetable; locked: boolean; 
   )
 }
 
-export function CreateTimetableButton(props: { members: TimetableMemberOption[]; services: TimetableServiceOption[]; saving: boolean }) {
+export function CreateTimetableButton(props: { members: TimetableMemberOption[]; serviceActiveCount: number; saving: boolean }) {
   const form = Form.useFormInstance()
   const values = Form.useWatch([], form) as Partial<Timetable> | undefined
   const problem = timetableFormError(values || {})
   const serviceOwned = String(values?.ownerType || 'TEACHER').toUpperCase() === 'SERVICE'
-  const owner = serviceOwned
-    ? props.services.find((item) => item.id === Number(values?.serviceItemId || 0))
-    : props.members.find((item) => item.id === Number(values?.createByMemberId || 0))
-  const blocked = !!problem || (!!owner && owner.activeCount >= 2)
+  const owner = props.members.find((item) => item.id === Number(values?.createByMemberId || 0))
+  const blocked = !!problem || (serviceOwned ? props.serviceActiveCount >= 2 : !!owner && owner.activeCount >= 2)
   return <Button type="primary" htmlType="submit" disabled={blocked || props.saving}>{props.saving ? '创建中...' : '创建课表'}</Button>
 }
 
 export function CreateTimetable(props: { open: boolean; campusId: number; manager: boolean; selfMemberId: number; source?: Timetable | null; onClose: () => void; onSaved: (id: number) => void }) {
   const [members, setMembers] = useState<TimetableMemberOption[]>([])
-  const [services, setServices] = useState<TimetableServiceOption[]>([])
+  const [serviceActiveCount, setServiceActiveCount] = useState(0)
   const [saving, setSaving] = useState(false)
   useEffect(() => {
     if (!props.open || !props.campusId) return
     Promise.all([
       getJson<Array<{ id: number; displayName?: string; nickname?: string; phone?: string }>>(`/campus-teacher/campus/${props.campusId}`, { onlySubstitute: true }),
-      props.manager
-        ? getJson<Array<{ id: number; serviceName?: string; name?: string; enabled?: number; deleted?: number }>>(`/campus-services/${props.campusId}/items`)
-        : Promise.resolve([]),
       getJson<Timetable[]>('/timetables/list'),
-    ]).then(([teachers, serviceItems, tables]) => {
+    ]).then(([teachers, tables]) => {
       const memberCounts = new Map<number, number>()
-      const serviceCounts = new Map<number, number>()
+      let activeServiceTimetables = 0
       ;(tables || []).forEach((item) => {
         if (Number(item.status ?? 1) === 2) return
-        if (String(item.ownerType || 'TEACHER').toUpperCase() === 'SERVICE' && item.serviceItemId) {
-          serviceCounts.set(item.serviceItemId, (serviceCounts.get(item.serviceItemId) || 0) + 1)
+        if (String(item.ownerType || 'TEACHER').toUpperCase() === 'SERVICE'
+          && Number(item.campusId || 0) === Number(props.campusId)) {
+          activeServiceTimetables += 1
         } else if (item.createByMemberId) {
           memberCounts.set(item.createByMemberId, (memberCounts.get(item.createByMemberId) || 0) + 1)
         }
       })
       const rows = (teachers || []).map((item) => ({ ...item, activeCount: memberCounts.get(item.id) || 0 }))
       setMembers(props.manager ? rows : rows.filter((item) => item.id === props.selfMemberId))
-      setServices((serviceItems || [])
-        .filter((item) => Number(item.id || 0) > 0 && Number(item.enabled ?? 1) === 1 && Number(item.deleted || 0) !== 1)
-        .map((item) => ({ ...item, activeCount: serviceCounts.get(item.id) || 0 })))
-    }).catch(() => { setMembers([]); setServices([]) })
+      setServiceActiveCount(activeServiceTimetables)
+    }).catch(() => { setMembers([]); setServiceActiveCount(0) })
   }, [props.open, props.campusId, props.manager, props.selfMemberId])
   return (
     <Modal title="创建课表" open={props.open} onCancel={props.onClose} footer={null} destroyOnHidden>
@@ -139,7 +124,6 @@ export function CreateTimetable(props: { open: boolean; campusId: number; manage
           startDate: props.source?.startDate,
           endDate: props.source?.endDate,
           createByMemberId: props.manager ? props.source?.createByMemberId : props.selfMemberId,
-          serviceItemId: props.manager ? props.source?.serviceItemId : undefined,
           splitWeekend: props.source?.splitWeekend || 0,
           weekendStartTime: props.source?.weekendStartTime,
           weekendEndTime: props.source?.weekendEndTime,
@@ -152,11 +136,9 @@ export function CreateTimetable(props: { open: boolean; campusId: number; manage
             return
           }
           const serviceOwned = String(values.ownerType || 'TEACHER').toUpperCase() === 'SERVICE'
-          const owner = serviceOwned
-            ? services.find((item) => item.id === values.serviceItemId)
-            : members.find((item) => item.id === values.createByMemberId)
-          if (owner && owner.activeCount >= 2) {
-            message.warning(serviceOwned ? '每项服务最多保留2张非归档课表，请先归档后再新增' : '每人最多保留2张非归档课表，请先归档后再新增')
+          const owner = members.find((item) => item.id === values.createByMemberId)
+          if ((serviceOwned && serviceActiveCount >= 2) || (!serviceOwned && owner && owner.activeCount >= 2)) {
+            message.warning(serviceOwned ? '每个校区最多保留2张非归档服务课表，请先归档后再新增' : '每人最多保留2张非归档课表，请先归档后再新增')
             return
           }
           setSaving(true)
@@ -173,23 +155,11 @@ export function CreateTimetable(props: { open: boolean; campusId: number; manage
       >
         <Form.Item name="name" label="课表名称" extra="最多12个字符" rules={[{ required: true, message: '请输入课表名称' }]}><Input maxLength={12} placeholder="如：秋季班课表" /></Form.Item>
         <Form.Item name="ownerType" label="课表归属" hidden={!props.manager}>
-          <Segmented block options={[{ value: 'TEACHER', label: '老师' }, { value: 'SERVICE', label: '服务类型' }]} />
+          <Segmented block options={[{ value: 'TEACHER', label: '老师' }, { value: 'SERVICE', label: '服务课表' }]} />
         </Form.Item>
         <Form.Item noStyle shouldUpdate={(previous, current) => previous.ownerType !== current.ownerType}>
           {({ getFieldValue }) => String(getFieldValue('ownerType') || 'TEACHER').toUpperCase() === 'SERVICE' ? (
-            <>
-              <Form.Item name="serviceItemId" label="服务类型" rules={[{ required: true, message: '请选择服务类型' }]} extra="服务课表不绑定老师；排课时只展示持有该服务储值卡或时段卡的学员。">
-                <Select
-                  placeholder="请选择服务类型"
-                  options={services.map((item) => ({
-                    value: item.id,
-                    disabled: item.activeCount >= 2,
-                    label: `${item.serviceName || item.name || '未命名服务'}${item.activeCount >= 2 ? '（最多保留2张非归档课表）' : ''}`,
-                  }))}
-                />
-              </Form.Item>
-              {!services.length ? <p>当前校区暂无启用的服务类型，请先到校区服务中配置。</p> : null}
-            </>
+            null
           ) : (
             <>
               <Form.Item name="createByMemberId" label="所属人员" rules={[{ required: true, message: '请选择所属人员' }]}>
@@ -213,7 +183,7 @@ export function CreateTimetable(props: { open: boolean; campusId: number; manage
         <Form.Item name="endTime" label="结束时间"><Input type="time" min="06:00" max="23:00" step={1800} /></Form.Item>
         <p>排课粒度固定为 1 小时。</p>
         <WeekendFields />
-        <CreateTimetableButton members={members} services={services} saving={saving} />
+        <CreateTimetableButton members={members} serviceActiveCount={serviceActiveCount} saving={saving} />
       </Form>
     </Modal>
   )

@@ -21,7 +21,6 @@ interface MemberTimetable {
   status?: number
   campusId?: number
   ownerType?: string
-  serviceItemName?: string
 }
 
 type HomeActionTone = 'slate' | 'orange' | 'blue' | 'rose' | 'green' | 'purple' | 'amber' | 'cyan'
@@ -169,7 +168,7 @@ function groupByCoach(items: ScheduleItem[], timetableById = new Map<number, Mem
     coachName: (() => {
       const timetable = timetableById.get(Number(slots[0]?.timetableId || 0))
       return String(timetable?.ownerType || '').toUpperCase() === 'SERVICE'
-        ? timetable?.serviceItemName || '服务'
+        ? '服务课表'
         : slots[0]?.coachName || '未分配老师'
     })(),
     timetableId: slots.find((slot) => Number(slot.timetableId || 0) > 0)?.timetableId,

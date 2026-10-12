@@ -108,21 +108,19 @@ export function useScheduleController() {
       ;(timetableList || []).forEach((item) => {
         if (groupedIds.has(item.id)
           || String(item.ownerType || '').toUpperCase() !== 'SERVICE'
-          || Number(item.campusId || 0) !== Number(campusId || 0)
-          || !item.serviceItemId) return
-        const serviceItemId = Number(item.serviceItemId)
-        const group = serviceGroups.get(serviceItemId) || {
-          memberId: -serviceItemId,
-          memberName: item.serviceItemName || item.createByMemberName || '服务',
-          positionName: '服务类型',
+          || Number(item.campusId || 0) !== Number(campusId || 0)) return
+        const serviceCampusId = Number(item.campusId || 0)
+        const group = serviceGroups.get(serviceCampusId) || {
+          memberId: -(1000000000 + serviceCampusId),
+          memberName: '服务课表',
+          positionName: '服务',
           ownerType: 'SERVICE',
-          serviceItemId,
           activeTimetables: [],
           archivedTimetables: [],
         }
         if (status === 2) group.archivedTimetables?.push(item)
         else group.activeTimetables?.push(item)
-        serviceGroups.set(serviceItemId, group)
+        serviceGroups.set(serviceCampusId, group)
       })
       data.push(...serviceGroups.values())
       setGroups(data || [])
@@ -288,7 +286,7 @@ export function useScheduleController() {
       const activeCount = (timetableOwner(groups, current.id)?.activeTimetables || []).length
       if (activeCount >= 2) {
         message.warning(String(current.ownerType || '').toUpperCase() === 'SERVICE'
-          ? '每项服务最多保留2张非归档课表，请先归档后再新增'
+          ? '每个校区最多保留2张非归档服务课表，请先归档后再新增'
           : '每人最多保留2张非归档课表，请先归档后再新增')
         return
       }
@@ -342,13 +340,13 @@ export function useScheduleController() {
       const owner = timetableOwner(groups, current.id)
       if (!archived && (owner?.archivedTimetables || []).length >= 5) {
         message.warning(String(current.ownerType || '').toUpperCase() === 'SERVICE'
-          ? '每项服务最多保留5张归档课表，请先删除后再归档'
+          ? '每个校区最多保留5张归档服务课表，请先删除后再归档'
           : '每个人最多保留5张归档课表，请先删除后再归档')
         return
       }
       if (archived && (owner?.activeTimetables || []).length >= 2) {
         message.warning(String(current.ownerType || '').toUpperCase() === 'SERVICE'
-          ? '每项服务最多保留2张非归档课表，请先归档后再新增'
+          ? '每个校区最多保留2张非归档服务课表，请先归档后再新增'
           : '每人最多保留2张非归档课表，请先归档后再新增')
         return
       }
