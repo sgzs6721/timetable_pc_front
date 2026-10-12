@@ -122,6 +122,10 @@ function academicPayload(state: { autoEnabled: boolean; autoMode: string; autoTi
   })
 }
 
+function studentDeleteSettingsKey(deletePayments: boolean, deleteCheckIns: boolean): string {
+  return `${deletePayments ? 1 : 0}|${deleteCheckIns ? 1 : 0}`
+}
+
 function trialDurations(enabled: boolean, halfHourEnabled: boolean, oneHourEnabled: boolean, snapshot: string) {
   if (!enabled || halfHourEnabled || oneHourEnabled) return { halfHourEnabled, oneHourEnabled }
   try {
@@ -148,6 +152,10 @@ export function AcademicSettings({ campusId, section = 'all' }: { campusId: numb
   const [fixedTime, setFixedTime] = useState('21:00')
   const [academicSaved, setAcademicSaved] = useState('')
   const [academicSaving, setAcademicSaving] = useState(false)
+  const [deletePayments, setDeletePayments] = useState(false)
+  const [deleteCheckIns, setDeleteCheckIns] = useState(false)
+  const [studentDeleteSaved, setStudentDeleteSaved] = useState('0|0')
+  const [studentDeleteSaving, setStudentDeleteSaving] = useState(false)
   const [refundTab, setRefundTab] = useState('lesson')
   const [refundSaved, setRefundSaved] = useState('')
   const [refund, setRefund] = useState<RefundRules>({ lessonFeeEnabled: false, lessonFeePercent: 0, lessonDeductMode: 'original', periodFeeEnabled: false, periodFeePercent: 0, periodDeductMode: 'duration', storedFeeEnabled: false, storedFeePercent: 0, storedDeductMode: 'original' })
@@ -173,6 +181,10 @@ export function AcademicSettings({ campusId, section = 'all' }: { campusId: numb
     const nextFixedTime = String(fixed.executeTime || '21:00').slice(0, 5)
     setFixedEnabled(nextFixedEnabled); setFixedDay(nextFixedDay); setFixedTime(nextFixedTime)
     setAcademicSaved(academicPayload({ autoEnabled: nextAutoEnabled, autoMode: nextAutoMode, autoTime: nextAutoTime, fixedEnabled: nextFixedEnabled, fixedDay: nextFixedDay, fixedTime: nextFixedTime }))
+    const nextDeletePayments = Number(settings.deletePaymentRecordsOnStudentDelete || 0) === 1
+    const nextDeleteCheckIns = Number(settings.deleteCheckInRecordsOnStudentDelete || 0) === 1
+    setDeletePayments(nextDeletePayments); setDeleteCheckIns(nextDeleteCheckIns)
+    setStudentDeleteSaved(studentDeleteSettingsKey(nextDeletePayments, nextDeleteCheckIns))
     const parsed = readJson<{ lesson?: Record<string, unknown>; period?: Record<string, unknown>; stored?: Record<string, unknown> }>(settings.refundSettingsConfig, {})
     const nextRefund: RefundRules = {
       lessonFeeEnabled: !!parsed.lesson?.feeEnabled, lessonFeePercent: Number(parsed.lesson?.feePercent || 0), lessonDeductMode: String(parsed.lesson?.deductMode || 'original'),
@@ -202,6 +214,8 @@ export function AcademicSettings({ campusId, section = 'all' }: { campusId: numb
 
   const academicNow = academicPayload({ autoEnabled, autoMode, autoTime, fixedEnabled, fixedDay, fixedTime })
   const academicDirty = !!academicSaved && academicNow !== academicSaved
+  const studentDeleteNow = studentDeleteSettingsKey(deletePayments, deleteCheckIns)
+  const studentDeleteDirty = studentDeleteNow !== studentDeleteSaved
   if (!campusId) return <p>请先选择校区。</p>
 
   return <>
@@ -284,6 +298,34 @@ export function AcademicSettings({ campusId, section = 'all' }: { campusId: numb
           </div>
         </div>
       </section> : null}
+      {section !== 'trial' ? <section className="work-card academic-settings-card student-delete-settings-card">
+        <header className="academic-section-head">
+          <div><h2>学员删除设置</h2><span>删除学员时，可同步处理关联记录</span></div>
+        </header>
+        <div className="academic-option-list">
+          <div className="academic-option-row">
+            <div><strong>同步删除缴费记录</strong><span>缴费记录仅标记删除，不物理清除</span></div>
+            <Switch checked={deletePayments} disabled={studentDeleteSaving} onChange={setDeletePayments} />
+          </div>
+          <div className="academic-option-row">
+            <div><strong>同步删除打卡记录</strong><span>打卡记录仅标记删除，不物理清除</span></div>
+            <Switch checked={deleteCheckIns} disabled={studentDeleteSaving} onChange={setDeleteCheckIns} />
+          </div>
+          <div className="academic-save-row">
+            <Button type="primary" disabled={!studentDeleteDirty || studentDeleteSaving} loading={studentDeleteSaving} onClick={async () => {
+              if (!studentDeleteDirty || studentDeleteSaving) return
+              setStudentDeleteSaving(true)
+              try {
+                await postJson(`/campus-staff/${campusId}/settings`, {
+                  deletePaymentRecordsOnStudentDelete: deletePayments ? 1 : 0,
+                  deleteCheckInRecordsOnStudentDelete: deleteCheckIns ? 1 : 0,
+                })
+                setStudentDeleteSaved(studentDeleteNow); message.success('保存成功')
+              } catch (error) { message.error(tell(error, '保存失败')) } finally { setStudentDeleteSaving(false) }
+            }}>{studentDeleteSaving ? '保存中...' : studentDeleteDirty ? '保存删除设置' : '已保存'}</Button>
+          </div>
+        </div>
+      </section> : null}
       {section !== 'trial' ? <RefundSettings refund={refund} saved={refundSaved} tab={refundTab} campusId={campusId} onTab={setRefundTab} onChange={setRefund} onSaved={setRefundSaved} /> : null}
     </div>
     {section !== 'academic' ? <Modal title="新建体验类型" open={creating} onCancel={() => setCreating(false)} footer={null} destroyOnHidden>
@@ -321,7 +363,7 @@ export function AcademicSettings({ campusId, section = 'all' }: { campusId: numb
 
 function RefundSettings(props: { refund: RefundRules; saved: string; tab: string; campusId: number; onTab: (value: string) => void; onChange: (value: RefundRules) => void; onSaved: (value: string) => void }) {
   const { refund } = props
-  return <section className="work-card academic-settings-card">
+  return <section className="work-card academic-settings-card refund-settings-card">
     <header className="academic-section-head">
       <div><h2>退费设置</h2><span>有打卡时，按卡类型规则扣除已用部分</span></div>
     </header>

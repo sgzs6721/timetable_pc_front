@@ -254,8 +254,7 @@ export function scheduleName(row: Schedule): string {
 }
 
 export function lessonsMatch(template: Schedule, active: Schedule): boolean {
-  if (Number(template.uiChangeStatus) === 4 || Number(active.uiChangeStatus) === 4) return false
-  return scheduleName(template) === scheduleName(active)
+  return sameComparableIdentity(template, active)
     && clockText(template.startTime) === clockText(active.startTime)
     && clockText(template.endTime) === clockText(active.endTime)
 }
@@ -263,14 +262,14 @@ export function lessonsMatch(template: Schedule, active: Schedule): boolean {
 export function compareDetail(lesson: Schedule, templates: Schedule[]): { mark: '' | 'added' | 'modified'; added: Array<{ start: number; end: number }>; modified: Array<{ start: number; end: number }> } {
   const empty = { mark: '' as const, added: [], modified: [] }
   if (Number(lesson.uiChangeStatus) === 3 || Number(lesson.uiChangeStatus) === 4) return empty
-  const comparable = templates.filter((item) => Number(item.uiChangeStatus) !== 3 && Number(item.uiChangeStatus) !== 4 && scheduleName(item))
+  const comparable = templates.filter(comparableTemplate)
   const start = clockText(lesson.startTime)
   if (comparable.some((item) => clockText(item.startTime) === start && lessonsMatch(item, lesson))) return empty
   const lessonStart = toMinutes(start)
   const lessonEnd = toMinutes(clockText(lesson.endTime))
   if (!(lessonEnd > lessonStart)) return { mark: 'added', added: [], modified: [] }
-  const named = comparable.filter((item) => scheduleName(item) === scheduleName(lesson))
-  const related = named.length ? named : comparable.filter((item) => {
+  const identityMatches = comparable.filter((item) => sameComparableIdentity(item, lesson))
+  const related = identityMatches.length ? identityMatches : comparable.filter((item) => {
     const left = toMinutes(clockText(item.startTime))
     return clockText(item.startTime) === start || (left >= lessonStart && left < lessonEnd)
   })
@@ -336,7 +335,8 @@ function explicitStudentKeys(row: Schedule): string[] {
 function studentKeys(row: Schedule): string[] {
   const explicit = explicitStudentKeys(row)
   if (explicit.length) return explicit
-  const ids = (row.studentInstances || []).map((item) => Number(item.studentId || 0)).filter((id) => id > 0)
+  const instanceIds = (row.studentInstances || []).map((item) => Number(item.studentId || 0)).filter((id) => id > 0)
+  const ids = instanceIds.length ? instanceIds : (row.studentIds || []).map(Number).filter((id) => id > 0)
   return Array.from(new Set(ids)).sort((left, right) => left - right).map((id) => `student:${id}`)
 }
 

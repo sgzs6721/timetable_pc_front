@@ -373,7 +373,7 @@ function periodTypeLabel(periodType: unknown): string {
 function isValidCourseLabel(value: unknown, courseType: unknown = ''): boolean {
   const label = String(value || '').trim()
   const type = String(courseType || '').trim()
-  if (!label || label === type) return false
+  if (!label || label === type || label === '未命名课程') return false
   return !/^\d+$/.test(label)
 }
 

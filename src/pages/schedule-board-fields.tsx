@@ -46,7 +46,9 @@ export function TimetableKindSelect(props: { value?: number; onChange?: (value: 
 
 export function timetableFormError(values: {
   name?: string
+  ownerType?: string
   createByMemberId?: number
+  serviceItemId?: number
   weekDays?: number[]
   startTime?: string
   endTime?: string
@@ -60,7 +62,9 @@ export function timetableFormError(values: {
   const validTime = (value?: string) => /^(?:0[6-9]|1\d|2[0-2]):(?:00|30)$/.test(clockText(value)) || clockText(value) === '23:00'
   if (!timetableName(values.name)) return '请输入课表名称'
   if (locked) return ''
-  if (!values.createByMemberId) return '请选择所属人员'
+  if (String(values.ownerType || 'TEACHER').toUpperCase() === 'SERVICE') {
+    if (!values.serviceItemId) return '请选择服务类型'
+  } else if (!values.createByMemberId) return '请选择所属人员'
   if (!(values.weekDays || []).length) return '至少选择一天'
   if (!validTime(values.startTime) || !validTime(values.endTime)) return '课表时间只能选择06:00至23:00内的整点或半点'
   if (clockText(values.startTime) >= clockText(values.endTime)) return '结束时间必须晚于开始时间'
@@ -78,7 +82,9 @@ export function timetableFormError(values: {
 
 export function timetableBody(values: {
   name?: string
+  ownerType?: string
   createByMemberId?: number
+  serviceItemId?: number
   weekDays?: number[]
   startTime?: string
   endTime?: string
@@ -92,10 +98,13 @@ export function timetableBody(values: {
   if (locked) return { name: timetableName(values.name) }
   const weekly = Number(values.isWeekly) === 1
   const split = Number(values.splitWeekend) === 1
+  const ownerType = String(values.ownerType || 'TEACHER').toUpperCase() === 'SERVICE' ? 'SERVICE' : 'TEACHER'
   return {
     name: timetableName(values.name),
     campusId,
-    createByMemberId: values.createByMemberId,
+    ownerType,
+    createByMemberId: ownerType === 'TEACHER' ? values.createByMemberId : undefined,
+    serviceItemId: ownerType === 'SERVICE' ? values.serviceItemId : undefined,
     isWeekly: weekly ? 1 : 0,
     startDate: weekly ? undefined : values.startDate,
     endDate: weekly ? undefined : values.endDate,

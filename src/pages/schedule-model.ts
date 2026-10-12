@@ -4,6 +4,9 @@ export interface Timetable {
   id: number
   name: string
   campusId?: number
+  ownerType?: 'TEACHER' | 'SERVICE' | string
+  serviceItemId?: number
+  serviceItemName?: string
   description?: string
   startDate?: string
   endDate?: string
@@ -30,9 +33,12 @@ export interface Timetable {
 }
 
 export interface TimetableGroup {
+  memberId?: number
   memberName?: string
   memberGender?: string
   positionName?: string
+  ownerType?: 'TEACHER' | 'SERVICE' | string
+  serviceItemId?: number
   activeTimetables?: Timetable[]
   archivedTimetables?: Timetable[]
 }
@@ -59,6 +65,7 @@ export interface Schedule {
   serviceQuantity?: number
   excludedStudentIds?: number[]
   currentStudents?: number
+  studentIds?: number[]
   studentInstances?: Array<{ studentId: number; studentName?: string; status?: number; studentCardId?: number; remainingHours?: number; gender?: number; cardCategory?: string; periodType?: string; courseCategory?: boolean }>
   createTime?: string
   updateTime?: string
@@ -122,12 +129,14 @@ export interface TargetOption {
   serviceQuantity?: number
   cardOptions?: CardChoice[]
   courseOptions?: Array<{ id?: number; name?: string; courseType?: string }>
-  serviceOptions?: Array<{ id?: number; courseType?: string; name?: string; studentCardIds?: number[] }>
+  serviceOptions?: Array<{ id?: number; courseType?: string; name?: string; unitPrice?: number; studentCardIds?: number[] }>
   selectionBlockedReason?: string
   studentCount?: number
   oneToOne?: boolean
   gender?: number
   remainingHours?: number
+  remainingAmount?: number
+  storedValueUnitPrice?: number
   expiredHours?: number
   totalHours?: number
   cardTypeLabels?: string[]
@@ -142,6 +151,9 @@ export interface PricingChoice {
   pricingStudentGroupId?: number
   pricingCourseType: string
   service: boolean
+  cardCategory?: string
+  remainingAmount?: number
+  unitPrice?: number
   disabled?: boolean
 }
 

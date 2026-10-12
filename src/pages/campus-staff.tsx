@@ -4,6 +4,7 @@ import { delJson, getJson, postJson, putJson } from '../api/biz'
 import { BusinessDatePicker } from '../components/BusinessDatePicker'
 import { PhoneCopyButton, copyPlainText, tell } from './kit'
 import type { Campus, Person, Position } from './campus-model'
+import { CoachHandoverModal, type CoachHandoverCheck, type StaffOffboardState } from './campus-staff-handover'
 function isIdCard(value: string) {
   const text = value.trim().toUpperCase()
   if (!text) return true
@@ -100,22 +101,6 @@ function StaffEditSaveButton(props: { person: Person; origin: { auto: boolean; n
   return <Button type="primary" htmlType="submit" disabled={props.loading || same}>保存</Button>
 }
 
-function handoverCandidates(people: Person[], sourceId: number): Person[] {
-  return people.filter((item) => item.id !== sourceId && item.status !== 0 && item.isSubstituteTeacher)
-}
-
-function handoverLines(check: Record<string, unknown>): string[] {
-  const rows = [
-    ['在读学员', check.activeStudentCount],
-    ['一对一', check.oneToOneStudentCount],
-    ['未来课次', check.futureScheduleCount],
-    ['固定课表', check.templateScheduleCount],
-    ['有效学员卡', check.activeCardCount],
-    ['课程', check.activeGroupCount],
-  ]
-  return rows.filter((item) => Number(item[1] || 0) > 0).map((item) => `${item[0]} ${item[1]}`)
-}
-
 export function Teachers({ campusId, onCampusChanged }: { campusId: number | null; onCampusChanged?: () => void }) {
   const [rows, setRows] = useState<Person[]>([])
   const [positions, setPositions] = useState<Position[]>([])
@@ -133,7 +118,7 @@ export function Teachers({ campusId, onCampusChanged }: { campusId: number | nul
   const [courseLocked, setCourseLocked] = useState(false)
   const [courseLoading, setCourseLoading] = useState(false)
   const [originCourse, setOriginCourse] = useState({ auto: false, name: '' })
-  const [offboard, setOffboard] = useState<{ person: Person; action: 'RESIGN' | 'DELETE'; check: Record<string, unknown> } | null>(null)
+  const [offboard, setOffboard] = useState<StaffOffboardState | null>(null)
   async function load() {
     if (!campusId) return
     setRows(await getJson(`/campus-teacher/campus/${campusId}`))
@@ -191,7 +176,7 @@ export function Teachers({ campusId, onCampusChanged }: { campusId: number | nul
   async function startOffboard(person: Person, action: 'RESIGN' | 'DELETE') {
     const deleting = action === 'DELETE'
     try {
-      const result = await postJson<Record<string, unknown>>(`/org-members/coaches/${person.id}/handover-check`, { campusId, action })
+      const result = await postJson<CoachHandoverCheck>(`/org-members/coaches/${person.id}/handover-check`, { campusId, action })
       if (result?.replacementRequired) {
         setOffboard({ person, action, check: result || {} })
         return
@@ -551,38 +536,7 @@ export function Teachers({ campusId, onCampusChanged }: { campusId: number | nul
           </Form>
         ) : null}
       </Modal>
-      <Modal title={offboard?.action === 'DELETE' ? '删除人员并交接' : '办理离职交接'} open={!!offboard} onCancel={() => setOffboard(null)} footer={null} destroyOnHidden>
-        {offboard ? (
-          <>
-            <p>原带课老师：{offboard.person.displayName || offboard.person.nickname || '该人员'}</p>
-            <p>本次交接会将以下业务统一转交给接替老师，请确认后再继续。</p>
-            <p>{offboard.action === 'DELETE' ? '交接完成后，该人员将移出当前校区并移除相关权限；历史记录仍会保留。' : '交接完成后，该人员将标记为离职；历史记录仍会保留。'}</p>
-            <div className="stat-line">
-              <span>待交接业务<strong>共 {Number(offboard.check.totalCount || 0)} 项</strong></span>
-            </div>
-            <ul>
-              {handoverLines(offboard.check).map((line) => <li key={line}>{line}</li>)}
-            </ul>
-            <Form layout="vertical" onFinish={async (values: { replacementMemberId?: number }) => {
-              if (!values.replacementMemberId) {
-                message.warning('请选择接替老师')
-                return
-              }
-              try {
-                await finishOffboard(offboard.person, offboard.action, values.replacementMemberId)
-              } catch (error) {
-                message.error(tell(error, offboard.action === 'DELETE' ? '删除失败' : '离职失败'))
-              }
-            }}>
-              <Form.Item name="replacementMemberId" label="选择接替老师" extra="必选" rules={[{ required: true, message: '请选择接替老师' }]}>
-                <Select options={handoverCandidates(rows, offboard.person.id).map((item) => ({ value: item.id, label: [item.displayName || item.nickname || item.phone, item.positionName || '带课老师'].filter(Boolean).join(' · ') }))} />
-              </Form.Item>
-              {!handoverCandidates(rows, offboard.person.id).length ? <p>暂无可接替的在职带课老师。请先添加或启用其他带课老师后再办理交接。</p> : null}
-              <Button danger={offboard.action === 'DELETE'} type="primary" htmlType="submit">确认交接</Button>
-            </Form>
-          </>
-        ) : null}
-      </Modal>
+      {offboard ? <CoachHandoverModal value={offboard} people={rows} onClose={() => setOffboard(null)} onFinish={finishOffboard} /> : null}
     </section>
   )
 }

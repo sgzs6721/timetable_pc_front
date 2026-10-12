@@ -56,7 +56,7 @@ export function SchedulePage() {
                   setDeleteIds([])
                 }}
                 items={[
-                  { key: 'active', label: '人员课表' },
+                  { key: 'active', label: '人员/服务课表' },
                   { key: 'archived', label: '归档课表' },
                 ]}
               />
@@ -78,15 +78,17 @@ export function SchedulePage() {
             <div className="schedule-list-panel">
             {groupsLoading ? <div className="schedule-list-loading" aria-label="课表加载中"><Skeleton active title={{ width: '42%' }} paragraph={{ rows: 5, width: ['92%', '84%', '88%', '76%', '82%'] }} /></div> : <>
             {visibleGroups.map((group) => {
-              const memberGender = group.memberGender || [...(group.activeTimetables || []), ...(group.archivedTimetables || [])]
+              const groupTimetables = [...(group.activeTimetables || []), ...(group.archivedTimetables || [])]
+              const serviceGroup = String(group.ownerType || groupTimetables[0]?.ownerType || '').toUpperCase() === 'SERVICE'
+              const memberGender = serviceGroup ? '' : group.memberGender || groupTimetables
                 .find((item) => item.createByMemberGender)?.createByMemberGender
               const memberGenderIcon = ownerGenderIcon(memberGender)
               return (
-              <div className="timetable-group" key={group.memberName || '未分组'}>
+              <div className="timetable-group" key={`${serviceGroup ? 'service' : 'member'}-${group.serviceItemId || group.memberId || group.memberName || '未分组'}`}>
                 <div className="timetable-group-name">
                   <AppIcon
-                    className={memberGenderIcon === 'icon-gender-male' ? 'timetable-group-person is-male' : memberGenderIcon === 'icon-gender-female' ? 'timetable-group-person is-female' : 'timetable-group-person'}
-                    name={memberGenderIcon || 'icon-person-neutral'}
+                    className={serviceGroup ? 'timetable-group-person' : memberGenderIcon === 'icon-gender-male' ? 'timetable-group-person is-male' : memberGenderIcon === 'icon-gender-female' ? 'timetable-group-person is-female' : 'timetable-group-person'}
+                    name={serviceGroup ? 'icon-timetable-card' : memberGenderIcon || 'icon-person-neutral'}
                     size={13}
                   />
                   <span>{group.memberName || '未分组'}</span>

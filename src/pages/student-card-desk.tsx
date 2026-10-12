@@ -157,10 +157,78 @@ export function courseCoachNames(group: Named | undefined, coaches: Named[]): st
   })
 }
 
-export function lockedCheckInCoach(group: Named | undefined, coaches: Named[]): { id: number; name: string } | null {
-  const ids = courseCoachIds(group)
-  if (ids.length <= 1) return null
-  return { id: ids[0], name: courseCoachNames(group, coaches).filter(Boolean).join('、') }
+export interface CheckInCoachOption {
+  id: number
+  name: string
+}
+
+export interface CheckInCoachSelection {
+  options: CheckInCoachOption[]
+  defaultIds: number[]
+  maxCount: number
+}
+
+/**
+ * 当前课程的老师优先，再补充该学员卡已分配的其他老师作为代课候选。
+ * 每次打卡至少选 1 位，最多不超过当前课程配置的老师数。
+ */
+export function buildCheckInCoachSelection(
+  student: Student | null | undefined,
+  card: Card | undefined,
+  groups: Named[],
+  coaches: Named[],
+  courseType = '',
+): CheckInCoachSelection {
+  const normalizedType = String(courseType || '').trim()
+  const courseGroupId = /^\d+$/.test(normalizedType) ? Number(normalizedType) : 0
+  const groupId = courseGroupId || Number(card?.studentGroupId || student?.studentGroupId || 0)
+  const group = groups.find((item) => Number(item.id) === groupId)
+  const groupUnavailable = !group
+    || group.invalid === true
+    || group.deleted === true
+    || group.isDeleted === true
+    || Number(group.deleted || 0) === 1
+    || Number(group.isDeleted || 0) === 1
+    || Number(group.status ?? 1) === 0
+    || !!group.inactiveReason
+  const configuredCourseCoachIds = groupUnavailable ? [] : courseCoachIds(group)
+  const assignedIds = (card?.coachMemberIds?.length ? card.coachMemberIds : (student?.coachMemberIds || []))
+    .map(Number)
+    .filter((id) => id > 0)
+  const assignedNames = card?.coachMemberIds?.length ? (card.coachMemberNames || []) : (student?.coachMemberNames || [])
+  const assignedNameById = new Map(assignedIds.map((id, index) => [id, String(assignedNames[index] || '').trim()]))
+  const result: CheckInCoachOption[] = []
+  const seen = new Set<number>()
+  const add = (id: number, fallback = '') => {
+    if (!id || seen.has(id)) return
+    const matched = coaches.find((item) => Number(item.id) === id || Number(item.userId || 0) === id)
+    if (!matched || Number(matched.status ?? 1) === 0) return
+    result.push({ id, name: personName(matched) || fallback || `老师${id}` })
+    seen.add(id)
+  }
+  if (!groupUnavailable) {
+    const names = courseCoachNames(group, coaches)
+    configuredCourseCoachIds.forEach((id, index) => add(id, names[index]))
+  }
+  assignedIds.forEach((id) => add(id, assignedNameById.get(id)))
+  const activeCourseCoachCount = configuredCourseCoachIds.filter((id) => seen.has(id)).length
+  const maxCount = result.length ? Math.max(1, activeCourseCoachCount || 1) : 0
+  const defaultIds = configuredCourseCoachIds.filter((id) => result.some((item) => item.id === id)).slice(0, maxCount)
+  return {
+    options: result,
+    defaultIds: defaultIds.length ? defaultIds : result.slice(0, maxCount ? 1 : 0).map((item) => item.id),
+    maxCount,
+  }
+}
+
+export function buildCheckInCoachOptions(
+  student: Student | null | undefined,
+  card: Card | undefined,
+  groups: Named[],
+  coaches: Named[],
+  courseType = '',
+): CheckInCoachOption[] {
+  return buildCheckInCoachSelection(student, card, groups, coaches, courseType).options
 }
 
 export function oneToOneCourse(group: Named): boolean {

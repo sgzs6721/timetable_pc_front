@@ -5,7 +5,7 @@ import { BusinessDatePicker } from '../components/BusinessDatePicker'
 import { buildQuickCheckInPaymentOptions, checkInCourseSubmitWarning } from './checkin-options'
 import { money, tell, todayIso } from './kit'
 import type { Student, Card, Named, PayRecord, CheckRecord } from './students-model'
-import { paymentOptionForCourse, preferredCourseForCoach } from './student-card-desk'
+import { buildCheckInCoachSelection } from './student-card-desk'
 import { CheckInCoursePicker } from './student-quick-checkin'
 import { isTransferInRecord } from './student-payments'
 import { CardRecordTabs, boundedDateMax, cardBalanceView, checkInBounds, personName } from './students-domain'
@@ -250,14 +250,19 @@ export function checkInService(row: CheckRecord): boolean {
 export function checkInCoachIdentity(row: CheckRecord, coaches: Named[]): { key: string; name: string; inactive: boolean; gender: '' | 'male' | 'female' } {
   const rawId = Number(row.coachId || 0)
   const rawName = String(row.coachName || '').trim()
+  const legacyMultiCoachName = /[、,，]/.test(rawName)
   const byId = rawId > 0
     ? coaches.find((item) => item.id === rawId || Number(item.userId || 0) === rawId)
     : undefined
-  const byName = !byId && rawName
+  const byName = !byId && rawName && !legacyMultiCoachName
     ? coaches.find((item) => [item.displayName, item.nickname, item.name, item.phone].some((value) => String(value || '').trim() === rawName))
     : undefined
   const matched = byId || byName
-  const name = matched ? personName(matched) : (rawName || (rawId > 0 ? `老师${rawId}` : '未分配老师'))
+  const name = legacyMultiCoachName
+    ? rawName
+    : matched
+    ? personName(matched)
+    : (rawName || (rawId > 0 ? `老师${rawId}` : '未分配老师'))
   const id = Number(matched?.id || rawId || 0)
   const genderText = String(matched?.gender || '').trim().toLowerCase()
   const gender = genderText === '2' || genderText === 'female' || genderText === 'f' || genderText === '女'
@@ -269,6 +274,15 @@ export function checkInCoachIdentity(row: CheckRecord, coaches: Named[]): { key:
     inactive: Number(matched?.status) === 0,
     gender,
   }
+}
+
+function recordCoachIds(row: CheckRecord, coaches: Named[]): number[] {
+  const explicit = (row.coachIds || []).map(Number).filter((id) => id > 0)
+  if (explicit.length) return Array.from(new Set(explicit))
+  const names = String(row.coachName || '').split(/[、,，]/).map((name) => name.trim()).filter(Boolean)
+  const matched = names.map((name) => coaches.find((item) => personName(item) === name)?.id).filter((id): id is number => Number(id || 0) > 0)
+  const primary = Number(row.coachId || 0)
+  return Array.from(new Set([...(primary > 0 ? [primary] : []), ...matched]))
 }
 
 export function checkInChipKey(row: CheckRecord, special: boolean, coaches: Named[] = []): string {
@@ -391,8 +405,7 @@ export function CheckEditor(props: { record: CheckRecord; student: Student; card
   const [moreHours, setMoreHours] = useState(Number(props.record.hours || 0) > 2)
   const [form] = Form.useForm()
   const service = checkInService(props.record)
-  const historicalName = String(props.record.coachName || '').trim()
-  const coachLocked = /[、,，]/.test(historicalName)
+  const historicalCoach = checkInCoachIdentity(props.record, props.coaches)
   const card = props.card || (props.student.cards || []).find((item) => item.id === props.record.studentCardId)
   const cards = (props.student.cards || []).filter((item) => item.status !== 0 && item.id)
   const category = String(card?.cardCategory || props.student.cardCategory || '').toUpperCase()
@@ -409,8 +422,21 @@ export function CheckEditor(props: { record: CheckRecord; student: Student; card
   }), [service, props.payments, card, props.groups, checkDate, cards.length])
   const paymentId = matchedPaymentId(courseOptions, props.record)
   const selectedCourse = courseOptions.find((item) => item.id === watchedPaymentId) || courseOptions.find((item) => item.id === paymentId)
-  const assignedCoachIds = card?.coachMemberIds?.length ? card.coachMemberIds : (props.student.coachMemberIds || [])
-  const coachChoices = props.coaches.filter((item) => !assignedCoachIds.length || assignedCoachIds.includes(item.id) || item.id === props.record.coachId)
+  const coachSelection = buildCheckInCoachSelection(
+    props.student,
+    card,
+    props.groups,
+    props.coaches,
+    selectedCourse?.courseType || props.record.courseType,
+  )
+  const coachChoices = [...coachSelection.options]
+  const historicalCoachIds = recordCoachIds(props.record, props.coaches)
+  historicalCoachIds.forEach((id) => {
+    if (coachChoices.some((item) => item.id === id)) return
+    const matched = props.coaches.find((item) => Number(item.id) === id || Number(item.userId || 0) === id)
+    coachChoices.push({ id, name: matched ? personName(matched) : (historicalCoachIds.length === 1 ? historicalCoach.name : `老师${id}`) })
+  })
+  const coachLimit = Math.max(1, coachSelection.maxCount)
   const editorSource = service
     ? card
     : (selectedCourse && (category === 'HOURS' || selectedCourse.validStartDate || selectedCourse.validEndDate || selectedCourse.consumeDeadline) ? selectedCourse : card)
@@ -436,10 +462,10 @@ export function CheckEditor(props: { record: CheckRecord; student: Student; card
             consumeDate: String(props.record.consumeDate || '').slice(0, 10),
             hours: props.record.hours || 1,
             remark: props.record.remark || '',
-            coachId: props.record.coachId,
+            coachIds: historicalCoachIds,
             paymentId,
           }}
-          onFinish={async (values: { consumeDate?: string; hours?: number; remark?: string; coachId?: number; paymentId?: number }) => {
+          onFinish={async (values: { consumeDate?: string; hours?: number; remark?: string; coachIds?: number[]; paymentId?: number }) => {
             if (!values.consumeDate) {
               message.warning('请选择日期')
               return
@@ -466,8 +492,13 @@ export function CheckEditor(props: { record: CheckRecord; student: Student; card
                 message.warning(courseWarning)
                 return
               }
-              if (!coachLocked && !values.coachId) {
-                message.warning('请选择老师')
+              const selectedCoachIds = Array.from(new Set((values.coachIds || []).map(Number).filter((id) => coachChoices.some((item) => item.id === id))))
+              if (!selectedCoachIds.length) {
+                message.warning('请至少选择一位老师')
+                return
+              }
+              if (selectedCoachIds.length > coachLimit) {
+                message.warning(`本次打卡最多可选择 ${coachLimit} 位老师`)
                 return
               }
               const bounds = checkInBounds(category === 'HOURS' || payment.validStartDate || payment.validEndDate || payment.consumeDeadline ? payment : card)
@@ -483,7 +514,8 @@ export function CheckEditor(props: { record: CheckRecord; student: Student; card
                 }
               }
             }
-            const coach = coachChoices.find((item) => item.id === values.coachId)
+            const selectedCoachIds = Array.from(new Set((values.coachIds || []).map(Number).filter((id) => coachChoices.some((item) => item.id === id))))
+            const selectedCoaches = selectedCoachIds.map((id) => coachChoices.find((item) => item.id === id)!).filter(Boolean)
             try {
               await putJson(`/consumptions/${props.record.id}`, service ? {
                 studentId: props.student.id,
@@ -501,8 +533,9 @@ export function CheckEditor(props: { record: CheckRecord; student: Student; card
               } : {
                 studentId: props.student.id,
                 studentCardId: props.record.studentCardId,
-                coachName: coachLocked ? historicalName : (coach ? personName(coach) : props.record.coachName),
-                coachId: coachLocked ? (props.record.coachId || undefined) : values.coachId,
+                coachName: selectedCoaches.map((item) => item.name).join('、'),
+                coachId: selectedCoachIds[0],
+                coachIds: selectedCoachIds,
                 hours,
                 paymentRecordId: payment?.id || props.record.paymentRecordId || undefined,
                 courseType: payment?.courseType || props.record.courseType,
@@ -523,20 +556,16 @@ export function CheckEditor(props: { record: CheckRecord; student: Student; card
           ) : (
             <>
               <Form.Item name="paymentId" label="课程">
-                <CheckInCoursePicker options={courseOptions} />
+                <CheckInCoursePicker options={courseOptions} afterChange={(nextPaymentId) => {
+                  const payment = courseOptions.find((item) => item.id === nextPaymentId)
+                  const selection = buildCheckInCoachSelection(props.student, card, props.groups, props.coaches, payment?.courseType)
+                  form.setFieldValue('coachIds', selection.defaultIds)
+                }} />
               </Form.Item>
               {selectedCourse?.validityText ? <p>{selectedCourse.validityText}</p> : null}
-              {coachLocked ? <Form.Item label="老师"><Input value={historicalName} disabled /></Form.Item> : (
-                <Form.Item name="coachId" label="老师" rules={[{ required: true, message: '请选择老师' }]}>
-                  <Select
-                    options={coachChoices.map((item) => ({ value: item.id, label: personName(item) }))}
-                    onChange={(value) => {
-                      const option = paymentOptionForCourse(courseOptions, preferredCourseForCoach(props.student, props.groups, Number(value)))
-                      if (option) form.setFieldValue('paymentId', option.id)
-                    }}
-                  />
-                </Form.Item>
-              )}
+              <Form.Item name="coachIds" label="老师" extra={`至少选择 1 位，最多 ${coachLimit} 位`} rules={[{ required: true, type: 'array', min: 1, message: '请至少选择一位老师' }]}>
+                <Select mode="multiple" maxCount={coachLimit} maxTagCount="responsive" options={coachChoices.map((item) => ({ value: item.id, label: item.name }))} />
+              </Form.Item>
             </>
           )}
           <Form.Item name="consumeDate" label="日期" extra={editorBounds.hint || undefined}><BusinessDatePicker minDate={editorBounds.min || undefined} maxDate={editorDateMax} /></Form.Item>

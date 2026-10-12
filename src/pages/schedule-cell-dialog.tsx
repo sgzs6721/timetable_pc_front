@@ -13,6 +13,7 @@ campuses: Array<{ id: number; name: string }>
 schedulableCampuses: Array<{ id: number; name: string }>
 ownerName: string
 coachMemberId?: number
+serviceTimetable: boolean
 allowTrial: boolean
 batchCount: number
 timetableId?: number
@@ -33,7 +34,7 @@ onStudent: (action: 'add' | 'remove' | 'leave' | 'restore', studentId: number) =
 export function CellDialog(input: CellDialogProps) {
   const vm = useCellDialogController(input)
   if (!vm) return null
-  const { props, optionsLoading, optionsError, target, setTarget, query, setQuery, searchOpen, setSearchOpen, pricingKey, setPricingKey, pricingOpen, setPricingOpen, serviceQuantity, setServiceQuantity, members, membersLoaded, excluded, setExcluded, memberCards, membersOpen, setMembersOpen, instancesOpen, setInstancesOpen, cardDraftId, setCardDraftId, trialConfig, trialOn, setTrialOn, trialDuration, setTrialDuration, halfPosition, note, setNote, startTime, endTime, coachIds, setCoachIds, recordsOpen, setRecordsOpen, recordsScope, setRecordsScope, recordsLoading, saving, leaving, setLeaving, deleting, setDeleting, restoring, setRestoring, dialogCampusId, cell, campusChoices, dialogCampusName, selected, choices, instances, sameCourse, occupied, onLeave, batching, existing, pricing, showPricing, duration, room, trialSwitchDisabled, keyword, visibleOptions, coachChoices, canLeave, openWarning, scheduleUnchanged, lessonSlotStart, lessonSecondStart, showLessonHalf, firstHalfAvailable, secondHalfAvailable, trialHourBase, trialHourSecond, trialHourSecondAvailable, durationHint, recordRows, shownMembers, shownInstances, cardMember, shiftStart, shiftDuration, chooseHalf, chooseTrialHour, chooseLessonHalf, changeDialogCampus, choose, confirmOccupy, save, openRecords, openStudentRecords, toggleStudent, openCardPicker, closeCardPicker, confirmCardPicker } = vm
+  const { props, optionsLoading, optionsError, target, setTarget, query, setQuery, searchOpen, setSearchOpen, pricingKey, setPricingKey, pricingOpen, setPricingOpen, serviceQuantity, setServiceQuantity, members, membersLoaded, excluded, setExcluded, memberCards, membersOpen, setMembersOpen, instancesOpen, setInstancesOpen, cardDraftId, setCardDraftId, trialConfig, trialOn, setTrialOn, trialDuration, setTrialDuration, halfPosition, note, setNote, startTime, endTime, coachIds, setCoachIds, recordsOpen, setRecordsOpen, recordsScope, setRecordsScope, recordsLoading, saving, leaving, setLeaving, deleting, setDeleting, restoring, setRestoring, dialogCampusId, cell, campusChoices, dialogCampusName, selected, choices, instances, sameCourse, occupied, onLeave, batching, existing, pricing, pricingRequiredAmount, pricingQuantityBlocked, saveBlocked, showPricing, duration, room, trialSwitchDisabled, keyword, visibleOptions, coachChoices, canLeave, openWarning, scheduleUnchanged, lessonSlotStart, lessonSecondStart, showLessonHalf, firstHalfAvailable, secondHalfAvailable, trialHourBase, trialHourSecond, trialHourSecondAvailable, durationHint, recordRows, shownMembers, shownInstances, cardMember, shiftStart, shiftDuration, chooseHalf, chooseTrialHour, chooseLessonHalf, changeDialogCampus, choose, confirmOccupy, save, openRecords, openStudentRecords, toggleStudent, openCardPicker, closeCardPicker, confirmCardPicker } = vm
 
   return (
     <Modal className="sheet-modal" open centered onCancel={props.onClose} footer={null} destroyOnHidden width={620} closable={false}>
@@ -105,7 +106,12 @@ export function CellDialog(input: CellDialogProps) {
             </label>
           ) : (
             <div className="sheet-form">
-              {batching && campusChoices.length <= 1 ? null : (
+              {props.serviceTimetable ? (
+                <label className="sheet-field">
+                  <span>校区</span>
+                  <strong>{dialogCampusName}</strong>
+                </label>
+              ) : batching && campusChoices.length <= 1 ? null : (
                 <label className="sheet-field">
                   <span>校区</span>
                   <Select
@@ -131,18 +137,18 @@ export function CellDialog(input: CellDialogProps) {
                 </label>
               ) : null}
               <div className="sheet-field is-search">
-                <span>{trialOn ? '体验类型' : selected?.targetType === 'course' || (!selected && cell.schedule?.targetType === 'course') ? '课程' : '学员'}</span>
+                <span>{trialOn ? '体验类型' : props.serviceTimetable ? '服务学员' : selected?.targetType === 'course' || (!selected && cell.schedule?.targetType === 'course') ? '课程' : '学员'}</span>
                 <div>
                   <input
                     value={query}
-                    placeholder={trialOn ? '选择体验类型' : '搜索学员姓名或非一对一课程简称'}
+                    placeholder={trialOn ? '选择体验类型' : props.serviceTimetable ? '搜索持有本服务卡的学员' : '搜索学员姓名或非一对一课程简称'}
                     onFocus={() => setSearchOpen(true)}
                     onChange={(event) => { setQuery(event.target.value); setSearchOpen(true); if (target) setTarget('') }}
                   />
                   {query || target ? <button type="button" onClick={() => { setQuery(''); setTarget(''); setSearchOpen(true) }}>×</button> : null}
                   {searchOpen ? (
                     <div className="sheet-menu">
-                      {optionsLoading ? <p>候选项加载中...</p> : optionsError ? <p>{optionsError}</p> : !visibleOptions.length ? <p>{trialOn ? '当前校区尚未设置体验类型，请前往校区设置的「体验类型」中添加' : keyword ? '没有找到匹配学员或课程，请换个关键词试试' : '暂无学员或课程，请换老师或校区'}</p> : visibleOptions.map((item) => {
+                      {optionsLoading ? <p>候选项加载中...</p> : optionsError ? <p>{optionsError}</p> : !visibleOptions.length ? <p>{trialOn ? '当前校区尚未设置体验类型，请前往校区设置的「体验类型」中添加' : props.serviceTimetable ? keyword ? '没有找到持有本服务卡的学员' : '暂无持有本服务储值卡或时段卡的学员' : keyword ? '没有找到匹配学员或课程，请换个关键词试试' : '暂无学员或课程，请换老师或校区'}</p> : visibleOptions.map((item) => {
                         const blocked = !!courseTargetWarning(item) || !!studentScheduleBlock(item)
                         const icon = genderIconName(item.gender)
                         const hoursLabel = scheduleHoursLabel(item)
@@ -151,7 +157,7 @@ export function CellDialog(input: CellDialogProps) {
                             {item.targetType === 'course' ? (
                               <>
                                 <b>{item.displayName || item.name}</b>
-                                <em>课程</em>
+                                <em>班级</em>
                                 <em>{item.studentCount || 0}学员</em>
                               </>
                             ) : (
@@ -176,7 +182,7 @@ export function CellDialog(input: CellDialogProps) {
 
               {showPricing && !trialOn ? (
                 <div className="sheet-field">
-                  <span>消费类型</span>
+                  <span>{props.serviceTimetable ? '使用卡片' : '消费类型'}</span>
                   <button type="button" className="sheet-picker" onClick={() => setPricingOpen((value) => !value)}>{pricing?.label || '请选择卡类型及课程或服务'}</button>
                   {pricing?.service ? (
                     <span className="sheet-stepper">
@@ -192,6 +198,7 @@ export function CellDialog(input: CellDialogProps) {
                       ))}
                     </div>
                   ) : null}
+                  {pricingQuantityBlocked ? <p className="sheet-warn">储值余额不足：本次需扣 ¥{pricingRequiredAmount.toFixed(2)}</p> : null}
                 </div>
               ) : null}
 
@@ -382,7 +389,7 @@ export function CellDialog(input: CellDialogProps) {
                   onOk: () => props.onDelete(),
                 })}>{deleting ? '删除中...' : '删除'}</button>
                 <button type="button" disabled={leaving} onClick={() => openRecords()}>{recordsOpen ? '收起' : '本周排课'}</button>
-                <button type="button" className="is-save" disabled={saving || leaving || scheduleUnchanged} onClick={() => save(false)}>{saving ? '保存中...' : '保存'}</button>
+                  <button type="button" className="is-save" disabled={saving || leaving || scheduleUnchanged || saveBlocked} onClick={() => save(false)}>{saving ? '保存中...' : '保存'}</button>
               </div>
             ) : (
               <>
@@ -400,15 +407,15 @@ export function CellDialog(input: CellDialogProps) {
                 <div className="sheet-actions">
                   <button type="button" onClick={() => openRecords()}>本周排课</button>
                   <button type="button" onClick={props.onClose}>取消</button>
-                  <button type="button" className="is-save" disabled={saving || scheduleUnchanged} onClick={() => save(false)}>{saving ? '保存中...' : '保存'}</button>
+                  <button type="button" className="is-save" disabled={saving || scheduleUnchanged || saveBlocked} onClick={() => save(false)}>{saving ? '保存中...' : '保存'}</button>
                 </div>
               </>
             )
           ) : (
             <div className={batching ? 'sheet-actions is-two' : 'sheet-actions is-three'}>
-              {batching ? null : <button type="button" className="is-occupy" disabled={saving} onClick={confirmOccupy}>{saving ? '占用中...' : '占用'}</button>}
+              {batching || props.serviceTimetable ? null : <button type="button" className="is-occupy" disabled={saving} onClick={confirmOccupy}>{saving ? '占用中...' : '占用'}</button>}
               <button type="button" onClick={props.onClose}>取消</button>
-              <button type="button" className="is-save" disabled={saving} onClick={() => save(false)}>{saving ? (existing ? '保存中...' : '添加中...') : (batching ? '确认排课' : '添加')}</button>
+              <button type="button" className="is-save" disabled={saving || saveBlocked} onClick={() => save(false)}>{saving ? (existing ? '保存中...' : '添加中...') : (batching ? '确认排课' : '添加')}</button>
             </div>
           )}
           {cell.schedule?.createTime ? <footer className="sheet-foot">添加时间：{cell.schedule.createTime}</footer> : null}

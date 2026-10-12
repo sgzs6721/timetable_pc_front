@@ -10,7 +10,7 @@ import type { CheckRecord, Named, PayLaunch, PayRecord, Student } from './studen
 import {
   CatalogHold, CatalogLoadContext, assignBlock, campusOffline, cardBalanceView,
   hasTeacherVisibleStudentCard, listBalanceText, listCardCategory, listCoachText,
-  listDisplayCard, listServiceOnly, managesStudents, orderedStudentCards, personName, studentQuotaBlock,
+  listDisplayCard, listServiceOnly, managesStudents, orderedStudentCards, personName,
   teacherVisibleStudent, type CatalogLoad, type CatalogStatus,
 } from './students-domain'
 
@@ -79,6 +79,7 @@ export function StudentsPage() {
   const [orders, setOrders] = useState<Array<Record<string, unknown>>>([])
   const [parentPaidIds, setParentPaidIds] = useState<number[]>([])
   const [adding, setAdding] = useState(false)
+  const [checkingStudentCapacity, setCheckingStudentCapacity] = useState(false)
   const [checkStudent, setCheckStudent] = useState<Student | null>(null)
   const [checkCardId, setCheckCardId] = useState<number | undefined>()
   const [checkCardLocked, setCheckCardLocked] = useState(false)
@@ -354,13 +355,18 @@ export function StudentsPage() {
             <span className="stat-readonly is-bonus">剩余赠课<strong>{money(summary?.remainingBonusHours)}</strong></span>
           </div>
           {canManage ? <div className="students-overview-actions">
-            <Button type="primary" onClick={() => {
-              const content = studentQuotaBlock(summary)
-              if (content) {
-                Modal.info({ title: '学员人数已达上限', content, okText: '我知道了' })
-                return
+            <Button type="primary" loading={checkingStudentCapacity} onClick={async () => {
+              if (!campusId || checkingStudentCapacity) return
+              const checkedCampusId = campusId
+              setCheckingStudentCapacity(true)
+              try {
+                await getJson<void>('/students/create-eligibility', { campusId: checkedCampusId })
+                if (Number(shell.campusId || 0) === Number(checkedCampusId) && canManage) setAdding(true)
+              } catch (error) {
+                Modal.info({ title: '暂时无法新增学员', content: tell(error, '当前校区暂时无法新增学员'), okText: '我知道了' })
+              } finally {
+                setCheckingStudentCapacity(false)
               }
-              setAdding(true)
             }}>新增学员</Button>
             <CoachTransferLauncher coaches={coaches} campusId={campusId || 0} onSaved={() => load()} />
           </div> : null}

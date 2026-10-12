@@ -12,6 +12,10 @@ import type { useScheduleController } from './schedule-controller'
 
 export function ScheduleDialogs({ vm }: { vm: ReturnType<typeof useScheduleController> }) {
   const { setSelecting, current, weekStart, mode, templateSchedules, creating, setCreating, createSource, setCreateSource, editing, setEditing, cell, setCell, setPlacement, batch, setBatch, setDeleting, overview, setOverview, dayDialog, setDayDialog, lookup, setLookup, dragAction, setDragAction, shell, campusId, campusName, managesCampus, timetableLocked, days, templateMode, boardSchedules, slots, loadGroups, loadWeek, saveCell, removeSchedule, leaveSchedule, moveSchedule, copySchedule } = vm
+  const serviceTimetable = String(current?.ownerType || '').toUpperCase() === 'SERVICE'
+  const timetableCampuses = serviceTimetable && current?.campusId
+    ? shell.campuses.filter((item) => Number(item.id) === Number(current.campusId))
+    : schedulableCampuses(shell.campuses, current?.createByMemberCampusIds)
   return (
     <>
       <CreateTimetable
@@ -41,10 +45,11 @@ export function ScheduleDialogs({ vm }: { vm: ReturnType<typeof useScheduleContr
         campusId={campusId || 0}
         campusName={campusName}
         campuses={shell.campuses}
-        schedulableCampuses={schedulableCampuses(shell.campuses, current?.createByMemberCampusIds)}
-        ownerName={current?.createByMemberName || '当前课表老师'}
-        coachMemberId={current?.createByMemberId}
-        allowTrial={mode === 'instance'}
+        schedulableCampuses={timetableCampuses}
+        ownerName={current?.serviceItemName || current?.createByMemberName || (serviceTimetable ? '当前服务' : '当前课表老师')}
+        coachMemberId={serviceTimetable ? undefined : current?.createByMemberId}
+        serviceTimetable={serviceTimetable}
+        allowTrial={mode === 'instance' && !serviceTimetable}
         batchCount={batch.length}
         timetableId={current?.id}
         weekStart={weekStart}

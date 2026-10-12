@@ -19,6 +19,9 @@ interface MemberTimetable {
   id: number
   isDefault?: number
   status?: number
+  campusId?: number
+  ownerType?: string
+  serviceItemName?: string
 }
 
 type HomeActionTone = 'slate' | 'orange' | 'blue' | 'rose' | 'green' | 'purple' | 'amber' | 'cyan'
@@ -150,7 +153,7 @@ function singleStudent(item: ScheduleItem, studentId: number): boolean {
   return String(item.targetType || '').toLowerCase() === 'student'
 }
 
-function groupByCoach(items: ScheduleItem[]): Array<{ id: string; coachName: string; timetableId?: number; slots: ScheduleItem[] }> {
+function groupByCoach(items: ScheduleItem[], timetableById = new Map<number, MemberTimetable>()): Array<{ id: string; coachName: string; timetableId?: number; service: boolean; slots: ScheduleItem[] }> {
   const grouped = new Map<string, ScheduleItem[]>()
   for (const item of items) {
     const coachId = Number(item.coachId || 0)
@@ -163,8 +166,14 @@ function groupByCoach(items: ScheduleItem[]): Array<{ id: string; coachName: str
   }
   return Array.from(grouped.entries()).map(([id, slots]) => ({
     id,
-    coachName: slots[0]?.coachName || '未分配老师',
+    coachName: (() => {
+      const timetable = timetableById.get(Number(slots[0]?.timetableId || 0))
+      return String(timetable?.ownerType || '').toUpperCase() === 'SERVICE'
+        ? timetable?.serviceItemName || '服务'
+        : slots[0]?.coachName || '未分配老师'
+    })(),
     timetableId: slots.find((slot) => Number(slot.timetableId || 0) > 0)?.timetableId,
+    service: String(timetableById.get(Number(slots[0]?.timetableId || 0))?.ownerType || '').toUpperCase() === 'SERVICE',
     slots,
   }))
 }
@@ -181,9 +190,10 @@ function filterMemberLessons(lessons: ScheduleItem[], timetables: MemberTimetabl
   return rows.filter((item) => !item.campusId || item.campusId === campusId)
 }
 
-function countCoaches(items: ScheduleItem[]): number {
+function countCoaches(items: ScheduleItem[], timetableById = new Map<number, MemberTimetable>()): number {
   const keys = new Set<string>()
   items.forEach((item) => {
+    if (String(timetableById.get(Number(item.timetableId || 0))?.ownerType || '').toUpperCase() === 'SERVICE') return
     if (Number(item.coachId || 0) > 0) keys.add(`id:${item.coachId}`)
     else if (item.coachName) keys.add(`name:${item.coachName}`)
   })
@@ -202,6 +212,7 @@ export function HomePage() {
   const [error, setError] = useState('')
   const [day, setDay] = useState<DayTab>('today')
   const [memberLessons, setMemberLessons] = useState<ScheduleItem[]>([])
+  const [overviewTimetables, setOverviewTimetables] = useState<MemberTimetable[]>([])
   const [creatingOrg, setCreatingOrg] = useState(false)
   const [creatingCampus, setCreatingCampus] = useState(false)
   const [recordStudentId, setRecordStudentId] = useState<number | null>(null)
@@ -288,21 +299,32 @@ export function HomePage() {
     }
   }, [day, home])
 
+  useEffect(() => {
+    if (!managerView) {
+      setOverviewTimetables([])
+      return
+    }
+    getJson<MemberTimetable[]>('/timetables/list', { status: 1 })
+      .then((items) => setOverviewTimetables((items || []).filter((item) => !campusId || !item.campusId || Number(item.campusId) === Number(campusId))))
+      .catch(() => setOverviewTimetables([]))
+  }, [campusId, managerView, home?.currentOrgId])
+
   const dashboard = home?.dashboard
   const schedules = (managerView
     ? (day === 'today' ? dashboard?.todaySchedules || [] : dashboard?.tomorrowSchedules || [])
     : memberLessons
   ).filter(activeSchedule)
+  const timetableById = useMemo(() => new Map(overviewTimetables.map((item) => [item.id, item])), [overviewTimetables])
   const metrics = useMemo(() => {
     const students = countDistinctStudents(schedules)
     return {
       courses: schedules.length,
       students,
       amount: day === 'today' ? dashboard?.todayConsumptionAmount ?? 0 : dashboard?.tomorrowConsumptionAmount ?? 0,
-      coaches: countCoaches(schedules),
+      coaches: countCoaches(schedules, timetableById),
     }
-  }, [dashboard, day, schedules])
-  const coachRows = useMemo(() => groupByCoach(schedules), [schedules])
+  }, [dashboard, day, schedules, timetableById])
+  const coachRows = useMemo(() => groupByCoach(schedules, timetableById), [schedules, timetableById])
   const dayText = day === 'today' ? '今日' : '明日'
   const emptySchedule = day === 'today'
     ? (view === 'campus' ? '今天还没有课程安排' : '今天暂无课程安排')
@@ -512,7 +534,7 @@ export function HomePage() {
             return (
             <div className="overview-row" key={row.id}>
               <button className="overview-coach" type="button" disabled={!row.timetableId} onClick={() => row.timetableId && openPath(`/schedule?timetableId=${row.timetableId}`)}>
-                <AppIcon name="icon-person-neutral" size={14} />
+                <AppIcon name={row.service ? 'icon-timetable-card' : 'icon-person-neutral'} size={14} />
                 {row.coachName}
               </button>
               <div>

@@ -96,8 +96,35 @@ export function useScheduleController() {
       return
     }
     try {
-      const data = await getJson<TimetableGroup[]>('/timetables/grouped', { campusId, status: archived ? 2 : 1 })
+      const status = archived ? 2 : 1
+      const [teacherGroups, timetableList] = await Promise.all([
+        getJson<TimetableGroup[]>('/timetables/grouped', { campusId, status }),
+        getJson<Timetable[]>('/timetables/list', { status }),
+      ])
       if (groupsRequestId.current !== requestId) return
+      const data = [...(teacherGroups || [])]
+      const groupedIds = new Set(data.flatMap((group) => [...(group.activeTimetables || []), ...(group.archivedTimetables || [])].map((item) => item.id)))
+      const serviceGroups = new Map<number, TimetableGroup>()
+      ;(timetableList || []).forEach((item) => {
+        if (groupedIds.has(item.id)
+          || String(item.ownerType || '').toUpperCase() !== 'SERVICE'
+          || Number(item.campusId || 0) !== Number(campusId || 0)
+          || !item.serviceItemId) return
+        const serviceItemId = Number(item.serviceItemId)
+        const group = serviceGroups.get(serviceItemId) || {
+          memberId: -serviceItemId,
+          memberName: item.serviceItemName || item.createByMemberName || '服务',
+          positionName: '服务类型',
+          ownerType: 'SERVICE',
+          serviceItemId,
+          activeTimetables: [],
+          archivedTimetables: [],
+        }
+        if (status === 2) group.archivedTimetables?.push(item)
+        else group.activeTimetables?.push(item)
+        serviceGroups.set(serviceItemId, group)
+      })
+      data.push(...serviceGroups.values())
       setGroups(data || [])
       const all = (data || []).flatMap((group) => (archived ? group.archivedTimetables : group.activeTimetables) || [])
       const requested = Number(preferId || routeTimetableId || 0)
@@ -260,7 +287,9 @@ export function useScheduleController() {
     if (key === 'copy' || key === 'create-from') {
       const activeCount = (timetableOwner(groups, current.id)?.activeTimetables || []).length
       if (activeCount >= 2) {
-        message.warning('每人最多保留2张非归档课表，请先归档后再新增')
+        message.warning(String(current.ownerType || '').toUpperCase() === 'SERVICE'
+          ? '每项服务最多保留2张非归档课表，请先归档后再新增'
+          : '每人最多保留2张非归档课表，请先归档后再新增')
         return
       }
     }
@@ -312,11 +341,15 @@ export function useScheduleController() {
     if (key === 'archive') {
       const owner = timetableOwner(groups, current.id)
       if (!archived && (owner?.archivedTimetables || []).length >= 5) {
-        message.warning('每个人最多保留5张归档课表，请先删除后再归档')
+        message.warning(String(current.ownerType || '').toUpperCase() === 'SERVICE'
+          ? '每项服务最多保留5张归档课表，请先删除后再归档'
+          : '每个人最多保留5张归档课表，请先删除后再归档')
         return
       }
       if (archived && (owner?.activeTimetables || []).length >= 2) {
-        message.warning('每人最多保留2张非归档课表，请先归档后再新增')
+        message.warning(String(current.ownerType || '').toUpperCase() === 'SERVICE'
+          ? '每项服务最多保留2张非归档课表，请先归档后再新增'
+          : '每人最多保留2张非归档课表，请先归档后再新增')
         return
       }
       Modal.confirm({

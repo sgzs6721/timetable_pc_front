@@ -103,6 +103,8 @@ export interface Named {
   coachNames?: string[]
   internal?: boolean
   invalid?: boolean
+  deleted?: boolean | number
+  isDeleted?: boolean | number
   inactiveReason?: string
   price?: number
   durationMinutes?: number
@@ -159,6 +161,7 @@ export interface CheckRecord {
   courseTypeLabel?: string
   coachName?: string
   coachId?: number
+  coachIds?: number[]
   hours?: number
   amount?: number
   remark?: string

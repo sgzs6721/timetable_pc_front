@@ -625,6 +625,10 @@ input[type='datetime-local']:focus {
   margin-top: 0;
 }
 
+.academic-settings-grid > .refund-settings-card {
+  grid-column: 1 / -1;
+}
+
 .academic-settings-grid + .work-card {
   margin-top: var(--space-4);
 }

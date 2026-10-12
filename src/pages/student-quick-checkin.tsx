@@ -1,4 +1,4 @@
-import { CalendarOutlined, CheckCircleOutlined, CheckOutlined, CreditCardOutlined, DownOutlined, InfoCircleOutlined, ReadOutlined, UserOutlined } from '@ant-design/icons'
+import { CalendarOutlined, CheckCircleOutlined, CheckOutlined, CreditCardOutlined, DownOutlined, InfoCircleOutlined, ReadOutlined } from '@ant-design/icons'
 import { Button, Form, Input, Modal, Select, Switch, message } from 'antd'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { getJson, postJson } from '../api/biz'
@@ -7,8 +7,8 @@ import { buildQuickCheckInPaymentOptions, buildQuickCheckInServiceOptions, check
 import type { CheckInPaymentOption } from './checkin-options'
 import { money, tell, todayIso } from './kit'
 import type { Card, Student, Named, PayRecord } from './students-model'
-import { lockedCheckInCoach, paymentOptionForCourse, preferredCourseForCoach } from './student-card-desk'
-import { activeStudentCards, boundedDateMax, cardCategoryText, cardRemain, checkInBlockReason, checkInBounds, checkInCardEligible, checkInQuotaHint, confirmCheckInDates, dateOutOfBoundsMessage, noEligibleCheckInMessage, personName } from './students-domain'
+import { buildCheckInCoachSelection } from './student-card-desk'
+import { activeStudentCards, boundedDateMax, cardCategoryText, cardRemain, checkInBlockReason, checkInBounds, checkInCardEligible, checkInQuotaHint, confirmCheckInDates, dateOutOfBoundsMessage, noEligibleCheckInMessage } from './students-domain'
 import { resolveConsumeItemReferenceFields } from './consume-item'
 
 const CHECK_IN_HOURS_MIN = 0.5
@@ -45,6 +45,7 @@ export function CheckInHoursStepper(props: { value?: number; onChange?: (value: 
 export function CheckInCoursePicker(props: {
   value?: number
   onChange?: (value: number) => void
+  afterChange?: (value: number) => void
   options: CheckInPaymentOption[]
 }) {
   const [open, setOpen] = useState(false)
@@ -72,6 +73,7 @@ export function CheckInCoursePicker(props: {
       return
     }
     props.onChange?.(item.id)
+    props.afterChange?.(item.id)
     setOpen(false)
   }
   if (!props.options.length) return <p>当前学员未配置课程</p>
@@ -221,11 +223,8 @@ export function QuickCheckIn(props: {
   }), [payments, props.services, card, cards.length])
   const selectableCourse = courseOptions.find((item) => item.isSelectable !== false)
   const remain = cardRemain(card, full || student || { id: 0, name: '' })
-  const cardCoaches = card?.coachMemberIds || []
   const currentCategory = String(card?.cardCategory || student?.cardCategory || 'HOURS').toUpperCase()
   const serviceOnlyCard = (String(card?.cardCategory || '').toUpperCase() === 'STORED_VALUE' || String(card?.cardCategory || '').toUpperCase() === 'PERIOD') && card?.courseCategory === false
-  const courseGroup = props.groups.find((item) => item.id === Number(card?.studentGroupId || full?.studentGroupId || 0))
-  const lockedCoach = serviceOnlyCard ? null : lockedCheckInCoach(courseGroup, props.coaches)
   const hasSelectableCourse = !serviceOnlyCard && !!selectableCourse
   // Match the mini program: choosing “course/service” is only meaningful for a
   // stored-value or period card that carries both kinds of benefits. A normal
@@ -239,6 +238,17 @@ export function QuickCheckIn(props: {
   const selectedServices = serviceOptions.filter((item) => Number(serviceCounts[item.id] || 0) > 0)
   const serviceAmount = selectedServices.reduce((sum, item) => sum + Number(item.discountedPrice || 0) * Number(serviceCounts[item.id] || 0), 0)
   const selectedPayment = courseOptions.find((item) => item.id === watchedPaymentId) || selectableCourse
+  const checkInCoachSelection = useMemo(() => serviceOnlyCard ? { options: [], defaultIds: [], maxCount: 0 } : buildCheckInCoachSelection(
+    full || student,
+    card,
+    props.groups,
+    props.coaches,
+    selectedPayment?.courseType,
+  ), [serviceOnlyCard, full, student, card, props.groups, props.coaches, selectedPayment?.courseType])
+  const checkInCoachOptions = checkInCoachSelection.options
+  const coachSignature = checkInCoachOptions.map((item) => `${item.id}:${item.name}`).join('|')
+  const coachScopeKey = `${Number(card?.id || 0)}|${String(selectedPayment?.courseType || '')}`
+  const coachScopeRef = useRef('')
   const selectedPaymentControlsValidity = !!selectedPayment && (
     currentCategory === 'HOURS'
     || !!(selectedPayment.validStartDate || selectedPayment.validEndDate || selectedPayment.consumeDeadline)
@@ -274,9 +284,24 @@ export function QuickCheckIn(props: {
     setUseService(!hasSelectableCourse && serviceOptions.length > 0)
     form.setFieldValue('paymentId', selectableCourse?.id)
     form.setFieldValue('hours', 1)
-    if (lockedCoach) form.setFieldValue('coachId', lockedCoach.id)
-    else if (cardCoaches[0]) form.setFieldValue('coachId', cardCoaches[0])
+    form.setFieldValue('coachIds', checkInCoachSelection.defaultIds)
   }, [card?.id])
+  useEffect(() => {
+    if (!card || serviceOnlyCard) return
+    if (coachScopeRef.current !== coachScopeKey) {
+      coachScopeRef.current = coachScopeKey
+      form.setFieldValue('coachIds', checkInCoachSelection.defaultIds)
+      return
+    }
+    const allowed = new Set(checkInCoachOptions.map((item) => item.id))
+    const current = ((form.getFieldValue('coachIds') || []) as number[])
+      .map(Number)
+      .filter((id, index, list) => id > 0 && allowed.has(id) && list.indexOf(id) === index)
+      .slice(0, checkInCoachSelection.maxCount)
+    if (!current.length || current.join(',') !== ((form.getFieldValue('coachIds') || []) as number[]).join(',')) {
+      form.setFieldValue('coachIds', current.length ? current : checkInCoachSelection.defaultIds)
+    }
+  }, [coachScopeKey, coachSignature, serviceOnlyCard, form, checkInCoachSelection.maxCount])
   const serviceSignature = serviceOptions.map((item) => item.id).join('|')
   useEffect(() => {
     const allowed = new Set(serviceOptions.map((item) => item.id))
@@ -354,7 +379,7 @@ export function QuickCheckIn(props: {
         form={form}
         layout="vertical"
         initialValues={{ hours: 1, serviceCount: 1 }}
-        onFinish={async (values: { paymentId?: number; coachId?: number; hours?: number; serviceId?: number; serviceCount?: number; remark?: string }) => {
+        onFinish={async (values: { paymentId?: number; coachIds?: number[]; hours?: number; serviceId?: number; serviceCount?: number; remark?: string }) => {
           if (blockReason) {
             message.warning(blockReason)
             return
@@ -405,12 +430,16 @@ export function QuickCheckIn(props: {
               message.warning(courseWarning)
               return
             }
-            const coachId = lockedCoach ? lockedCoach.id : Number(values.coachId || 0)
-            const coachName = lockedCoach ? lockedCoach.name : personName(props.coaches.find((item) => item.id === coachId))
-            if (!coachId || (!lockedCoach && (!cardCoaches.length || !cardCoaches.includes(coachId)))) {
-              message.warning('请先为该课时卡分配老师')
+            const coachIds = Array.from(new Set((values.coachIds || []).map(Number).filter((id) => checkInCoachOptions.some((item) => item.id === id))))
+            if (!coachIds.length) {
+              message.warning('请至少选择一位授课老师')
               return
             }
+            if (coachIds.length > checkInCoachSelection.maxCount) {
+              message.warning(`本次打卡最多可选择 ${checkInCoachSelection.maxCount} 位老师`)
+              return
+            }
+            const selectedCoaches = coachIds.map((id) => checkInCoachOptions.find((item) => item.id === id)!).filter(Boolean)
             const hours = Number(values.hours || 0)
             if (!hours || hours < CHECK_IN_HOURS_MIN) {
               message.warning('请输入正确的课时数')
@@ -429,8 +458,9 @@ export function QuickCheckIn(props: {
               studentCardId: card?.id,
               consumeType: 1,
               remark: String(values.remark || '').trim(),
-              coachId,
-              coachName,
+              coachId: coachIds[0],
+              coachIds,
+              coachName: selectedCoaches.map((item) => item.name).join('、'),
               hours,
               paymentRecordId: payment.id || undefined,
               courseType: payment.courseType,
@@ -551,19 +581,22 @@ export function QuickCheckIn(props: {
                 <Form.Item className="is-full" name="paymentId" label="课程" initialValue={selectableCourse?.id}>
                   <CheckInCoursePicker options={courseOptions} />
                 </Form.Item>
-                {lockedCoach ? (
-                  <Form.Item label="授课老师"><Input value={lockedCoach.name || '未分配老师'} disabled prefix={<UserOutlined />} /></Form.Item>
-                ) : cardCoaches.length ? (
-                  <Form.Item name="coachId" label="授课老师" initialValue={cardCoaches[0]}>
+                {checkInCoachOptions.length ? (
+                  <Form.Item
+                    name="coachIds"
+                    label="授课老师"
+                    initialValue={checkInCoachSelection.defaultIds}
+                    extra={`至少选择 1 位，最多 ${checkInCoachSelection.maxCount} 位`}
+                    rules={[{ required: true, type: 'array', min: 1, message: '请至少选择一位老师' }]}
+                  >
                     <Select
-                      options={props.coaches.filter((item) => cardCoaches.includes(item.id)).map((item) => ({ value: item.id, label: personName(item) }))}
-                      onChange={(value) => {
-                        const option = paymentOptionForCourse(courseOptions, preferredCourseForCoach(full || student, props.groups, Number(value)))
-                        if (option) form.setFieldValue('paymentId', option.id)
-                      }}
+                      mode="multiple"
+                      maxCount={checkInCoachSelection.maxCount}
+                      maxTagCount="responsive"
+                      options={checkInCoachOptions.map((item) => ({ value: item.id, label: item.name }))}
                     />
                   </Form.Item>
-                ) : <div className="quick-checkin-inline-notice">请先为该课时卡分配老师</div>}
+                ) : <div className="quick-checkin-inline-notice">当前课程暂无可用老师，请先分配老师</div>}
                 <Form.Item name="hours" label="消耗课时">
                   <CheckInHoursStepper />
                 </Form.Item>

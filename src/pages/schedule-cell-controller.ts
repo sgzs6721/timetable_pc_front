@@ -83,6 +83,7 @@ export function useCellDialogController(props: CellDialogProps) {
     setOptions([])
     getJson<TargetOption[]>('/schedules/cell-target-options', {
       campusId: dialogCampusId,
+      timetableId: props.timetableId,
       coachMemberId: props.coachMemberId,
       scheduleId: cell.schedule?.id,
       durationMinutes: duration,
@@ -108,7 +109,7 @@ export function useCellDialogController(props: CellDialogProps) {
       })
       .catch(() => { if (alive) setTrialConfig({ enabled: true, half: true, hour: true }) })
     return () => { alive = false }
-  }, [cell, dialogCampusId, props.coachMemberId])
+  }, [cell, dialogCampusId, props.coachMemberId, props.timetableId])
 
   const selected = options.find((item) => `${item.targetType}:${item.targetId}` === target)
   const choices = selected ? pricingChoices(selected) : []
@@ -196,6 +197,11 @@ export function useCellDialogController(props: CellDialogProps) {
 
   if (!cell) return null
   const pricing = choices.find((item) => item.key === pricingKey)
+  const pricingRequiredAmount = pricing?.service && String(pricing.cardCategory || '').toUpperCase() === 'STORED_VALUE'
+    ? Number(pricing.unitPrice || 0) * serviceQuantity
+    : 0
+  const pricingQuantityBlocked = pricingRequiredAmount > 0
+    && Number(pricing?.remainingAmount || 0) < pricingRequiredAmount
   const showPricing = !!selected && selected.targetType === 'student' && (choices.length > 1 || !!pricing?.service)
   const duration = Math.max(0, toMinutes(endTime) - toMinutes(startTime))
   const room = freeUntil(startTime, props.dayLessons, cell.schedule?.id, props.dayEnd) - toMinutes(startTime)
@@ -220,7 +226,7 @@ export function useCellDialogController(props: CellDialogProps) {
       ? instances.filter((item) => Number(item.status) !== 3 && !excluded.includes(item.studentId)).length
       : members.filter((item) => !excluded.includes(item.studentId)).length
   const openWarning = selected?.targetType === 'course' && (sameCourse || membersLoaded) ? minOpenWarning(courseAttending, minOpenCount, maxOpenCount) : ''
-  const saveBlocked = occupied || !selected || !!courseTargetWarning(selected) || !!studentScheduleBlock(selected) || !!pricing?.disabled
+  const saveBlocked = occupied || !selected || !!courseTargetWarning(selected) || !!studentScheduleBlock(selected) || !!pricing?.disabled || pricingQuantityBlocked
     || (selected.targetType === 'course' && !sameCourse && membersLoaded && !!courseMembersWarning(members, excluded))
     || !!openWarning
     || (selected.targetType === 'student' && choices.length > 1 && !pricingKey)
@@ -619,6 +625,9 @@ export function useCellDialogController(props: CellDialogProps) {
     batching,
     existing,
     pricing,
+    pricingRequiredAmount,
+    pricingQuantityBlocked,
+    saveBlocked,
     showPricing,
     duration,
     room,

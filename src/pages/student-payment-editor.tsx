@@ -459,7 +459,9 @@ export function PaymentEditor(props: {
           const pickedIds = Array.isArray(values.pickedServiceIds)
             ? (values.pickedServiceIds as Array<number | string>).map((id) => Number(id)).filter((id) => id > 0)
             : []
-          const choosingServices = serviceOnlyPay && boundIds.length === 0 && (values.type === 'new' || values.type === 'renew')
+          // 服务类学员卡除退费外都必须保留至少一个服务权益，
+          // 避免补缴或调整后生成无法打卡的空卡。
+          const choosingServices = serviceOnlyPay && boundIds.length === 0 && values.type !== 'refund'
           if (choosingServices && props.services.length > 0 && pickedIds.length === 0) {
             message.warning('请选择服务类别')
             return

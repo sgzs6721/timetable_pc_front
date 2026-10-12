@@ -127,7 +127,9 @@ export function studentHoursExpired(option: TargetOption): boolean {
 export function studentScheduleBlock(option: TargetOption): string {
   if (option.targetType !== 'student') return ''
   if (studentHoursExpired(option) && !hasUsableNonHoursCard(option)) return '课时已过期，无法排课'
-  return String(option.selectionBlockedReason || '').trim()
+  const reason = String(option.selectionBlockedReason || '').trim()
+  if (reason && (option.cardOptions || []).length > 1 && pricingChoices(option).some((item) => !item.disabled)) return ''
+  return reason
 }
 
 export function scheduleHoursLabel(option: TargetOption): string {
@@ -378,12 +380,32 @@ export function pricingChoices(option: TargetOption): PricingChoice[] {
       if (cardId > 0 && allowed.length && !allowed.includes(cardId)) continue
       const base = String(service.courseType || '')
       if (!base || !service.name) continue
+      const unitPrice = Number(service.unitPrice || 0)
+      const remainingAmount = Number(card.remainingAmount ?? option.remainingAmount ?? 0)
+      let serviceUnavailable = pricingUnavailable(card)
+      let serviceDisabled = card.available === false
+      let billingLabel = ''
+      if (category === 'STORED_VALUE') {
+        billingLabel = unitPrice > 0 ? `¥${amountLabel(unitPrice)}/次` : '未配置单价'
+        if (!(unitPrice > 0)) {
+          serviceDisabled = true
+          serviceUnavailable = '请先配置服务单价'
+        } else if (remainingAmount < unitPrice) {
+          serviceDisabled = true
+          serviceUnavailable = '余额不足'
+        }
+      } else if (category === 'PERIOD') {
+        billingLabel = '不扣费'
+      }
       choices.push({
         key: withCard(base),
-        label: [prefix, service.name, pricingCardDetail(card), pricingUnavailable(card)].filter(Boolean).join(' · '),
+        label: [prefix, service.name, billingLabel, pricingCardDetail(card), serviceUnavailable].filter(Boolean).join(' · '),
         pricingCourseType: withCard(base),
         service: true,
-        disabled: card.available === false,
+        cardCategory: category,
+        remainingAmount,
+        unitPrice,
+        disabled: serviceDisabled,
       })
     }
     if (cardId > 0 && choices.length === before && category !== 'STORED_VALUE') {

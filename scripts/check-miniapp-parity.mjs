@@ -106,12 +106,32 @@ const behaviorContracts = [
   {
     label: '新增成功必须回到新学员详情，新增和筛选的老师源只请求带课人员',
     file: 'src/pages/StudentsPage.tsx',
-    need: ['setParams({ studentId: String(student.id) })', 'onlySubstitute: true'],
+    need: ['setParams({ studentId: String(student.id) })', 'onlySubstitute: true', "'/students/create-eligibility'", 'checkingStudentCapacity'],
   },
   {
-    label: '转校必须包含内部一对一课程，并对目标老师做服务端与前端双重带课身份筛选',
+    label: '转校必须包含内部一对一课程，允许多卡同时转移，并对目标老师做带课身份筛选',
     file: 'src/pages/student-campus-transfer.tsx',
-    need: ['includeInternal: true', 'onlySubstitute: true', 'filter(isActiveTeachingCoach)'],
+    need: ['includeInternal: true', 'onlySubstitute: true', 'filter(isActiveTeachingCoach)', 'selected: !disabled && event.target.checked'],
+  },
+  {
+    label: '打卡必须按当前课程老师优先排序，至少选1位且不超过课程配置人数',
+    files: ['src/pages/checkin-options.ts', 'src/pages/student-card-desk.tsx', 'src/pages/student-quick-checkin.tsx', 'src/pages/student-checkins.tsx'],
+    need: ["label === '未命名课程'", 'buildCheckInCoachSelection(', 'maxCount', 'coachIds', '至少选择 1 位'],
+  },
+  {
+    label: '固定课表对比必须过滤删除标记，并把跨行取消时段保持为单一连续块',
+    files: ['src/pages/schedule-board-helpers.tsx', 'src/pages/schedule-cell-dialog.tsx', 'src/styles/work-schedule-board.css'],
+    need: ['Number(row.uiChangeStatus) !== 3 && Number(row.uiChangeStatus) !== 4', 'subtractMinuteRange(range, blockers)', '<em>班级</em>', '让跨行的固定课仍是一个完整取消框'],
+  },
+  {
+    label: '校区设置必须包含学员删除关联记录策略，老师交接必须能查看有效学员卡名单',
+    files: ['src/pages/campus-academic.tsx', 'src/pages/campus-staff-handover.tsx'],
+    need: ['deletePaymentRecordsOnStudentDelete', 'deleteCheckInRecordsOnStudentDelete', 'activeCardStudents', '有效学员卡名单'],
+  },
+  {
+    label: '服务类学员卡除退费外必须保留至少一个服务类别',
+    file: 'src/pages/student-payment-editor.tsx',
+    need: ["values.type !== 'refund'", '请选择服务类别'],
   },
   {
     label: '首页快捷入口必须按角色、会员状态和校区状态收敛',

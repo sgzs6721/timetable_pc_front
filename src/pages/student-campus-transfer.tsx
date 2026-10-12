@@ -242,18 +242,7 @@ export function CampusTransfer(props: { student: Student; campuses: Named[]; onD
           />
           <BusinessDatePicker value={transferDate} onChange={setTransferDate} allowClear={false} />
           <Input placeholder="备注" value={remark} onChange={(event) => setRemark(event.target.value)} />
-          {cards.length ? <Tabs onChange={(key) => {
-            const id = Number(key)
-            setDrafts((current) => {
-              const next = { ...current }
-              cards.forEach((item) => {
-                const row = next[item.id!]
-                if (!row) return
-                next[item.id!] = { ...row, selected: item.id === id && periodTransferable(item, payments) }
-              })
-              return next
-            })
-          }} items={cards.map((card) => {
+          {cards.length ? <Tabs items={cards.map((card) => {
             const draft = drafts[card.id!]
             if (!draft) return { key: String(card.id), label: cardCategoryText(card.cardCategory), children: null }
             const category = String(card.cardCategory || '').toUpperCase()
@@ -266,24 +255,12 @@ export function CampusTransfer(props: { student: Student; campuses: Named[]; onD
               children: (
               <div className="panel-block">
                 <Checkbox disabled={disabled} checked={draft.selected && !disabled} onChange={(event) => {
-                  if (!event.target.checked) {
-                    patch(card.id!, { selected: false })
-                    return
-                  }
-                  setDrafts((current) => {
-                    const next = { ...current }
-                    cards.forEach((item) => {
-                      const row = next[item.id!]
-                      if (!row) return
-                      next[item.id!] = { ...row, selected: item.id === card.id && periodTransferable(item, payments) }
-                    })
-                    return next
-                  })
+                  patch(card.id!, { selected: !disabled && event.target.checked })
                 }}>
                   转入这张卡
                 </Checkbox>
                 <div>{disabled ? '当前没有可转移的有效期' : category === 'HOURS' ? `当前可转 ${card.remainingHours || 0} 课时` : category === 'STORED_VALUE' ? `当前可转 ${money(card.remainingAmount)}` : '有效期原样转入目标校区'}</div>
-                {!draft.selected && !disabled ? <p>本次不转移此卡。再次点击上方标签即可选中转移。</p> : null}
+                {!draft.selected && !disabled ? <p>本次不转移此卡；可切换其他标签同时勾选多张卡。</p> : null}
                 {draft.selected && !disabled ? (
                   <Space direction="vertical" style={{ width: '100%', marginTop: 8 }}>
                     {category === 'HOURS' ? (
