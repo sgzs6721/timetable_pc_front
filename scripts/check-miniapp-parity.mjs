@@ -124,6 +124,18 @@ const behaviorContracts = [
     need: ['Number(row.uiChangeStatus) !== 3 && Number(row.uiChangeStatus) !== 4', 'subtractMinuteRange(range, blockers)', '<em>班级</em>', '让跨行的固定课仍是一个完整取消框'],
   },
   {
+    label: '本周拖动固定课实例不能修改模板，拖动时必须隔离页面回弹',
+    files: ['src/pages/schedule-mutations.ts', 'src/pages/SchedulePage.tsx', 'src/styles/work-schedule-board.css'],
+    need: [
+      'if (isVirtualTemplateInstance(schedule, timetable))',
+      "await postJson<Schedule>('/schedules/cell', instanceCell(schedule, timetable, campusId, {",
+      'scheduleDate: target.date,',
+      "document.documentElement.classList.toggle('schedule-dragging', active)",
+      'overscroll-behavior: contain;',
+      'body.schedule-dragging',
+    ],
+  },
+  {
     label: '校区设置必须包含学员删除关联记录策略，老师交接必须能查看有效学员卡名单',
     files: ['src/pages/campus-academic.tsx', 'src/pages/campus-staff-handover.tsx'],
     need: ['deletePaymentRecordsOnStudentDelete', 'deleteCheckInRecordsOnStudentDelete', 'activeCardStudents', '有效学员卡名单'],

@@ -29,6 +29,11 @@ function instanceCell(
 ) {
   const templateScheduleId = Number(schedule.templateScheduleId || schedule.id || 0)
   const virtual = templateScheduleId === Number(schedule.id || 0)
+  const memberCardBindings = schedule.memberCardBindings?.length
+    ? schedule.memberCardBindings
+    : (schedule.studentInstances || [])
+      .filter((item) => Number(item.studentId || 0) > 0 && Number(item.studentCardId || 0) > 0)
+      .map((item) => ({ studentId: Number(item.studentId), studentCardId: Number(item.studentCardId) }))
   return {
     scheduleId: virtual ? undefined : schedule.id,
     timetableId: timetable.id,
@@ -48,7 +53,7 @@ function instanceCell(
     pricingCourseType: schedule.pricingCourseType,
     serviceQuantity: schedule.serviceQuantity,
     excludedStudentIds: schedule.excludedStudentIds,
-    memberCardBindings: schedule.memberCardBindings,
+    memberCardBindings,
     ...overrides,
   }
 }
@@ -95,7 +100,7 @@ export async function removeScheduleItem(schedule: Schedule, timetable: Timetabl
   await delJson(`/schedules/${schedule.id}`)
 }
 
-export async function moveScheduleItem(schedule: Schedule, timetable: Timetable, target: ScheduleMutationTarget, templateMode: boolean) {
+export async function moveScheduleItem(schedule: Schedule, timetable: Timetable, campusId: number, target: ScheduleMutationTarget, templateMode: boolean) {
   if (templateMode && !schedule.scheduleDate) {
     const startTime = clockText(target.start)
     const endTime = clockText(target.end)
@@ -118,8 +123,18 @@ export async function moveScheduleItem(schedule: Schedule, timetable: Timetable,
     })
     return
   }
+  if (isVirtualTemplateInstance(schedule, timetable)) {
+    if (!target.date) throw new Error('请选择目标日期')
+    await postJson<Schedule>('/schedules/cell', instanceCell(schedule, timetable, campusId, {
+      dayOfWeek: target.day,
+      scheduleDate: target.date,
+      startTime: clockText(target.start),
+      endTime: clockText(target.end),
+    }))
+    return
+  }
   await postJson(`/schedules/${schedule.id}/move`, {
-    scheduleDate: isVirtualTemplateInstance(schedule, timetable) ? undefined : (target.date || undefined),
+    scheduleDate: target.date || undefined,
     dayOfWeek: target.day,
     startTime: target.start,
     endTime: target.end,

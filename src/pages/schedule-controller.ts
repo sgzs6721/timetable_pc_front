@@ -263,7 +263,7 @@ export function useScheduleController() {
 
   async function moveSchedule(schedule: Schedule, target: ScheduleMutationTarget) {
     if (!current || !schedule.id) return
-    await moveScheduleItem(schedule, current, target, templateMode)
+    await moveScheduleItem(schedule, current, campusId || 0, target, templateMode)
   }
 
   async function copySchedule(schedule: Schedule, targets: ScheduleMutationTarget[]) {

@@ -1,5 +1,6 @@
 import { Button, Dropdown, Modal, Popconfirm, Skeleton, Tabs, message } from 'antd'
 import { LeftOutlined, PlusOutlined, RightOutlined, StarFilled, StarOutlined } from '@ant-design/icons'
+import { useEffect } from 'react'
 import { postJson, putJson } from '../api/biz'
 import { AppIcon, NeedCampus, PageHead, tell, todayIso } from './kit'
 import {
@@ -23,6 +24,14 @@ export function SchedulePage() {
   const vm = useScheduleController()
   const { groups, groupsLoading, archived, setArchived, dayBand, setDayBand, selecting, setSelecting, current, setCurrent, weekStart, setWeekStart, mode, schedules, templateSchedules, setCreating, setCell, placement, setPlacement, batch, setBatch, deleting, setDeleting, deleteIds, setDeleteIds, setCampusFilter, setDragAction, dragHover, setDragHover, dragGuard, dragLessonKey, campusId, canCreate, days, splitWeekend, templateMode, boardSchedules, campusLegend, activeCampusId, boardDays, splitHead, slots, limits, loadGroups, loadWeek, switchBoardMode, removeSchedule, moveSchedule, copySchedule, openOverview, onTimetableMenu, openDay, choosePlacement } = vm
   const visibleGroups = groups.filter((group) => ((archived ? group.archivedTimetables : group.activeTimetables) || []).length > 0)
+  const setScheduleDragLock = (active: boolean) => {
+    document.documentElement.classList.toggle('schedule-dragging', active)
+    document.body.classList.toggle('schedule-dragging', active)
+  }
+  useEffect(() => () => {
+    document.documentElement.classList.remove('schedule-dragging')
+    document.body.classList.remove('schedule-dragging')
+  }, [])
   const restoreLeave = (scheduleId: number) => {
     if (!scheduleId || archived || Number(current?.status) === 2) return
     Modal.confirm({
@@ -377,6 +386,7 @@ export function SchedulePage() {
                               }}
                               onDrop={(event) => {
                                 event.preventDefault()
+                                setScheduleDragLock(false)
                                 dragGuard.current = true
                                 window.setTimeout(() => { dragGuard.current = false }, 0)
                                 setDragHover(null)
@@ -612,10 +622,12 @@ export function SchedulePage() {
                                 }
                                 dragGuard.current = true
                                 dragLessonKey.current = scheduleInstanceKey(lesson)
+                                setScheduleDragLock(true)
                                 event.dataTransfer.setData('text/plain', dragLessonKey.current)
                                 event.dataTransfer.effectAllowed = 'copyMove'
                               }}
                               onDragEnd={() => {
+                                setScheduleDragLock(false)
                                 dragLessonKey.current = ''
                                 setDragHover(null)
                                 window.setTimeout(() => { dragGuard.current = false }, 0)

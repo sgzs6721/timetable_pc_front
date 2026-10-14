@@ -225,6 +225,7 @@
 
 .tt-board {
   overflow: auto;
+  overscroll-behavior: contain;
   border: 1px solid var(--line);
   border-radius: 16px;
   background:
@@ -494,6 +495,19 @@
 
 .tt-card[draggable='true'] {
   cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+html.schedule-dragging,
+body.schedule-dragging {
+  overscroll-behavior: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+body.schedule-dragging .tt-card[draggable='true'] {
+  cursor: grabbing;
 }
 
 .tt-card.is-tone-1 { background: #e7f8f4; box-shadow: inset 3px 0 0 #0f9f8a; }
