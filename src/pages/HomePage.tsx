@@ -17,6 +17,7 @@ type DayTab = 'today' | 'tomorrow'
 
 interface MemberTimetable {
   id: number
+  name?: string
   isDefault?: number
   status?: number
   campusId?: number
@@ -163,18 +164,21 @@ function groupByCoach(items: ScheduleItem[], timetableById = new Map<number, Mem
     slots.push(item)
     grouped.set(key, slots)
   }
-  return Array.from(grouped.entries()).map(([id, slots]) => ({
-    id,
-    coachName: (() => {
-      const timetable = timetableById.get(Number(slots[0]?.timetableId || 0))
-      return String(timetable?.ownerType || '').toUpperCase() === 'SERVICE'
-        ? '服务课表'
-        : slots[0]?.coachName || '未分配老师'
-    })(),
-    timetableId: slots.find((slot) => Number(slot.timetableId || 0) > 0)?.timetableId,
-    service: String(timetableById.get(Number(slots[0]?.timetableId || 0))?.ownerType || '').toUpperCase() === 'SERVICE',
-    slots,
-  }))
+  return Array.from(grouped.entries()).map(([id, slots]) => {
+    const first = slots[0]
+    const timetable = timetableById.get(Number(first?.timetableId || 0))
+    const ownerType = String(first?.timetableOwnerType || timetable?.ownerType || '').toUpperCase()
+    const service = ownerType === 'SERVICE'
+    return {
+      id,
+      coachName: service
+        ? (first?.timetableName || timetable?.name || '服务课表')
+        : first?.coachName || '未分配老师',
+      timetableId: slots.find((slot) => Number(slot.timetableId || 0) > 0)?.timetableId,
+      service,
+      slots,
+    }
+  })
 }
 
 function filterMemberLessons(lessons: ScheduleItem[], timetables: MemberTimetable[], timetablesLoaded: boolean, campusId: number | null): ScheduleItem[] {
@@ -192,7 +196,8 @@ function filterMemberLessons(lessons: ScheduleItem[], timetables: MemberTimetabl
 function countCoaches(items: ScheduleItem[], timetableById = new Map<number, MemberTimetable>()): number {
   const keys = new Set<string>()
   items.forEach((item) => {
-    if (String(timetableById.get(Number(item.timetableId || 0))?.ownerType || '').toUpperCase() === 'SERVICE') return
+    const timetable = timetableById.get(Number(item.timetableId || 0))
+    if (String(item.timetableOwnerType || timetable?.ownerType || '').toUpperCase() === 'SERVICE') return
     if (Number(item.coachId || 0) > 0) keys.add(`id:${item.coachId}`)
     else if (item.coachName) keys.add(`name:${item.coachName}`)
   })
@@ -533,7 +538,7 @@ export function HomePage() {
             return (
             <div className="overview-row" key={row.id}>
               <button className="overview-coach" type="button" disabled={!row.timetableId} onClick={() => row.timetableId && openPath(`/schedule?timetableId=${row.timetableId}`)}>
-                <AppIcon name={row.service ? 'icon-timetable-card' : 'icon-person-neutral'} size={14} />
+                <AppIcon name={row.service ? 'icon-calendar' : 'icon-person-neutral'} size={14} />
                 {row.coachName}
               </button>
               <div>

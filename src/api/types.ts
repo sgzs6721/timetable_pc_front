@@ -60,6 +60,8 @@ export interface Campus {
 export interface ScheduleItem {
   id: number
   timetableId?: number
+  timetableName?: string
+  timetableOwnerType?: 'TEACHER' | 'SERVICE' | string
   courseName?: string
   displayName?: string
   coachId?: number

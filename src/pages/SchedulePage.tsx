@@ -97,7 +97,7 @@ export function SchedulePage() {
                 <div className="timetable-group-name">
                   <AppIcon
                     className={serviceGroup ? 'timetable-group-person' : memberGenderIcon === 'icon-gender-male' ? 'timetable-group-person is-male' : memberGenderIcon === 'icon-gender-female' ? 'timetable-group-person is-female' : 'timetable-group-person'}
-                    name={serviceGroup ? 'icon-timetable-card' : memberGenderIcon || 'icon-person-neutral'}
+                    name={serviceGroup ? 'icon-calendar' : memberGenderIcon || 'icon-person-neutral'}
                     size={13}
                   />
                   <span>{group.memberName || '未分组'}</span>

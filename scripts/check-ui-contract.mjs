@@ -98,6 +98,11 @@ if (!homeSource.includes('className="home-module-section"')
   || !homeSource.includes('disabled={Boolean(item.disabledReason)}')) {
   failures.push('首页功能模块必须按角色权限渲染，并为不可用入口提供真实 disabled 状态')
 }
+if (!homeSource.includes('first?.timetableOwnerType || timetable?.ownerType')
+  || !homeSource.includes("first?.timetableName || timetable?.name || '服务课表'")
+  || !homeSource.includes("row.service ? 'icon-calendar' : 'icon-person-neutral'")) {
+  failures.push('首页服务课表必须优先使用排课携带的课表身份，并显示课表名称和日历图标')
+}
 if (!/\.home-module-grid\s*\{[^}]*grid-template-columns:\s*repeat\(4,/s.test(homeCss)
   || !homeCss.includes('.home-module-action:disabled')) {
   failures.push('首页功能模块必须使用响应式快捷入口网格，并覆盖禁用态样式')
