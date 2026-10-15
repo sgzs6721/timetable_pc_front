@@ -416,12 +416,19 @@ export function ValidityStartDate({ minDate }: { minDate?: string }) {
   )
 }
 
-export function ValidityEndDate() {
+export function ValidityEndDate({ minDate, minDateMessage }: { minDate?: string; minDateMessage?: string } = {}) {
   const form = Form.useFormInstance()
   return (
     <Form.Item name="validEndDate" label="有效期结束" getValueFromEvent={(event) => {
       const value = String(event?.target?.value ?? event ?? '')
       const start = String(form.getFieldValue('validStartDate') || '').slice(0, 10)
+      const floors = [start, String(minDate || '').slice(0, 10)].filter(Boolean).sort()
+      const floor = floors[floors.length - 1] || ''
+      if (floor && value && value < floor) {
+        message.warning(minDate && value < minDate ? (minDateMessage || `有效期结束不能早于${minDate}`) : '结束日期不能早于开始日期')
+        const current = String(form.getFieldValue('validEndDate') || '')
+        return current
+      }
       if (start && value && value < start) {
         message.warning('结束日期不能早于开始日期')
         const current = String(form.getFieldValue('validEndDate') || '')
@@ -429,7 +436,7 @@ export function ValidityEndDate() {
       }
       return value
     }}>
-      <BusinessDatePicker />
+      <BusinessDatePicker minDate={minDate || undefined} />
     </Form.Item>
   )
 }

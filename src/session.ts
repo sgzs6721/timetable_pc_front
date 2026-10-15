@@ -6,9 +6,6 @@ const LOGIN_REDIRECT_KEY = 'timetable_pc_login_redirect'
 const LOGIN_REDIRECT_TTL_MS = 30 * 60 * 1000
 const WECHAT_OAUTH_STATE_KEY = 'timetable_pc_wechat_oauth_state'
 const WECHAT_OAUTH_STATE_TTL_MS = 10 * 60 * 1000
-const MARKETING_TOKEN_KEY = 'timetable_marketing_token'
-const MARKETING_PHONE_KEY = 'timetable_marketing_phone_bound'
-const MARKETING_OWNER_TOKEN_KEY = 'timetable_marketing_owner_token'
 
 interface SavedLoginRedirect {
   path: string
@@ -51,16 +48,8 @@ export function getToken(): string {
 }
 
 export function setToken(token: string): void {
-  clearMarketingAuthentication()
   localStorage.setItem(TOKEN_KEY, token)
   localStorage.setItem(SESSION_DAY_KEY, todaySessionDay())
-}
-
-/** 营销身份独立于主 JWT，但账号切换时必须同步失效，避免跨账号复用。 */
-export function clearMarketingAuthentication(): void {
-  sessionStorage.removeItem(MARKETING_TOKEN_KEY)
-  sessionStorage.removeItem(MARKETING_PHONE_KEY)
-  sessionStorage.removeItem(MARKETING_OWNER_TOKEN_KEY)
 }
 
 /** 清除持久登录上下文，但保留本次登录流程的深链和 OAuth state。 */
@@ -74,7 +63,6 @@ export function clearAuthentication(): void {
 /** 用户显式退出时，同时丢弃所有待处理的登录流程状态。 */
 export function clearSession(): void {
   clearAuthentication()
-  clearMarketingAuthentication()
   sessionStorage.removeItem(LOGIN_REDIRECT_KEY)
   sessionStorage.removeItem(WECHAT_OAUTH_STATE_KEY)
 }

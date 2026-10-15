@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { getUserInfo, getWechatWebConfig, loginByPassword } from '../api/auth'
 import type { WechatWebConfig } from '../api/types'
-import { consumeLoginRedirect, createWechatOAuthState, setToken } from '../session'
+import { clearAuthentication, consumeLoginRedirect, createWechatOAuthState, setToken } from '../session'
 import { createWechatQrLoginUrl } from '../wechat-auth'
 
 export function LoginPage() {
@@ -36,8 +36,13 @@ export function LoginPage() {
       setToken(login.token)
       const user = await getUserInfo().catch(() => null)
       const pureParent = String(user?.role || login.role || '').toLowerCase() === 'parent' && !Number(user?.orgMemberId || 0)
+      if (pureParent) {
+        clearAuthentication()
+        consumeLoginRedirect()
+        throw new Error('网页管理端仅供机构员工使用，家长和学员请前往微信小程序')
+      }
       const redirect = consumeLoginRedirect()
-      navigate(pureParent ? '/parent/home' : (redirect || '/home'), { replace: true })
+      navigate(redirect || '/home', { replace: true })
     } catch (error) {
       message.error(error instanceof Error ? error.message : '登录失败')
     } finally {

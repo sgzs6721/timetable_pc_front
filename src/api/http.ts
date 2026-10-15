@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { clearAuthentication, clearMarketingAuthentication, discardLoginRedirect, getOrgId, getToken, rememberLoginRedirect } from '../session'
+import { clearAuthentication, getOrgId, getToken, rememberLoginRedirect } from '../session'
 import type { ApiResult } from './types'
 
 const ONLINE_API_BASE_URL = 'https://timetable.devtesting.top/api'
@@ -34,24 +34,13 @@ const http = axios.create({
   timeout: 20000,
 })
 
-function isMarketingSessionRequest(url?: string): boolean {
-  return Boolean(url?.includes('/marketing/landing/') && !url.includes('/web-login'))
-}
-
-function clearMarketingSession(): void {
-  clearMarketingAuthentication()
-}
-
 function expireAccountSession(): void {
   const { pathname, search, hash } = window.location
-  const keepsOriginalLoginLanding = pathname === '/parent'
-    || pathname.startsWith('/parent/')
   const shouldNavigate = !pathname.startsWith('/login')
   const returnTarget = `${pathname}${search}${hash}`
   clearAuthentication()
   if (shouldNavigate) {
-    if (keepsOriginalLoginLanding) discardLoginRedirect()
-    else rememberLoginRedirect(returnTarget)
+    rememberLoginRedirect(returnTarget)
     window.location.assign('/login')
   }
 }
@@ -73,11 +62,7 @@ http.interceptors.response.use(
     const body = response.data as ApiResult<unknown>
     if (body && typeof body.code === 'number' && body.code !== 200) {
       if (body.code === 401) {
-        if (isMarketingSessionRequest(response.config.url)) {
-          clearMarketingSession()
-        } else {
-          expireAccountSession()
-        }
+        expireAccountSession()
       }
       return Promise.reject(new Error(body.message || '请求失败'))
     }
@@ -86,11 +71,7 @@ http.interceptors.response.use(
   (error) => {
     const message = error?.response?.data?.message || error?.message || '网络异常'
     if (error?.response?.status === 401) {
-      if (isMarketingSessionRequest(error?.config?.url)) {
-        clearMarketingSession()
-      } else {
-        expireAccountSession()
-      }
+      expireAccountSession()
     }
     return Promise.reject(new Error(message))
   },

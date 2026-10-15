@@ -2,9 +2,10 @@ import { Modal, message } from 'antd'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { delJson, getJson, postJson, putJson } from '../api/biz'
+import type { Campus } from '../api/types'
 import { tell, todayIso, useShell } from './kit'
 import type { DayDialog, Schedule, Timetable, TimetableGroup } from './schedule-model'
-import { DAY_LABELS, clockText, duplicateTimetableName, freeUntil, fromMinutes, latestTemplateSchedules, mondayOf, scheduleCampusLegend, slotsOf, splitBoardHead, toMinutes, weekLimits } from './schedule-board-helpers'
+import { DAY_LABELS, clockText, duplicateTimetableName, freeUntil, fromMinutes, latestTemplateSchedules, mondayOf, scheduleCampusLegend, slotsOf, splitBoardHead, timetableCampusIds, toMinutes, weekLimits } from './schedule-board-helpers'
 import { timetableBody, timetableOwner } from './schedule-board-fields'
 import { toDayCourses } from './schedule-day-dialog'
 import { copyScheduleItem, leaveScheduleItem, moveScheduleItem, removeScheduleItem, type ScheduleMutationTarget } from './schedule-mutations'
@@ -35,6 +36,7 @@ export function useScheduleController() {
   const [dayDialog, setDayDialog] = useState<DayDialog | null>(null)
   const [lookup, setLookup] = useState<Schedule[] | null>(null)
   const [campusFilter, setCampusFilter] = useState(0)
+  const [scheduleCampuses, setScheduleCampuses] = useState<Campus[]>([])
   const groupsRequestId = useRef(0)
   const [dragAction, setDragAction] = useState<{
     schedule: Schedule
@@ -50,16 +52,36 @@ export function useScheduleController() {
   const routeTimetableId = Number(params.get('timetableId') || 0)
 
   const campusId = shell.campusId
-  const groupsKey = `${campusId || 0}:${archived ? 2 : 1}`
-  const timetableListLoading = groupsLoading || groupsLoadedKey !== groupsKey
-  const campusName = shell.campuses.find((item) => item.id === campusId)?.name || '当前校区'
   const currentOrg = shell.organizations.find((item) => item.id === shell.currentOrgId) || null
   const role = String(shell.user?.role || '').toLowerCase()
   const userId = Number(shell.user?.id || 0)
   const ownerId = Number(currentOrg?.ownerId || 0)
-  const campusScope = (shell.user?.campusAdminCampusIds || []).map((id) => Number(id || 0)).filter((id) => id > 0)
-  const managesCampus = role === 'owner' || role === 'admin' || (userId > 0 && ownerId > 0 && userId === ownerId) || (shell.user?.campusAdmin === true && (!campusScope.length || campusScope.includes(Number(campusId || 0))))
-  const canCreate = managesCampus || shell.user?.isSubstituteTeacher === true
+  const explicitCampusScope = (shell.user?.campusAdminCampusIds || []).map((id) => Number(id || 0)).filter((id) => id > 0)
+  const legacyCampusId = Number(shell.user?.positionCampusId || 0)
+  const campusScope = Array.from(new Set(explicitCampusScope.length
+    ? explicitCampusScope
+    : shell.user?.campusAdmin === true && legacyCampusId > 0 ? [legacyCampusId] : []))
+  const organizationManager = role === 'owner'
+    || role === 'admin'
+    || (userId > 0 && ownerId > 0 && userId === ownerId)
+  const managerView = organizationManager || campusScope.length > 0
+  const canManageCampus = (targetCampusId?: number | null) => organizationManager
+    || (Number(targetCampusId || 0) > 0 && campusScope.includes(Number(targetCampusId)))
+  const groupsKey = `${shell.currentOrgId || 0}:${campusId || 0}:${archived ? 2 : 1}:${managerView ? 'manager' : 'member'}`
+  const timetableListLoading = groupsLoading || groupsLoadedKey !== groupsKey
+  const effectiveCampuses = scheduleCampuses.length ? scheduleCampuses : shell.campuses
+  const activeTimetableCampusId = Number(current?.campusId || campusId || 0)
+  const campusName = effectiveCampuses.find((item) => item.id === activeTimetableCampusId)?.name || '当前校区'
+  const currentOwner = current ? timetableOwner(groups, current.id) : undefined
+  const canManageTimetable = (timetable?: Timetable | null, group?: TimetableGroup) => {
+    if (!timetable) return false
+    if (organizationManager) return true
+    if (!managerView) return true
+    const ids = timetableCampusIds(timetable, group?.campusIds)
+    return ids.length > 0 && ids.every((id) => canManageCampus(id))
+  }
+  const canManageCurrent = canManageTimetable(current, currentOwner)
+  const canCreate = canManageCampus(campusId) || (!managerView && shell.user?.isSubstituteTeacher === true)
   const timetableLocked = Number(current?.scheduleCount || 0) > 0
   const days = current?.weekDays?.length ? current.weekDays : [1, 2, 3, 4, 5, 6, 7]
   const splitWeekend = Number(current?.splitWeekend) === 1
@@ -69,7 +91,7 @@ export function useScheduleController() {
       .filter((item) => Number(item.uiChangeStatus || 0) !== 3),
     [templateMode, templateSchedules, schedules],
   )
-  const campusLegend = scheduleCampusLegend(boardSchedules, shell.campuses)
+  const campusLegend = scheduleCampusLegend(boardSchedules, effectiveCampuses)
   const activeCampusId = campusLegend.some((item) => item.id === campusFilter) ? campusFilter : 0
   const boardDays = splitWeekend ? days.filter((day) => (dayBand === 'weekend' ? day >= 6 : day <= 5)) : days
   const splitHead = splitWeekend ? splitBoardHead(templateMode, dayBand === 'weekend', boardDays, weekStart) : null
@@ -86,7 +108,7 @@ export function useScheduleController() {
   async function loadGroups(preferId?: number) {
     const requestId = groupsRequestId.current + 1
     groupsRequestId.current = requestId
-    const requestKey = `${campusId || 0}:${archived ? 2 : 1}`
+    const requestKey = `${shell.currentOrgId || 0}:${campusId || 0}:${archived ? 2 : 1}:${managerView ? 'manager' : 'member'}`
     setGroupsLoading(true)
     if (!campusId) {
       setGroups([])
@@ -97,18 +119,22 @@ export function useScheduleController() {
     }
     try {
       const status = archived ? 2 : 1
-      const [teacherGroups, timetableList] = await Promise.all([
-        getJson<TimetableGroup[]>('/timetables/grouped', { campusId, status }),
+      const [teacherGroups, timetableList, campuses] = await Promise.all([
+        getJson<TimetableGroup[]>('/timetables/grouped', managerView ? { status } : { campusId, status }),
         getJson<Timetable[]>('/timetables/list', { status }),
+        managerView
+          ? getJson<Campus[]>('/campus/list', { timetableView: true }).catch(() => shell.campuses)
+          : Promise.resolve(shell.campuses),
       ])
       if (groupsRequestId.current !== requestId) return
+      setScheduleCampuses(campuses || [])
       const data = [...(teacherGroups || [])]
       const groupedIds = new Set(data.flatMap((group) => [...(group.activeTimetables || []), ...(group.archivedTimetables || [])].map((item) => item.id)))
       const serviceGroups = new Map<number, TimetableGroup>()
       ;(timetableList || []).forEach((item) => {
         if (groupedIds.has(item.id)
           || String(item.ownerType || '').toUpperCase() !== 'SERVICE'
-          || Number(item.campusId || 0) !== Number(campusId || 0)) return
+          || (!managerView && Number(item.campusId || 0) !== Number(campusId || 0))) return
         const serviceCampusId = Number(item.campusId || 0)
         const group = serviceGroups.get(serviceCampusId) || {
           memberId: -(1000000000 + serviceCampusId),
@@ -187,7 +213,13 @@ export function useScheduleController() {
   useEffect(() => {
     loadGroups().catch((error) => message.error(tell(error, '课表加载失败')))
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [campusId, archived])
+  }, [campusId, archived, managerView, shell.currentOrgId])
+
+  useEffect(() => {
+    // 课表权限可能刚在小程序或另一端更新，进入页面时主动刷新一次账号范围。
+    shell.reload()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   useEffect(() => {
     if (!routeTimetableId || current?.id === routeTimetableId) return
@@ -200,6 +232,18 @@ export function useScheduleController() {
     loadWeek().catch((error) => message.error(tell(error, '周课表加载失败')))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [current?.id, weekStart])
+
+  useEffect(() => {
+    if (canManageCurrent) return
+    setSelecting(false)
+    setDeleting(false)
+    setBatch([])
+    setDeleteIds([])
+    setPlacement(null)
+    setCell(null)
+    setEditing(false)
+    setDragAction(null)
+  }, [canManageCurrent, current?.id])
 
   const limits = weekLimits(current, weekStart)
   useEffect(() => {
@@ -224,7 +268,7 @@ export function useScheduleController() {
     occupy?: boolean
     campusId?: number
   }, ranges = cell ? [cell] : []) {
-    if (!current || !ranges.length) return
+    if (!current || !ranges.length || !canManageCurrent) return
     const cells = ranges.map((range) => ({
       scheduleId: 'schedule' in range ? range.schedule?.id : undefined,
       timetableId: current.id,
@@ -240,7 +284,7 @@ export function useScheduleController() {
       coachIds: values.coachIds,
       note: values.note || '',
       uiChangeStatus: values.occupy ? 4 : undefined,
-      campusId: values.campusId || campusId,
+      campusId: values.campusId || current.campusId || campusId,
       pricingStudentGroupId: values.occupy ? undefined : values.pricingStudentGroupId,
       pricingCourseType: values.occupy ? undefined : values.pricingCourseType,
       serviceQuantity: values.occupy ? undefined : values.serviceQuantity,
@@ -252,23 +296,23 @@ export function useScheduleController() {
   }
 
   async function removeSchedule(schedule: Schedule) {
-    if (!current || !schedule.id) return
-    await removeScheduleItem(schedule, current, campusId || 0, templateMode)
+    if (!current || !schedule.id || !canManageCurrent) return
+    await removeScheduleItem(schedule, current, activeTimetableCampusId, templateMode)
   }
 
   async function leaveSchedule(schedule: Schedule) {
-    if (!current || !schedule.id) return null
-    return leaveScheduleItem(schedule, current, campusId || 0)
+    if (!current || !schedule.id || !canManageCurrent) return null
+    return leaveScheduleItem(schedule, current, activeTimetableCampusId)
   }
 
   async function moveSchedule(schedule: Schedule, target: ScheduleMutationTarget) {
-    if (!current || !schedule.id) return
-    await moveScheduleItem(schedule, current, campusId || 0, target, templateMode)
+    if (!current || !schedule.id || !canManageCurrent) return
+    await moveScheduleItem(schedule, current, activeTimetableCampusId, target, templateMode)
   }
 
   async function copySchedule(schedule: Schedule, targets: ScheduleMutationTarget[]) {
-    if (!current || !schedule.id || !targets.length) return
-    await copyScheduleItem(schedule, current, campusId || 0, templateMode, targets)
+    if (!current || !schedule.id || !targets.length || !canManageCurrent) return
+    await copyScheduleItem(schedule, current, activeTimetableCampusId, templateMode, targets)
   }
 
   async function openOverview() {
@@ -282,6 +326,10 @@ export function useScheduleController() {
 
   async function onTimetableMenu(key: string) {
     if (!current) return
+    if (!canManageCurrent) {
+      message.warning('当前课表不在你的管理校区内，仅可查看')
+      return
+    }
     if (key === 'copy' || key === 'create-from') {
       const activeCount = (timetableOwner(groups, current.id)?.activeTimetables || []).length
       if (activeCount >= 2) {
@@ -295,7 +343,7 @@ export function useScheduleController() {
       try {
         const detail = await getJson<Timetable>(`/timetables/${current.id}`)
         const created = await postJson<Timetable>('/timetables', {
-          ...timetableBody({ ...detail, name: duplicateTimetableName(detail.name) }, campusId || 0),
+          ...timetableBody({ ...detail, name: duplicateTimetableName(detail.name) }, Number(detail.campusId || campusId || 0)),
           isDefault: 0,
         })
         message.success('已复制课表')
@@ -488,7 +536,17 @@ export function useScheduleController() {
     dragLessonKey,
     campusId,
     campusName,
-    managesCampus,
+    scheduleCampuses: effectiveCampuses,
+    activeTimetableCampusId,
+    managesCampus: canManageCampus(Number(createSource?.campusId || campusId || 0)),
+    managerView,
+    canManageCurrent,
+    canManageTimetable,
+    manageableScheduleCampuses: organizationManager
+      ? effectiveCampuses
+      : managerView
+        ? effectiveCampuses.filter((item) => canManageCampus(item.id))
+        : effectiveCampuses,
     canCreate,
     timetableLocked,
     days,

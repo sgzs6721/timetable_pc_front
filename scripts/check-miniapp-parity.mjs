@@ -21,29 +21,35 @@ const registeredPages = [
   ...app.pages,
   ...app.subPackages.flatMap((subPackage) => subPackage.pages.map((page) => `${subPackage.root}${page}`)),
 ]
-// 待办只在小程序使用，不要求 Web 页面或验收矩阵条目。
-const webExcludedPages = new Set([
+// Web 只承载机构管理后台；待办、家长/学员工作区与学员营销落地页只在小程序提供。
+const webExcludedPages = new Set(registeredPages.filter((page) => page.startsWith('subpackages/parent/pages/') || [
   'subpackages/todo/pages/todo-list/todo-list',
   'subpackages/todo/pages/todo-edit/todo-edit',
-])
+  'subpackages/marketing/pages/campaign-landing/campaign-landing',
+  'subpackages/marketing/pages/my-enrollment/my-enrollment',
+  'subpackages/marketing/pages/my-referral/my-referral',
+].includes(page)))
 const missingPages = registeredPages.filter((page) => !webExcludedPages.has(page) && !document.includes(`\`${page}\``))
 
 const requiredRoutes = [
-  '/parent/home',
-  '/parent/activities',
-  '/parent/courses',
-  '/parent/children',
-  '/parent/timetable',
-  '/parent/course/:courseId',
-  '/parent/records',
-  '/parent/course-stats',
-  '/parent/pay',
-  '/parent/mine',
-  '/parent/share/timetable/:shareCode',
-  '/parent/share/course-stats/:shareCode',
-  '/campaign/:shareCode',
-  '/my-enrollments',
-  '/my-referral/:shareCode',
+  '/home',
+  '/account',
+  '/students',
+  '/schedule',
+  '/courses',
+  '/hours',
+  '/org',
+  '/campus',
+  '/daily',
+  '/payments',
+  '/salary',
+  '/finance',
+  '/profit',
+  '/membership',
+  '/marketing',
+  '/leads',
+  '/guide',
+  '/feedback',
 ]
 const missingRoutes = requiredRoutes.filter((route) => !routes.includes(`path="${route}"`))
 const authContractFailures = []
@@ -60,6 +66,12 @@ if (!session.includes('LOGIN_REDIRECT_TTL_MS')
 }
 if (!passwordLogin.includes('consumeLoginRedirect()') || !wechatLogin.includes('consumeLoginRedirect()')) {
   authContractFailures.push('密码登录与微信扫码登录都必须消费原始深链')
+}
+if (!passwordLogin.includes('网页管理端仅供机构员工使用') || !wechatLogin.includes('网页管理端仅供机构员工使用')) {
+  authContractFailures.push('家长与学员账号必须被 Web 管理后台拒绝并引导至小程序')
+}
+if (routes.includes('/parent/') || routes.includes('/campaign/:shareCode') || routes.includes('/my-enrollments') || routes.includes('/my-referral/')) {
+  authContractFailures.push('Web 管理后台不能注册家长、学员或公开报名路由')
 }
 if (!http.includes('rememberLoginRedirect(returnTarget)')) {
   authContractFailures.push('登录态过期的 401 也必须保存当前深链')
@@ -136,6 +148,51 @@ const behaviorContracts = [
     ],
   },
   {
+    label: '课表管理员必须刷新权限并使用机构全量校区与课表视图',
+    files: ['src/pages/schedule-controller.ts', 'src/pages/schedule-dialogs.tsx'],
+    need: [
+      "getJson<Campus[]>('/campus/list', { timetableView: true })",
+      "managerView ? { status } : { campusId, status }",
+      'shell.reload()',
+      'scheduleCampuses',
+      'activeTimetableCampusId',
+      'canManageCurrent',
+      "ids.every((id) => canManageCampus(id))",
+    ],
+  },
+  {
+    label: '转入流水仅可改有效期，补缴有效期不能早于补缴日期',
+    files: ['src/pages/student-transfer-record-editor.tsx', 'src/pages/student-payments.tsx', 'src/pages/student-payment-editor.tsx'],
+    need: [
+      '仅可修改有效期，转入来源和转出目标保留系统生成内容',
+      "return '补缴有效期不能早于补缴日期'",
+      'minDateMessage="补缴有效期不能早于补缴日期"',
+    ],
+  },
+  {
+    label: '校区编辑锁定负责人电话，课程定价切换卡类型保留独立草稿',
+    files: ['src/pages/CampusPage.tsx', 'src/pages/campus-course-pricing.tsx'],
+    need: [
+      "if (!current) {",
+      "disabled={editing !== 'new'}",
+      'type CategoryDrafts = Record<CardCategory, CategoryDraft>',
+      '[draft.category]: {',
+      'const target = categoryDrafts[category]',
+    ],
+  },
+  {
+    label: '机构管理必须支持微信支付分账资料校验、检测保存、停用和只读比例',
+    file: 'src/pages/OrgPage.tsx',
+    need: [
+      '/profit-sharing',
+      "!/^\\d{8,32}$/.test(merchantId)",
+      '商户法定全称不能超过100个字',
+      "persistProfitSharing('商户资料检测通过')",
+      'disableProfitSharing()',
+      '由平台管理员设置，机构端仅展示',
+    ],
+  },
+  {
     label: '校区设置必须包含学员删除关联记录策略，老师交接必须能查看有效学员卡名单',
     files: ['src/pages/campus-academic.tsx', 'src/pages/campus-staff-handover.tsx'],
     need: ['deletePaymentRecordsOnStudentDelete', 'deleteCheckInRecordsOnStudentDelete', 'activeCardStudents', '有效学员卡名单'],
@@ -149,11 +206,6 @@ const behaviorContracts = [
     label: '首页快捷入口必须按角色、会员状态和校区状态收敛',
     file: 'src/pages/HomePage.tsx',
     need: ['MANAGER_QUICK_ACTIONS', 'TEACHER_QUICK_ACTIONS', 'MEMBER_QUICK_ACTIONS', 'navForUser(', 'subscriptionBlocksPath(', 'disabledReason'],
-  },
-  {
-    label: '营销待支付报名必须隔离账号与活动，复用已有订单并引导到小程序确认支付',
-    files: ['src/marketing-public/MarketingLandingPage.tsx', 'src/marketing-public/MarketingMyPages.tsx', 'src/api/marketing-public.ts'],
-    need: ['createdEnrollmentId', 'loadSequence', 'view.shareCode !== shareCode', 'window.setInterval(', 'openPayGuide()', '不会创建重复报名', '前往小程序支付', 'OWNER_TOKEN_KEY', 'getToken() !== accountToken'],
   },
 ]
 

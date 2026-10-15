@@ -1,5 +1,5 @@
 import { Button, Form, Input, Modal, Popconfirm, Space, Switch, Table, message } from 'antd'
-import { BankOutlined, CrownOutlined, FileTextOutlined, PhoneOutlined, SafetyCertificateOutlined, TeamOutlined, WarningOutlined } from '@ant-design/icons'
+import { BankOutlined, CrownOutlined, DollarOutlined, FileTextOutlined, PhoneOutlined, SafetyCertificateOutlined, TeamOutlined, WarningOutlined } from '@ant-design/icons'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { delJson, getJson, postJson, putJson } from '../api/biz'
@@ -20,6 +20,26 @@ interface Member {
   phone?: string
   nickname?: string
   displayName?: string
+}
+
+interface OrganizationProfitSharing {
+  orgId: number
+  configured: boolean
+  merchantIdMasked?: string
+  merchantName?: string
+  status: 'UNCONFIGURED' | 'PENDING' | 'VERIFIED' | 'FAILED' | 'DISABLED'
+  rate?: number
+  enabled: boolean
+  errorMessage?: string
+  verifiedAt?: string
+}
+
+const PROFIT_SHARING_STATUS: Record<OrganizationProfitSharing['status'], string> = {
+  UNCONFIGURED: '未配置',
+  PENDING: '待平台验证',
+  VERIFIED: '已验证',
+  FAILED: '验证失败',
+  DISABLED: '已停用',
 }
 
 function orgPhone(value?: string) {
@@ -73,6 +93,12 @@ export function OrgPage() {
   const [dissolveOpen, setDissolveOpen] = useState(false)
   const [dissolveName, setDissolveName] = useState('')
   const [permissionSaving, setPermissionSaving] = useState(false)
+  const [profitSharing, setProfitSharing] = useState<OrganizationProfitSharing | null>(null)
+  const [profitSharingLoading, setProfitSharingLoading] = useState(false)
+  const [profitSharingSaving, setProfitSharingSaving] = useState(false)
+  const [profitSharingMerchantId, setProfitSharingMerchantId] = useState('')
+  const [profitSharingMerchantName, setProfitSharingMerchantName] = useState('')
+  const [profitSharingEnabled, setProfitSharingEnabled] = useState(true)
   const [savingOrg, setSavingOrg] = useState(false)
   const [savingMember, setSavingMember] = useState(false)
   const [addForm] = Form.useForm()
@@ -110,6 +136,65 @@ export function OrgPage() {
     if (!shell.currentOrgId) return
     setOrg(await getJson<Org>(`/organizations/${shell.currentOrgId}`))
     setCollaborators(await getJson<Member[]>('/org-members/collaborators', { orgId: shell.currentOrgId }).catch(() => []))
+    setProfitSharingLoading(true)
+    try {
+      const sharing = await getJson<OrganizationProfitSharing>(`/organizations/${shell.currentOrgId}/profit-sharing`)
+      setProfitSharing(sharing)
+      setProfitSharingMerchantId('')
+      setProfitSharingMerchantName(sharing.merchantName || '')
+      setProfitSharingEnabled(sharing.configured ? sharing.enabled !== false : true)
+    } catch (error) {
+      setProfitSharing(null)
+      message.error(tell(error, '分账配置加载失败'))
+    } finally {
+      setProfitSharingLoading(false)
+    }
+  }
+
+  function profitSharingPayload() {
+    const merchantId = profitSharingMerchantId.replace(/\D+/g, '').slice(0, 32)
+    const merchantName = profitSharingMerchantName.trim()
+    if (!profitSharing?.configured && !/^\d{8,32}$/.test(merchantId)) return { error: '请输入正确的微信支付商户号' }
+    if (!merchantName) return { error: '请输入商户法定全称' }
+    if (Array.from(merchantName).length > 100) return { error: '商户法定全称不能超过100个字' }
+    return { payload: { merchantId: merchantId || undefined, merchantName, enabled: profitSharingEnabled } }
+  }
+
+  async function persistProfitSharing(successTitle: string) {
+    if (!shell.currentOrgId || profitSharingSaving) return
+    const result = profitSharingPayload()
+    if ('error' in result) {
+      message.warning(result.error)
+      return
+    }
+    setProfitSharingSaving(true)
+    try {
+      const sharing = await putJson<OrganizationProfitSharing>(`/organizations/${shell.currentOrgId}/profit-sharing`, result.payload)
+      message.success(sharing.status === 'VERIFIED' ? successTitle : '资料已保存，待验证')
+      setProfitSharing(sharing)
+      setProfitSharingMerchantId('')
+      setProfitSharingMerchantName(sharing.merchantName || '')
+      setProfitSharingEnabled(sharing.configured ? sharing.enabled !== false : true)
+    } catch (error) {
+      message.error(tell(error, '保存失败'))
+    } finally {
+      setProfitSharingSaving(false)
+    }
+  }
+
+  async function disableProfitSharing() {
+    if (!shell.currentOrgId || profitSharingSaving) return
+    setProfitSharingSaving(true)
+    try {
+      const sharing = await putJson<OrganizationProfitSharing>(`/organizations/${shell.currentOrgId}/profit-sharing`, { enabled: false })
+      setProfitSharing(sharing)
+      setProfitSharingEnabled(false)
+      message.success('已停用')
+    } catch (error) {
+      message.error(tell(error, '停用失败'))
+    } finally {
+      setProfitSharingSaving(false)
+    }
   }
 
   async function saveSalaryPermission(checked: boolean) {
@@ -317,6 +402,58 @@ export function OrgPage() {
         </div>
       </section>
       </div>
+      <section className="work-card org-block-card org-profit-sharing-card">
+        <div className="org-card-heading">
+          <span className="org-card-heading-icon org-card-heading-icon--green"><DollarOutlined /></span>
+          <div>
+            <h2>微信支付分账</h2>
+            <p>机构资料选填，不配置不影响正常使用</p>
+          </div>
+          <span className={`org-profit-sharing-status is-${String(profitSharing?.status || 'UNCONFIGURED').toLowerCase()}`}>
+            {profitSharingLoading ? '加载中' : PROFIT_SHARING_STATUS[profitSharing?.status || 'UNCONFIGURED']}
+          </span>
+        </div>
+        <div className="org-profit-sharing-body">
+          <p className="org-profit-sharing-notice">验证通过后，仅新产生的营销订单进入分账，历史订单不受影响。</p>
+          {profitSharing?.errorMessage ? <p className="org-profit-sharing-error">{profitSharing.errorMessage}</p> : null}
+          <div className="org-profit-sharing-fields">
+            <label>
+              <span>微信支付商户号 <em>选填</em></span>
+              <Input
+                value={profitSharingMerchantId}
+                maxLength={32}
+                inputMode="numeric"
+                disabled={profitSharingLoading || profitSharingSaving}
+                placeholder={profitSharing?.merchantIdMasked ? `当前 ${profitSharing.merchantIdMasked}，不修改可留空` : '请输入机构自己的微信支付商户号'}
+                onChange={(event) => setProfitSharingMerchantId(event.target.value.replace(/\D+/g, '').slice(0, 32))}
+              />
+            </label>
+            <label>
+              <span>商户法定全称 <em>选填</em></span>
+              <Input
+                value={profitSharingMerchantName}
+                maxLength={100}
+                disabled={profitSharingLoading || profitSharingSaving}
+                placeholder="必须与微信支付商户信息完全一致"
+                onChange={(event) => setProfitSharingMerchantName(event.target.value)}
+              />
+            </label>
+          </div>
+          <div className="org-profit-sharing-setting">
+            <div><strong>机构分账比例</strong><span>由平台管理员设置，机构端仅展示</span></div>
+            <b>{Number(profitSharing?.rate || 30)}%</b>
+          </div>
+          <div className="org-profit-sharing-setting">
+            <div><strong>验证后启用</strong><span>关闭后，新订单不再进入微信分账</span></div>
+            <Switch checked={profitSharingEnabled} disabled={profitSharingLoading || profitSharingSaving} onChange={setProfitSharingEnabled} />
+          </div>
+          <div className="org-profit-sharing-actions">
+            <Button disabled={profitSharingLoading} loading={profitSharingSaving} onClick={() => { void persistProfitSharing('商户资料检测通过') }}>检测商户资料</Button>
+            {profitSharing?.configured ? <Popconfirm title="停用微信支付分账？" description="停用后，新订单不再进入微信分账。" onConfirm={() => void disableProfitSharing()}><Button danger disabled={profitSharingSaving}>停用分账</Button></Popconfirm> : null}
+            <Button type="primary" disabled={profitSharingLoading} loading={profitSharingSaving} onClick={() => { void persistProfitSharing('分账设置已保存') }}>保存分账设置</Button>
+          </div>
+        </div>
+      </section>
       <section className="work-card org-block-card org-permission-card">
         <div className="org-card-heading">
           <span className="org-card-heading-icon org-card-heading-icon--amber"><SafetyCertificateOutlined /></span>

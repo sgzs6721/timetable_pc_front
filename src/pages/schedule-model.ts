@@ -36,6 +36,7 @@ export interface TimetableGroup {
   memberGender?: string
   positionName?: string
   ownerType?: 'TEACHER' | 'SERVICE' | string
+  campusIds?: number[]
   activeTimetables?: Timetable[]
   archivedTimetables?: Timetable[]
 }

@@ -22,7 +22,7 @@ import { ScheduleDialogs } from './schedule-dialogs'
 
 export function SchedulePage() {
   const vm = useScheduleController()
-  const { groups, groupsLoading, archived, setArchived, dayBand, setDayBand, selecting, setSelecting, current, setCurrent, weekStart, setWeekStart, mode, schedules, templateSchedules, setCreating, setCell, placement, setPlacement, batch, setBatch, deleting, setDeleting, deleteIds, setDeleteIds, setCampusFilter, setDragAction, dragHover, setDragHover, dragGuard, dragLessonKey, campusId, canCreate, days, splitWeekend, templateMode, boardSchedules, campusLegend, activeCampusId, boardDays, splitHead, slots, limits, loadGroups, loadWeek, switchBoardMode, removeSchedule, moveSchedule, copySchedule, openOverview, onTimetableMenu, openDay, choosePlacement } = vm
+  const { groups, groupsLoading, archived, setArchived, dayBand, setDayBand, selecting, setSelecting, current, setCurrent, weekStart, setWeekStart, mode, schedules, templateSchedules, setCreating, setCell, placement, setPlacement, batch, setBatch, deleting, setDeleting, deleteIds, setDeleteIds, setCampusFilter, setDragAction, dragHover, setDragHover, dragGuard, dragLessonKey, campusId, canCreate, canManageCurrent, canManageTimetable, days, splitWeekend, templateMode, boardSchedules, campusLegend, activeCampusId, boardDays, splitHead, slots, limits, loadGroups, loadWeek, switchBoardMode, removeSchedule, moveSchedule, copySchedule, openOverview, onTimetableMenu, openDay, choosePlacement } = vm
   const visibleGroups = groups.filter((group) => ((archived ? group.archivedTimetables : group.activeTimetables) || []).length > 0)
   const setScheduleDragLock = (active: boolean) => {
     document.documentElement.classList.toggle('schedule-dragging', active)
@@ -33,7 +33,7 @@ export function SchedulePage() {
     document.body.classList.remove('schedule-dragging')
   }, [])
   const restoreLeave = (scheduleId: number) => {
-    if (!scheduleId || archived || Number(current?.status) === 2) return
+    if (!scheduleId || archived || Number(current?.status) === 2 || !canManageCurrent) return
     Modal.confirm({
       title: '销假',
       content: '确认恢复这个请假时间段吗？',
@@ -122,7 +122,7 @@ export function SchedulePage() {
                     </button>
                     {archived ? null : Number(item.isDefault) === 1 ? (
                       <span className="timetable-active" aria-label="活动课表" title="活动课表"><StarFilled /></span>
-                    ) : (
+                    ) : canManageTimetable(item, group) ? (
                       <button type="button" className="timetable-set" aria-label="设为活动课表" title="设为活动课表" onClick={() => {
                         Modal.confirm({
                           title: '设置活动课表',
@@ -140,7 +140,7 @@ export function SchedulePage() {
                           },
                         })
                       }}><StarOutlined /></button>
-                    )}
+                    ) : null}
                   </div>
                 ))}
               </div>
@@ -205,7 +205,7 @@ export function SchedulePage() {
                   </div>
                 ) : null}
                 <span className="tt-toolbar-spacer" />
-                <Dropdown
+                {canManageCurrent && !archived && Number(current.status) !== 2 ? <Dropdown
                   menu={{
                     items: [
                       { key: 'create', label: selecting ? '退出批量排课' : '批量排课' },
@@ -226,9 +226,9 @@ export function SchedulePage() {
                   }}
                 >
                   <Button type={selecting || deleting ? 'primary' : 'default'}>批量</Button>
-                </Dropdown>
+                </Dropdown> : null}
                 {deleting ? <span className="range-label">正在选择要删除的课程</span> : null}
-                <Dropdown
+                {canManageCurrent ? <Dropdown
                   menu={{
                     items: [
                       ...(archived ? [] : [
@@ -252,7 +252,7 @@ export function SchedulePage() {
                   }}
                 >
                   <Button>课表操作</Button>
-                </Dropdown>
+                </Dropdown> : <span className="range-label">仅查看</span>}
               </div>
               {campusLegend.length > 1 ? (
               <section className="tt-support-panel">
@@ -371,7 +371,7 @@ export function SchedulePage() {
                               type="button"
                               className={['tt-slot', selecting && batch.includes(batchKey(date, slot.start, slot.end)) ? 'is-picked' : '', placement?.targets.some((item) => item.date === date && item.start === slot.start) ? 'is-target' : ''].filter(Boolean).join(' ')}
                               onDragOver={(event) => {
-                                if (archived || Number(current.status) === 2) return
+                                if (!canManageCurrent || archived || Number(current.status) === 2) return
                                 event.preventDefault()
                                 const lesson = boardSchedules.find((item) => scheduleInstanceKey(item) === dragLessonKey.current)
                                 if (!lesson) return
@@ -390,6 +390,10 @@ export function SchedulePage() {
                                 dragGuard.current = true
                                 window.setTimeout(() => { dragGuard.current = false }, 0)
                                 setDragHover(null)
+                                if (!canManageCurrent) {
+                                  message.warning('当前课表不在你的管理校区内，仅可查看')
+                                  return
+                                }
                                 if (archived || Number(current.status) === 2) {
                                   message.warning('归档课表不能修改排课')
                                   return
@@ -414,6 +418,10 @@ export function SchedulePage() {
                               }}
                               onClick={() => {
                                 if (dragGuard.current) return
+                                if (!canManageCurrent) {
+                                  message.warning('当前课表不在你的管理校区内，仅可查看')
+                                  return
+                                }
                                 if (covered) {
                                   if (deleting) message.warning('请选择有内容的单元格')
                                   else if (selecting) message.warning('批量排课时请选择空白时间段')
@@ -517,6 +525,10 @@ export function SchedulePage() {
                               style={{ top: frame.top, height: frame.height }}
                               onClick={() => {
                                 if (dragGuard.current) return
+                                if (!canManageCurrent) {
+                                  message.warning('当前课表不在你的管理校区内，仅可查看')
+                                  return
+                                }
                                 if (deleting) {
                                   message.warning('请选择有内容的单元格')
                                   return
@@ -563,7 +575,7 @@ export function SchedulePage() {
                         }) : null}
                         {cancelMarks.map((segment) => {
                           const frame = rangeFrame(segment.start, segment.end, slots)
-                          const actionable = !!segment.leaveScheduleId && !archived && Number(current.status) !== 2
+                          const actionable = !!segment.leaveScheduleId && canManageCurrent && !archived && Number(current.status) !== 2
                           const style = { top: frame.top, height: frame.height }
                           if (!actionable) {
                             return <div key={`cancel-${segment.key}`} className="tt-cancel" aria-label="已删除的固定课表时段" style={style} />
@@ -614,9 +626,9 @@ export function SchedulePage() {
                               type="button"
                               className={lessonClass(lesson, `${deleting && deleteIds.includes(scheduleInstanceKey(lesson)) ? ' is-picked' : ''}${placement?.schedule && scheduleInstanceKey(placement.schedule) === scheduleInstanceKey(lesson) ? ' is-source' : ''}${!partial && detail.mark ? ` is-${detail.mark}` : ''}`)}
                               style={{ top: frame.top, height: frame.height }}
-                              draggable={!archived && Number(current.status) !== 2 && lesson.uiChangeStatus !== 4}
+                              draggable={canManageCurrent && !archived && Number(current.status) !== 2 && lesson.uiChangeStatus !== 4}
                               onDragStart={(event) => {
-                                if (lesson.uiChangeStatus === 4) {
+                                if (!canManageCurrent || lesson.uiChangeStatus === 4) {
                                   event.preventDefault()
                                   return
                                 }
@@ -633,12 +645,16 @@ export function SchedulePage() {
                                 window.setTimeout(() => { dragGuard.current = false }, 0)
                               }}
                               onContextMenu={(event) => {
-                                if (Number(lesson.uiChangeStatus) !== 3 || !lesson.id) return
+                                if (!canManageCurrent || Number(lesson.uiChangeStatus) !== 3 || !lesson.id) return
                                 event.preventDefault()
                                 restoreLeave(lesson.id)
                               }}
                               onClick={() => {
                                 if (dragGuard.current) return
+                                if (!canManageCurrent) {
+                                  message.warning('当前课表不在你的管理校区内，仅可查看')
+                                  return
+                                }
                                 if (selecting && !deleting) {
                                   message.warning('批量排课时请选择空白时间段')
                                   return

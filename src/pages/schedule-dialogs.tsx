@@ -11,28 +11,28 @@ import { DayScheduleDialog } from './schedule-day-dialog'
 import type { useScheduleController } from './schedule-controller'
 
 export function ScheduleDialogs({ vm }: { vm: ReturnType<typeof useScheduleController> }) {
-  const { setSelecting, current, weekStart, mode, templateSchedules, creating, setCreating, createSource, setCreateSource, editing, setEditing, cell, setCell, setPlacement, batch, setBatch, setDeleting, overview, setOverview, dayDialog, setDayDialog, lookup, setLookup, dragAction, setDragAction, shell, campusId, campusName, managesCampus, timetableLocked, days, templateMode, boardSchedules, slots, loadGroups, loadWeek, saveCell, removeSchedule, leaveSchedule, moveSchedule, copySchedule } = vm
+  const { setSelecting, current, weekStart, mode, templateSchedules, creating, setCreating, createSource, setCreateSource, editing, setEditing, cell, setCell, setPlacement, batch, setBatch, setDeleting, overview, setOverview, dayDialog, setDayDialog, lookup, setLookup, dragAction, setDragAction, shell, campusId, campusName, manageableScheduleCampuses, activeTimetableCampusId, managesCampus, canManageCurrent, timetableLocked, days, templateMode, boardSchedules, slots, loadGroups, loadWeek, saveCell, removeSchedule, leaveSchedule, moveSchedule, copySchedule } = vm
   const serviceTimetable = String(current?.ownerType || '').toUpperCase() === 'SERVICE'
   const timetableCampuses = serviceTimetable && current?.campusId
-    ? shell.campuses.filter((item) => Number(item.id) === Number(current.campusId))
-    : schedulableCampuses(shell.campuses, current?.createByMemberCampusIds)
+    ? manageableScheduleCampuses.filter((item) => Number(item.id) === Number(current.campusId))
+    : schedulableCampuses(manageableScheduleCampuses, current?.createByMemberCampusIds)
   return (
     <>
       <CreateTimetable
         open={creating}
-        campusId={campusId || 0}
+        campusId={Number(createSource?.campusId || campusId || 0)}
         manager={managesCampus}
         selfMemberId={Number(shell.user?.orgMemberId || 0)}
         source={createSource}
         onClose={() => { setCreating(false); setCreateSource(null) }}
         onSaved={(id) => { setCreating(false); setCreateSource(null); loadGroups(id).catch(() => undefined) }}
       />
-      <Modal title="编辑课表" open={editing} onCancel={() => setEditing(false)} footer={null} destroyOnHidden>
+      <Modal title="编辑课表" open={editing && canManageCurrent} onCancel={() => setEditing(false)} footer={null} destroyOnHidden>
         {current ? (
           <EditTimetableForm
             current={current}
             locked={timetableLocked}
-            campusId={campusId || 0}
+            campusId={activeTimetableCampusId}
             onSaved={async () => {
               setEditing(false)
               await loadGroups(current.id)
@@ -41,10 +41,10 @@ export function ScheduleDialogs({ vm }: { vm: ReturnType<typeof useScheduleContr
         ) : null}
       </Modal>
       <CellDialog
-        cell={cell}
-        campusId={campusId || 0}
+        cell={canManageCurrent ? cell : null}
+        campusId={activeTimetableCampusId}
         campusName={campusName}
-        campuses={shell.campuses}
+        campuses={manageableScheduleCampuses}
         schedulableCampuses={timetableCampuses}
         ownerName={current?.createByMemberName || (serviceTimetable ? '服务课表' : '当前课表老师')}
         coachMemberId={serviceTimetable ? undefined : current?.createByMemberId}
@@ -124,7 +124,7 @@ export function ScheduleDialogs({ vm }: { vm: ReturnType<typeof useScheduleContr
                 targetType: template.targetType,
                 targetId: template.targetId,
                 note: template.note || '',
-                campusId: template.campusId || campusId,
+                campusId: template.campusId || activeTimetableCampusId,
               })
             }
             message.success('已恢复原课时')
@@ -176,7 +176,7 @@ export function ScheduleDialogs({ vm }: { vm: ReturnType<typeof useScheduleContr
           return fresh || null
         }}
       />
-      <Modal title={dragAction?.canCopy ? '选择复制还是移动' : '确认移动位置'} open={!!dragAction} onCancel={() => setDragAction(null)} footer={null} destroyOnHidden>
+      <Modal title={dragAction?.canCopy ? '选择复制还是移动' : '确认移动位置'} open={canManageCurrent && !!dragAction} onCancel={() => setDragAction(null)} footer={null} destroyOnHidden>
         {dragAction ? (
           <div>
             <strong>{dragAction.name}</strong>

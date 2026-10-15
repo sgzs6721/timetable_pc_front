@@ -2,7 +2,6 @@
  * never change the cascade or the appearance of a previously visited page. */
 @import '../components/PaymentMethodPicker.css';
 @import '../layouts/AppShell.css';
-@import '../marketing-public/marketing-public.css';
 @import '../pages/AccountPage.css';
 @import '../pages/CoursesPage.css';
 @import '../pages/HomePage.css';
@@ -19,4 +18,3 @@
 @import '../pages/SalaryPage.css';
 @import '../pages/ProfitDashboard.css';
 @import '../pages/ProfitDetail.css';
-@import '../parent/parent.css';

@@ -2,9 +2,9 @@
 
 ## 范围
 
-Web 端覆盖 `miniprogram/app.json` 中除待办以外的注册页面，不再只验收机构管理角色。机构管理、家长/学员、平台运营、营销公开页和只读分享页按角色拆分为不同 Web 工作区，但继续复用同一业务数据与后端规则。subpackages/todo/pages/todo-list/todo-list 与 subpackages/todo/pages/todo-edit/todo-edit 只在小程序提供，不进入 Web 验收矩阵。
+Web 端只承载机构管理后台。家长/学员工作区、课表分享、活动报名、个人报名记录与个人推广页只在微信小程序提供，不进入 Web 路由或构建产物；待办同样只在小程序提供。
 
-移动端为了单手操作拆开的页面，可以在 Web 合并为标签、抽屉或弹窗；家长端与平台运营端则使用独立导航，避免角色菜单混杂。支付能力在 Web 保留订单和状态逻辑，微信 JSAPI 唤起改为扫码或提示继续在微信完成。
+移动端为了单手操作拆开的机构管理页面，可以在 Web 合并为标签、抽屉或弹窗。Web 支付仅保留机构会员购买所需的扫码与订单状态能力。
 
 ## 页面与功能映射
 
@@ -23,7 +23,7 @@ Web 端覆盖 `miniprogram/app.json` 中除待办以外的注册页面，不再�
 | 课表详情 | `/schedule?timetableId=...` | 周课表、半小时格、创建/移动/编辑/删除/请假/恢复、试听、批量创建、日视图和汇总；固定课变更、取消与跨行轮廓同小程序一致 |
 | 课程管理 | `/courses` | 一对一/班课、老师、简称、单价、开课人数区间（最少/最多）、学员与权益汇总、删除约束 |
 | 课时管理 | `/hours` | 时间周期、老师范围、课时明细、删除与汇总 |
-| 机构管理、机构工资周期 | `/org` | 基本资料、权限、工资周期、协同管理员、解散机构 |
+| 机构管理、机构工资周期 | `/org` | 基本资料、权限、工资周期、协同管理员、微信支付分账配置与解散机构 |
 | 校区管理 | `/campus` | 校区额度、创建/编辑、上线/下线校验、人员和业务快捷入口 |
 | 校区服务 | `/campus` 服务项目 | 服务价格、试听、退费费用、启停与编辑 |
 | 老师/员工/职位/权限 | `/campus` 老师、职位、权限 | 入职、离职、交接、身份与职位约束、权限预设、管理员范围 |
@@ -40,10 +40,7 @@ Web 端覆盖 `miniprogram/app.json` 中除待办以外的注册页面，不再�
 | 会员中心 | `/membership` | 套餐、新购/续费/升级、学员扩容、PC 微信扫码支付、支付状态自动确认 |
 | 问题反馈 | `/feedback` | 提交、历史记录和状态 |
 | 使用文档 | `/guide` | 管理端功能说明与操作入口 |
-| 家长/学员工作区 | `/parent/*` | 首页、成员、课程、课表、记录、统计、缴费、活动、我的和机构切换 |
-| 家长分享页 | `/parent/share/*` | 只读周课表和课程统计，保持隐私提示与登录保护 |
 | 平台运营中心 | `/platform` | 数据总览、用户、机构/校区、订单、反馈、结算、套餐和功能开关 |
-| 营销公开页 | `/campaign/:shareCode`、`/my-enrollments`、`/my-referral/:shareCode` | 活动详情、场次与表单、报名/取消、推广进度、奖励、邀请人和海报 |
 
 ## 逐页验收矩阵
 
@@ -68,22 +65,10 @@ Web 端覆盖 `miniprogram/app.json` 中除待办以外的注册页面，不再�
 | `subpackages/student/pages/student-coach-transfer/student-coach-transfer` | `/students` 批量换老师 | 源老师、目标老师、学员多选、校区范围和结果计数一致 |
 | `subpackages/student/pages/parent-fee-items/parent-fee-items` | 学员详情“家长端” | 费用项新增/启停/删除、支付标记、家长访问权限一致 |
 | `subpackages/student/pages/parent-fee-item-create/parent-fee-item-create` | 学员详情“家长端”费用方案弹窗 | 专属方案金额、课时、卡片、有效期、启用状态和编辑回显一致 |
-| `subpackages/parent/pages/home/home` | `/parent/home` | 成员切换、本周课表、近期动态、课程与缴费快捷入口一致 |
-| `subpackages/parent/pages/activities/activities` | `/parent/activities` | 可报名活动、状态、时间、地点和活动落地页下钻一致 |
-| `subpackages/parent/pages/courses/courses` | `/parent/courses` | 自建/机构课程、权益摘要、新增、编辑、删除和详情下钻一致 |
-| `subpackages/parent/pages/children/children` | `/parent/children` | 家庭成员、展示名、添加、编辑和删除保护一致 |
-| `subpackages/parent/pages/timetable/timetable` | `/parent/timetable` | 成员切换、周切换、自建日程增改删、机构课程只读详情与分享一致 |
-| `subpackages/parent/pages/course/course` | `/parent/course/:courseId` | 课程资料、缴费、上课记录、权益、编辑/删除和记录维护一致 |
-| `subpackages/parent/pages/records/records` | `/parent/records` | 缴费与上课记录切换、成员范围、课程和状态信息一致 |
-| `subpackages/parent/pages/course-stats/course-stats` | `/parent/course-stats` | 课程权益、缴费、到课/请假、综合出勤率、周/月趋势和分享一致 |
-| `subpackages/parent/pages/pay/pay` | `/parent/pay` | 费用项、金额、订单创建和微信支付衔接提示一致 |
-| `subpackages/parent/pages/mine/mine` | `/parent/mine` | 家庭资料、机构切换、活动、反馈和退出登录一致 |
-| `subpackages/parent/pages/shared-timetable/shared-timetable` | `/parent/share/timetable/:shareCode` | 登录保护的只读周课表、成员和分享周期一致 |
-| `subpackages/parent/pages/shared-course-stats/shared-course-stats` | `/parent/share/course-stats/:shareCode` | 登录保护的只读课程统计与隐私提示一致 |
 | `subpackages/admin/pages/onboarding/onboarding` | `/home` 空机构引导 | 创建机构、创建校区、额度和下一步引导一致 |
 | `subpackages/admin/pages/create-org/create-org` | `/home`、`/account` 创建机构弹窗 | 名称、资料、配额、创建后切换一致 |
 | `subpackages/admin/pages/create-campus/create-campus` | `/home`、`/campus` 创建校区弹窗 | 名称、地址、联系人、联系电话、额度和创建后选中一致 |
-| `subpackages/admin/pages/org-manage/org-manage` | `/org` | 机构资料、协同管理员、权限和解散保护一致 |
+| `subpackages/admin/pages/org-manage/org-manage` | `/org` | 机构资料、协同管理员、权限、微信支付分账资料检测/启停和解散保护一致 |
 | `subpackages/admin/pages/org-salary-settings/org-salary-settings` | `/org` 工资周期 | 工资周期起止、查看权限和组织级设置一致 |
 | `subpackages/admin/pages/campus-manage/campus-manage` | `/campus` | 校区列表、资料、上下线校验、删除校验和业务下钻一致 |
 | `subpackages/admin/pages/campus-service-manage/campus-service-manage` | `/campus` 服务项目 | 服务单价、时长、试听、退费费用、启停与编辑一致 |
@@ -111,12 +96,9 @@ Web 端覆盖 `miniprogram/app.json` 中除待办以外的注册页面，不再�
 | `subpackages/marketing/pages/template-edit/template-edit` | `/marketing` 模板编辑弹窗 | 名称、文案、卖点、规则、排序、启停和长度限制一致 |
 | `subpackages/marketing/pages/campaign-edit/campaign-edit` | `/marketing` 活动编辑弹窗 | 模板套用、报名/支付方式、时间、名额、场地、联系人、发布前校验一致 |
 | `subpackages/marketing/pages/campaign-detail/campaign-detail` | `/marketing` 活动详情抽屉 | 状态操作、场次、报名、推广、奖励、二维码和统计一致 |
-| `subpackages/marketing/pages/campaign-landing/campaign-landing` | `/campaign/:shareCode` | 活动视觉、场次、剩余名额、报名字段、协议、推荐关系、待支付识别、继续支付和状态自动确认一致 |
-| `subpackages/marketing/pages/my-enrollment/my-enrollment` | `/my-enrollments` | 我的报名、待支付继续付款、状态、活动下钻和仅允许状态下取消报名一致 |
 | `subpackages/marketing/pages/enrollment-list/enrollment-list` | 活动详情“报名” | 筛选、分页、导出、新老客调整和退款/作废一致 |
 | `subpackages/marketing/pages/settlement-list/settlement-list` | `/marketing` 入账结算 | 汇总、活动维度入账、扣减、净额和分页一致 |
 | `subpackages/marketing/pages/settlement-detail/settlement-detail` | 入账结算明细抽屉 | 活动入账明细、状态和分页一致 |
-| `subpackages/marketing/pages/my-referral/my-referral` | `/my-referral/:shareCode` | 推广进度、奖励状态、邀请明细、链接分享和推广海报一致 |
 | `subpackages/marketing/pages/poster-preview/poster-preview` | 活动预览及二维码弹层 | 活动预览、分享二维码和下载入口一致 |
 | `subpackages/marketing/pages/referral-reward-manage/referral-reward-manage` | 活动详情“推广奖励” | 推广排行、奖励发放、备注、作废原因与状态保护一致 |
 

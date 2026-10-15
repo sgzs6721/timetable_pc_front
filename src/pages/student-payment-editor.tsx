@@ -730,10 +730,10 @@ export function PaymentEditor(props: {
         {showTimedRange ? (
           <>
             <ValidityStartDate />
-            <ValidityEndDate />
+            <ValidityEndDate minDate={payType === 'supplement' ? String(paymentDateValue || '') : undefined} minDateMessage="补缴有效期不能早于补缴日期" />
           </>
         ) : null}
-        {showDeadline ? <Form.Item name="consumeDeadline" label="有效期至"><BusinessDatePicker /></Form.Item> : null}
+        {showDeadline ? <Form.Item name="consumeDeadline" label="有效期至"><BusinessDatePicker minDate={payType === 'supplement' ? String(paymentDateValue || '') : undefined} /></Form.Item> : null}
         {payType === 'adjustment' ? (
           <Form.Item name="adjustmentReason" label="调整方式" rules={[{ required: true, message: '请选择调整方式' }]}>
             <Select options={adjustmentReasonOptions(cardCategory, String(record?.adjustmentReason || reason || ''), { ready: hoursReady, regular: regularAvailable, gift: giftAvailable })} />

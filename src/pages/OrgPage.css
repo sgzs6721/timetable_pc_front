@@ -64,6 +64,10 @@
   grid-column: 1;
 }
 
+.org-profit-sharing-card {
+  grid-column: 1 / -1;
+}
+
 .org-permission-card--wide {
   grid-column: 1 / -1;
 }
@@ -168,6 +172,112 @@
   background: #eff4ff;
   font-size: var(--text-sm);
   line-height: 1.4;
+}
+
+.org-profit-sharing-status {
+  flex: none;
+  margin-left: auto;
+  padding: 5px 10px;
+  border-radius: var(--radius-tag);
+  color: #6c7890;
+  background: #f1f4f8;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.org-profit-sharing-status.is-verified {
+  color: #16805b;
+  background: #e9f8f1;
+}
+
+.org-profit-sharing-status.is-pending {
+  color: #9a6a12;
+  background: #fff6dc;
+}
+
+.org-profit-sharing-status.is-failed {
+  color: #bd4453;
+  background: #fff0f1;
+}
+
+.org-profit-sharing-body {
+  padding: var(--space-5);
+}
+
+.org-profit-sharing-notice,
+.org-profit-sharing-error {
+  margin: 0 0 var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-control);
+  color: #52627a;
+  background: #f5f8fe;
+  font-size: 12px;
+}
+
+.org-profit-sharing-error {
+  color: #aa3e4b;
+  background: #fff1f2;
+}
+
+.org-profit-sharing-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+
+.org-profit-sharing-fields label > span,
+.org-profit-sharing-setting strong,
+.org-profit-sharing-setting span {
+  display: block;
+}
+
+.org-profit-sharing-fields label > span {
+  margin-bottom: var(--space-2);
+  color: #263650;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.org-profit-sharing-fields label em {
+  color: #98a3b6;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 500;
+}
+
+.org-profit-sharing-setting {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-5);
+  margin-top: var(--space-4);
+  padding: var(--space-4);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-panel);
+  background: var(--surface-subtle);
+}
+
+.org-profit-sharing-setting strong {
+  color: #263650;
+  font-size: 13px;
+}
+
+.org-profit-sharing-setting span {
+  margin-top: var(--space-1);
+  color: #8795ab;
+  font-size: 12px;
+}
+
+.org-profit-sharing-setting > b {
+  color: #3569f4;
+  font-size: 20px;
+}
+
+.org-profit-sharing-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  margin-top: var(--space-5);
 }
 
 .org-card-heading h2,
@@ -334,6 +444,10 @@
 
 @media (max-width: 1100px) {
   .org-profile-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .org-profit-sharing-fields {
     grid-template-columns: 1fr;
   }
 

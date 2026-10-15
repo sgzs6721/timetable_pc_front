@@ -138,15 +138,24 @@ export function ownerGenderIcon(value?: string): string {
 
 export function timetablePositionName(item: Timetable, campusId: number | null): string {
   const names = item.createByMemberCampusPositionNames || {}
-  const scheduled = (item.scheduleCampusIds || []).map((id) => Number(id)).filter((id) => id > 0)
-  const campusIds = scheduled.length
-    ? scheduled
-    : (Number(item.campusId || 0) > 0 ? [Number(item.campusId)] : (item.createByMemberCampusIds || []).map((id) => Number(id)).filter((id) => id > 0))
+  const campusIds = timetableCampusIds(item)
   const preferred = campusId && names[String(campusId)]
     ? [names[String(campusId)]]
     : campusIds.map((id) => names[String(id)]).filter(Boolean)
   const unique = Array.from(new Set(preferred.map((name) => String(name).trim()).filter(Boolean)))
   return unique.join('、') || String(item.createByMemberJobTitle || '').trim()
+}
+
+export function timetableCampusIds(item?: Partial<Timetable>, fallbackCampusIds: number[] = []): number[] {
+  const unique = (values: Array<number | string | null | undefined>) => Array.from(new Set(
+    values.map((id) => Number(id || 0)).filter((id) => Number.isFinite(id) && id > 0),
+  ))
+  const scheduled = unique(item?.scheduleCampusIds || [])
+  if (scheduled.length) return scheduled
+  const timetableCampus = Number(item?.campusId || 0)
+  if (timetableCampus > 0) return [timetableCampus]
+  const ownerCampuses = unique(item?.createByMemberCampusIds || [])
+  return ownerCampuses.length ? ownerCampuses : unique(fallbackCampusIds)
 }
 
 export function formatTimetableTime(value?: string): string {

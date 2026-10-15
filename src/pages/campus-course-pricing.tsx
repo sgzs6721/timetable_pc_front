@@ -48,6 +48,17 @@ interface RuleDraft {
   unitPrice: string
 }
 
+interface CategoryDraft {
+  price: string
+  hours: string
+  periodType: PeriodType
+  courseIds: number[]
+  serviceIds: number[]
+  rules: RuleDraft[]
+}
+
+type CategoryDrafts = Record<CardCategory, CategoryDraft>
+
 const CARD_TYPES: Array<{ value: CardCategory; label: string }> = [
   { value: 'HOURS', label: '课时卡' },
   { value: 'STORED_VALUE', label: '储值卡' },
@@ -187,6 +198,18 @@ function pricingMeta(item: CoursePricing): string {
   return `¥${priceText} · ${periodLabel(item.periodType)}`
 }
 
+function emptyCategoryDraft(): CategoryDraft {
+  return { price: '', hours: '', periodType: 'MONTH', courseIds: [], serviceIds: [], rules: [] }
+}
+
+function emptyCategoryDrafts(): CategoryDrafts {
+  return { HOURS: emptyCategoryDraft(), STORED_VALUE: emptyCategoryDraft(), PERIOD: emptyCategoryDraft() }
+}
+
+function copyRules(rules: RuleDraft[]): RuleDraft[] {
+  return rules.map((rule) => ({ ...rule }))
+}
+
 function emptyDraft() {
   return {
     editingId: 0,
@@ -199,6 +222,7 @@ function emptyDraft() {
     courseIds: [] as number[],
     serviceIds: [] as number[],
     rules: [] as RuleDraft[],
+    categoryDrafts: emptyCategoryDrafts(),
   }
 }
 
@@ -260,6 +284,16 @@ export function CoursePricings({ campusId }: { campusId: number | null }) {
     const legacyUnitPrice = category === 'STORED_VALUE' && !saved.length && Number(row.unitPrice || 0) > 0
       ? formatDecimal(row.unitPrice)
       : ''
+    const rules = syncRules(courses, services, courseIds, serviceIds, saved, legacyUnitPrice)
+    const categoryDrafts = emptyCategoryDrafts()
+    categoryDrafts[category] = {
+      price: formatDecimal(row.price),
+      hours: category === 'HOURS' ? formatDecimal(row.hours) : '',
+      periodType: periodTypeOf(row.periodType),
+      courseIds: [...courseIds],
+      serviceIds: [...serviceIds],
+      rules: category === 'STORED_VALUE' ? copyRules(rules) : [],
+    }
     setDraft({
       editingId: Number(row.id || 0),
       category,
@@ -270,7 +304,8 @@ export function CoursePricings({ campusId }: { campusId: number | null }) {
       description: String(row.description || ''),
       courseIds,
       serviceIds,
-      rules: syncRules(courses, services, courseIds, serviceIds, saved, legacyUnitPrice),
+      rules,
+      categoryDrafts,
     })
     setOpen(true)
   }
@@ -438,11 +473,31 @@ export function CoursePricings({ campusId }: { campusId: number | null }) {
               options={CARD_TYPES}
               onChange={(event) => {
                 const category = cardCategoryOf(event.target.value)
+                if (category === draft.category) return
+                const categoryDrafts: CategoryDrafts = {
+                  ...draft.categoryDrafts,
+                  [draft.category]: {
+                    price: draft.price,
+                    hours: draft.category === 'HOURS' ? draft.hours : '',
+                    periodType: draft.periodType,
+                    courseIds: [...draft.courseIds],
+                    serviceIds: [...draft.serviceIds],
+                    rules: draft.category === 'STORED_VALUE' ? copyRules(draft.rules) : [],
+                  },
+                }
+                const target = categoryDrafts[category] || emptyCategoryDraft()
                 setDraft({
                   ...draft,
                   category,
-                  hours: category === 'HOURS' ? draft.hours : '',
-                  rules: category === 'STORED_VALUE' ? syncRules(courses, services, draft.courseIds, draft.serviceIds, draft.rules) : draft.rules,
+                  price: target.price,
+                  hours: category === 'HOURS' ? target.hours : '',
+                  periodType: target.periodType,
+                  courseIds: [...target.courseIds],
+                  serviceIds: [...target.serviceIds],
+                  rules: category === 'STORED_VALUE'
+                    ? syncRules(courses, services, target.courseIds, target.serviceIds, copyRules(target.rules))
+                    : [],
+                  categoryDrafts,
                 })
               }}
             />

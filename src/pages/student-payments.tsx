@@ -772,6 +772,8 @@ export function paymentFormError(values: Record<string, unknown>, student: Stude
   if (needsRange && (!start || !end)) return '请选择有效期开始和结束日期'
   if (start && end && end < start) return '有效期结束不能早于开始'
   if (type === 'supplement' && !period && mode === 'deadline' && !deadline) return '请选择有效期至'
+  const supplementValidityEnd = mode === 'deadline' && !period ? deadline : end
+  if (type === 'supplement' && supplementValidityEnd && date && supplementValidityEnd < date) return '补缴有效期不能早于补缴日期'
   if (type === 'refund' && period && values.belowRefundMax) {
     if (!start || !end) return '请选择更改后的有效期'
     if (end < start) return '有效期结束不能早于开始'
@@ -780,4 +782,3 @@ export function paymentFormError(values: Record<string, unknown>, student: Stude
   if ((type === 'supplement' || type === 'adjustment') && !values.mainRecordId) return '缺少主缴费记录，请返回重新点击调整'
   return ''
 }
-

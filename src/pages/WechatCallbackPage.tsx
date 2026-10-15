@@ -2,7 +2,7 @@ import { Button, Result, Spin } from 'antd'
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { getUserInfo, loginByWechatQr } from '../api/auth'
-import { consumeLoginRedirect, consumeWechatOAuthState, setToken } from '../session'
+import { clearAuthentication, consumeLoginRedirect, consumeWechatOAuthState, setToken } from '../session'
 
 export function WechatCallbackPage() {
   const [params] = useSearchParams()
@@ -37,8 +37,14 @@ export function WechatCallbackPage() {
         const user = await getUserInfo().catch(() => null)
         if (!active) return
         const pureParent = String(user?.role || login.role || '').toLowerCase() === 'parent' && !Number(user?.orgMemberId || 0)
+        if (pureParent) {
+          clearAuthentication()
+          consumeLoginRedirect()
+          setError('网页管理端仅供机构员工使用，家长和学员请前往微信小程序')
+          return
+        }
         const redirect = consumeLoginRedirect()
-        navigate(pureParent ? '/parent/home' : (redirect || '/home'), { replace: true })
+        navigate(redirect || '/home', { replace: true })
       })
       .catch((reason: unknown) => {
         if (active) setError(reason instanceof Error ? reason.message : '微信扫码登录失败')

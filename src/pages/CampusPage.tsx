@@ -315,12 +315,14 @@ function CampusList() {
               message.warning('请先修改校区信息')
               return
             }
-            const payload = {
+            const payload: Partial<Campus> = {
               name: String(values.name || '').trim(),
               address: String(values.address || '').trim(),
-              contactPerson: String(values.contactPerson || '').trim(),
-              contactPhone: String(values.contactPhone || '').replace(/\D+/g, '').slice(0, 11),
               visibleInList: current ? current.visibleInList !== false : true,
+            }
+            if (!current) {
+              payload.contactPerson = String(values.contactPerson || '').trim()
+              payload.contactPhone = String(values.contactPhone || '').replace(/\D+/g, '').slice(0, 11)
             }
             try {
               if (current) await putJson('/campus', { ...payload, id: current.id })
@@ -335,8 +337,8 @@ function CampusList() {
         >
           <Form.Item name="name" label="名称" rules={[{ required: true, message: '请输入校区名称' }]}><Input maxLength={15} /></Form.Item>
           <Form.Item name="address" label="详细地址" rules={editing === 'new' ? [] : [{ required: true, message: '请输入详细地址' }]} extra={editing === 'new' ? '详细地址可以先不填' : undefined}><Input maxLength={editing === 'new' ? 100 : 30} /></Form.Item>
-          <Form.Item name="contactPerson" label="负责人" rules={[{ required: true, message: '请输入负责人' }]}><Input maxLength={6} /></Form.Item>
-          <Form.Item name="contactPhone" label="联系电话" rules={[{ required: true, message: '请输入联系电话' }]}><Input maxLength={11} /></Form.Item>
+          <Form.Item name="contactPerson" label="负责人" rules={[{ required: true, message: '请输入负责人' }]} extra={editing !== 'new' ? '负责人请到人员设置中维护' : undefined}><Input maxLength={6} disabled={editing !== 'new'} /></Form.Item>
+          <Form.Item name="contactPhone" label="联系电话" rules={[{ required: true, message: '请输入联系电话' }]} extra={editing !== 'new' ? '联系电话随负责人资料维护' : undefined}><Input maxLength={11} disabled={editing !== 'new'} /></Form.Item>
           <CampusSaveButton current={editing && editing !== 'new' ? editing : null} campuses={rows} />
         </Form>
       </Modal>
