@@ -330,6 +330,14 @@
   font-variant-numeric: tabular-nums;
 }
 
+.overview-person-name.is-male {
+  color: #2563eb;
+}
+
+.overview-person-name.is-female {
+  color: #db2777;
+}
+
 .supplement-head {
   width: 100%;
   display: flex;

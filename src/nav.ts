@@ -59,6 +59,18 @@ export function canViewLeads(user: UserInfo | null, org?: Organization | null): 
   return (user.campusAdminCampusIds || []).some((id) => Number(id) > 0)
 }
 
+/** 销售负责人筛选会暴露人员名单，仅向机构/协同管理员与校区管理员开放。 */
+export function canFilterLeadSalespeople(user: UserInfo | null, org?: Organization | null): boolean {
+  if (!user) return false
+  const role = String(user.role || '').toLowerCase()
+  const organizationManager = role === 'owner' || role === 'admin'
+    || (Number(user.id || 0) > 0 && Number(org?.ownerId || 0) === Number(user.id))
+  return user.canViewAllLeads === true
+    || organizationManager
+    || user.campusAdmin === true
+    || (user.campusAdminCampusIds || []).some((id) => Number(id) > 0)
+}
+
 function withoutLeads(items: NavItem[], user: UserInfo | null, org?: Organization | null): NavItem[] {
   return canViewLeads(user, org) ? items : items.filter((item) => item.key !== 'leads')
 }

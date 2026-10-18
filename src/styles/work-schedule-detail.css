@@ -547,6 +547,29 @@
   transform: translateY(-1px);
 }
 
+.permission-switch-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-top: var(--space-4);
+  padding: var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #f8faff;
+}
+
+.permission-switch-row strong {
+  color: var(--ink);
+  font-size: 14px;
+}
+
+.permission-switch-row p {
+  margin: var(--space-1) 0 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
 .schedule-bar {
   display: flex;
   flex-wrap: wrap;

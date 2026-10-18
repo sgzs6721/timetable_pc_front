@@ -4,8 +4,8 @@ import { getJson, postJson, putJson } from '../api/biz'
 import { tell } from './kit'
 import { LEAD_SOURCES, leadPhoneError, normalizeLeadPhone, type Lead, type LeadCampus, type LeadSalesperson } from './leads-model'
 
-export function LeadEditor({ lead, salespeople, campuses, onClose, onSaved }: {
-  lead?: Lead; salespeople: LeadSalesperson[]; campuses: LeadCampus[]; onClose: () => void; onSaved: (lead: Lead) => void
+export function LeadEditor({ lead, salespeople, campuses, currentCampusId, onClose, onSaved }: {
+  lead?: Lead; salespeople: LeadSalesperson[]; campuses: LeadCampus[]; currentCampusId?: number | null; onClose: () => void; onSaved: (lead: Lead) => void
 }) {
   const [form] = Form.useForm()
   const [saving, setSaving] = useState(false)
@@ -38,7 +38,7 @@ export function LeadEditor({ lead, salespeople, campuses, onClose, onSaved }: {
       const payload = {
         name: values.name.trim(),
         phone: values.phone || '',
-        contactName: values.contactName || '',
+        contactName: String(values.contactName || '').trim(),
         wechat: values.wechat || '',
         gender: values.gender || 'UNKNOWN',
         age: values.age ?? null,
@@ -58,13 +58,13 @@ export function LeadEditor({ lead, salespeople, campuses, onClose, onSaved }: {
   }
   return <Modal open className="lead-editor-modal" title={lead ? '编辑客源' : '录入客源'} width={640} onCancel={onClose}
     maskClosable={false} keyboard={!saving} closable={!saving} cancelButtonProps={{ disabled: saving }} confirmLoading={saving} onOk={save} okText="保存客源" cancelText="取消">
-    <Form form={form} layout="vertical" scrollToFirstError onValuesChange={() => setSaveError('')} initialValues={lead || { gender: 'UNKNOWN', campusId: campuses.length === 1 ? campuses[0].id : undefined }}>
+    <Form form={form} layout="vertical" scrollToFirstError onValuesChange={() => setSaveError('')} initialValues={lead || { gender: 'UNKNOWN', campusId: campuses.some((item) => item.id === currentCampusId) ? currentCampusId : campuses[0]?.id }}>
       <section className="lead-form-section">
         <h3 className="lead-form-section-title">基本信息</h3>
-        <Form.Item name="name" label="客户姓名" rules={[{ required: true, whitespace: true, message: '请输入客户姓名' }]}><Input maxLength={60} placeholder="请输入客户姓名" /></Form.Item>
+        <Form.Item name="name" label="客户姓名" rules={[{ required: true, whitespace: true, message: '请输入客户姓名' }, { validator: (_, value) => Array.from(String(value || '').trim()).length <= 6 ? Promise.resolve() : Promise.reject(new Error('客户姓名不能超过6个字')) }]}><Input maxLength={6} placeholder="请输入客户姓名（最多6个字）" /></Form.Item>
         <div className="lead-form-grid">
           <Form.Item name="phone" label="联系电话" getValueFromEvent={(event) => normalizeLeadPhone(event?.target?.value ?? event)} rules={[{ validator: (_, value) => { const error = leadPhoneError(String(value || '')); return error ? Promise.reject(new Error(error)) : Promise.resolve() } }]}><Input maxLength={20} placeholder="手机号或固定电话（选填）" /></Form.Item>
-          <Form.Item name="contactName" label="联系人"><Input maxLength={60} placeholder="例如：家长姓名（选填）" /></Form.Item>
+          <Form.Item name="contactName" label="联系人" rules={[{ validator: (_, value) => Array.from(String(value || '').trim()).length <= 6 ? Promise.resolve() : Promise.reject(new Error('联系人不能超过6个字')) }]}><Input maxLength={6} placeholder="家长姓名（选填，最多6个字）" /></Form.Item>
           <Form.Item name="wechat" label="微信号"><Input maxLength={60} placeholder="选填" /></Form.Item>
           <Form.Item name="gender" label="性别"><Select options={[{ value: 'UNKNOWN', label: '未填写' }, { value: 'MALE', label: '男' }, { value: 'FEMALE', label: '女' }]} /></Form.Item>
           <Form.Item name="age" label="年龄"><InputNumber min={0} max={120} precision={0} placeholder="选填" style={{ width: '100%' }} /></Form.Item>

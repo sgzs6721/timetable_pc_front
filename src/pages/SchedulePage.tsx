@@ -7,8 +7,7 @@ import {
   DAY_LABELS, addDays, boardHoursText, cancelledCompareSegments, clockText,
   compareDetail, formatTimetableTime, freeUntil, fromMinutes, visibleLeaveSlices,
   ownerGenderIcon, scheduleInstanceKey, templateEchoForCell, timetableMeta,
-  timetableWeeks, toMinutes,
-  weekChipLabel,
+  toMinutes,
   weekRangeLabel,
 } from './schedule-board-helpers'
 import {
@@ -19,11 +18,23 @@ import {
 import { slotContaining } from './schedule-timetable-forms'
 import { useScheduleController } from './schedule-controller'
 import { ScheduleDialogs } from './schedule-dialogs'
+import { buildTimetableSummary, isOutsideTimetableDateRange, isScheduleConflictMessage } from './schedule-policy'
+import { ScheduleWeekPicker } from './schedule-week-picker'
+
+function showScheduleOperationError(error: unknown, fallback: string) {
+  const text = tell(error, fallback)
+  if (isScheduleConflictMessage(text)) {
+    Modal.info({ title: '排课时间冲突', content: text || '该时间段与已有课程重叠，请调整后再保存。', okText: '重新调整' })
+  } else {
+    message.error(text)
+  }
+}
 
 export function SchedulePage() {
   const vm = useScheduleController()
-  const { groups, groupsLoading, archived, setArchived, dayBand, setDayBand, selecting, setSelecting, current, setCurrent, weekStart, setWeekStart, mode, schedules, templateSchedules, setCreating, setCell, placement, setPlacement, batch, setBatch, deleting, setDeleting, deleteIds, setDeleteIds, setCampusFilter, setDragAction, dragHover, setDragHover, dragGuard, dragLessonKey, campusId, canCreate, canManageCurrent, canManageTimetable, days, splitWeekend, templateMode, boardSchedules, campusLegend, activeCampusId, boardDays, splitHead, slots, limits, loadGroups, loadWeek, switchBoardMode, removeSchedule, moveSchedule, copySchedule, openOverview, onTimetableMenu, openDay, choosePlacement } = vm
+  const { groups, groupsLoading, archived, setArchived, dayBand, setDayBand, selecting, setSelecting, current, setCurrent, weekStart, setWeekStart, mode, schedules, templateSchedules, instantiatedWeeks, instantiatedWeeksLoading, setCreating, setCell, placement, setPlacement, batch, setBatch, deleting, setDeleting, deleteIds, setDeleteIds, setCampusFilter, setDragAction, dragHover, setDragHover, dragGuard, dragLessonKey, campusId, activeTimetableCampusId, canCreate, canManageCurrent, canManageTimetable, days, splitWeekend, templateMode, boardSchedules, campusLegend, activeCampusId, boardDays, splitHead, slots, limits, loadGroups, loadWeek, switchBoardMode, removeSchedule, moveSchedule, copySchedule, openOverview, onTimetableMenu, openDay, choosePlacement, ensureScheduleDateManageable } = vm
   const visibleGroups = groups.filter((group) => ((archived ? group.archivedTimetables : group.activeTimetables) || []).length > 0)
+  const timetableSummary = buildTimetableSummary(current)
   const setScheduleDragLock = (active: boolean) => {
     document.documentElement.classList.toggle('schedule-dragging', active)
     document.body.classList.toggle('schedule-dragging', active)
@@ -32,8 +43,10 @@ export function SchedulePage() {
     document.documentElement.classList.remove('schedule-dragging')
     document.body.classList.remove('schedule-dragging')
   }, [])
-  const restoreLeave = (scheduleId: number) => {
+  const restoreLeave = (scheduleId: number, operationDate?: string) => {
     if (!scheduleId || archived || Number(current?.status) === 2 || !canManageCurrent) return
+    const schedule = boardSchedules.find((item) => Number(item.id || 0) === scheduleId)
+    if (!ensureScheduleDateManageable(Number(schedule?.campusId || activeTimetableCampusId), templateMode ? '' : (schedule?.scheduleDate || operationDate))) return
     Modal.confirm({
       title: '销假',
       content: '确认恢复这个请假时间段吗？',
@@ -162,9 +175,10 @@ export function SchedulePage() {
             <>
               <div className="tt-head-panel">
               <div className="tt-toolbar">
-                {current.isWeekly === 0 && current.startDate && current.endDate ? (
+                {timetableSummary.dateRangeText || timetableSummary.scheduleRanges.length ? (
                   <div className="tt-summary tt-toolbar-summary">
-                    <span className="tt-range">{current.startDate.slice(0, 10)} 至 {current.endDate.slice(0, 10)}{timetableWeeks(current.startDate, current.endDate) ? ` · 共${timetableWeeks(current.startDate, current.endDate)}周` : ''}</span>
+                    {timetableSummary.dateRangeText ? <span className="tt-range">有效期 {timetableSummary.dateRangeText}{timetableSummary.weekCountText ? ` · ${timetableSummary.weekCountText}` : ''}</span> : null}
+                    {timetableSummary.scheduleRanges.map((item) => <span key={item.label} className="tt-range">{item.label} {item.text}</span>)}
                   </div>
                 ) : null}
                 {templateMode ? null : (
@@ -190,12 +204,7 @@ export function SchedulePage() {
                   />
                 </div>
                 )}
-                {current.isWeekly === 1 ? (
-                  <div className="tt-modes tt-toolbar-modes">
-                    <button type="button" className={mode === 'instance' ? 'is-on' : ''} onClick={() => switchBoardMode('instance')}>{weekChipLabel(weekStart)}</button>
-                    <button type="button" className={mode === 'template' ? 'is-on' : ''} onClick={() => switchBoardMode('template')}>固定课表</button>
-                  </div>
-                ) : null}
+                <ScheduleWeekPicker mode={mode} weekStart={weekStart} weeks={instantiatedWeeks} loading={instantiatedWeeksLoading} showTemplate={current.isWeekly === 1} onModeChange={switchBoardMode} onWeekChange={setWeekStart} />
                 {current.isWeekly === 1 && !templateMode ? (
                   <div className="tt-legend tt-toolbar-legend">
                     <span className="is-added"><i />新增</span>
@@ -315,7 +324,7 @@ export function SchedulePage() {
                         setPlacement(null)
                         await loadWeek()
                       } catch (error) {
-                        message.error(tell(error, placement.kind === 'move' ? '移动失败' : '复制失败'))
+                        showScheduleOperationError(error, placement.kind === 'move' ? '移动失败' : '复制失败')
                       }
                     }}
                   >{placement.kind === 'move' ? '确认移动' : '确认复制'}</button>
@@ -336,14 +345,19 @@ export function SchedulePage() {
                   </button>
                   {boardDays.map((day, column) => {
                     const date = addDays(weekStart, day - 1)
+                    const outsideDateRange = !templateMode && isOutsideTimetableDateRange(current, date)
                     return (
                       <button
-                        className={!templateMode && date === todayIso() ? 'tt-dayhead is-today' : 'tt-dayhead'}
+                        className={['tt-dayhead', !templateMode && date === todayIso() ? 'is-today' : '', outsideDateRange ? 'is-outside-range' : ''].filter(Boolean).join(' ')}
                         key={day}
                         type="button"
                         style={{ gridColumn: column + 2, gridRow: 1 }}
                         onClick={() => {
                           if (templateMode || selecting || deleting || placement) return
+                          if (outsideDateRange) {
+                            ensureScheduleDateManageable(activeTimetableCampusId, date)
+                            return
+                          }
                           openDay(date, day).catch((error) => message.error(tell(error, '当日课程加载失败')))
                         }}
                       >
@@ -355,13 +369,14 @@ export function SchedulePage() {
                   {slots.map((slot, row) => <div className="tt-time" key={slot.start} style={{ gridColumn: 1, gridRow: row + 2 }}>{slot.start}</div>)}
                   {boardDays.map((day, column) => {
                     const date = addDays(weekStart, day - 1)
-                    const own = boardSchedules.filter((item) => templateMode ? item.dayOfWeek === day : (item.scheduleDate ? item.scheduleDate === date : item.dayOfWeek === day))
+                    const outsideDateRange = !templateMode && isOutsideTimetableDateRange(current, date)
+                    const own = outsideDateRange ? [] : boardSchedules.filter((item) => templateMode ? item.dayOfWeek === day : (item.scheduleDate ? item.scheduleDate === date : item.dayOfWeek === day))
                     const shown = activeCampusId
                       ? own.filter((lesson) => Number(lesson.uiChangeStatus || 0) === 4 || Number(lesson.campusId || 0) === activeCampusId)
                       : own
                     const cancelMarks = templateMode ? [] : cancelledCompareSegments(day, date, own, templateSchedules)
                     return (
-                      <div className={!templateMode && date === todayIso() ? 'tt-day is-today' : 'tt-day'} key={day} style={{ gridColumn: column + 2, gridRow: `2 / span ${slots.length}` }}>
+                      <div className={['tt-day', !templateMode && date === todayIso() ? 'is-today' : '', outsideDateRange ? 'is-outside-range' : ''].filter(Boolean).join(' ')} key={day} style={{ gridColumn: column + 2, gridRow: `2 / span ${slots.length}` }}>
                         {slots.map((slot) => {
                           const key = `${date} ${slot.start}`
                           const covered = own.find((lesson) => lessonOverlaps(lesson, day, date, slot.start, slot.end))
@@ -370,8 +385,9 @@ export function SchedulePage() {
                               key={key}
                               type="button"
                               className={['tt-slot', selecting && batch.includes(batchKey(date, slot.start, slot.end)) ? 'is-picked' : '', placement?.targets.some((item) => item.date === date && item.start === slot.start) ? 'is-target' : ''].filter(Boolean).join(' ')}
+                              title={outsideDateRange ? '该日期不在课表有效期内' : undefined}
                               onDragOver={(event) => {
-                                if (!canManageCurrent || archived || Number(current.status) === 2) return
+                                if (outsideDateRange || !canManageCurrent || archived || Number(current.status) === 2) return
                                 event.preventDefault()
                                 const lesson = boardSchedules.find((item) => scheduleInstanceKey(item) === dragLessonKey.current)
                                 if (!lesson) return
@@ -401,6 +417,7 @@ export function SchedulePage() {
                                 const lessonKey = event.dataTransfer.getData('text/plain') || dragLessonKey.current
                                 const lesson = boardSchedules.find((item) => scheduleInstanceKey(item) === lessonKey)
                                 if (!lesson?.id) return
+                                if (!ensureScheduleDateManageable(Number(lesson.campusId || activeTimetableCampusId), date)) return
                                 const start = pointerStart(event.clientY, event.currentTarget, slot)
                                 const dropped = dragPlacement(lesson, { day, date, start, end: slot.end }, slots, boardSchedules)
                                 if (dropped.problem) {
@@ -418,6 +435,10 @@ export function SchedulePage() {
                               }}
                               onClick={() => {
                                 if (dragGuard.current) return
+                                if (outsideDateRange) {
+                                  ensureScheduleDateManageable(activeTimetableCampusId, date)
+                                  return
+                                }
                                 if (!canManageCurrent) {
                                   message.warning('当前课表不在你的管理校区内，仅可查看')
                                   return
@@ -462,7 +483,7 @@ export function SchedulePage() {
                             </button>
                           )
                         })}
-                        {selecting || placement ? slots.flatMap((slot) => {
+                        {!outsideDateRange && (selecting || placement) ? slots.flatMap((slot) => {
                           if (own.some((lesson) => lessonOverlaps(lesson, day, date, slot.start, slot.end))) return []
                           if (blankSegments(slot, own).length) return []
                           const minutes = toMinutes(slot.end) - toMinutes(slot.start)
@@ -589,11 +610,12 @@ export function SchedulePage() {
                               style={style}
                               onContextMenu={(event) => {
                                 event.preventDefault()
-                                if (segment.leaveScheduleId) restoreLeave(segment.leaveScheduleId)
+                                if (segment.leaveScheduleId) restoreLeave(segment.leaveScheduleId, date)
                               }}
                               onClick={() => {
                                 const leave = own.find((item) => Number(item.id) === segment.leaveScheduleId)
                                 if (!leave || selecting || deleting || placement) return
+                                if (!ensureScheduleDateManageable(Number(leave.campusId || activeTimetableCampusId), date)) return
                                 setCell({
                                   day,
                                   date,
@@ -632,6 +654,10 @@ export function SchedulePage() {
                                   event.preventDefault()
                                   return
                                 }
+                                if (!ensureScheduleDateManageable(Number(lesson.campusId || activeTimetableCampusId), templateMode ? '' : (lesson.scheduleDate || date))) {
+                                  event.preventDefault()
+                                  return
+                                }
                                 dragGuard.current = true
                                 dragLessonKey.current = scheduleInstanceKey(lesson)
                                 setScheduleDragLock(true)
@@ -647,7 +673,7 @@ export function SchedulePage() {
                               onContextMenu={(event) => {
                                 if (!canManageCurrent || Number(lesson.uiChangeStatus) !== 3 || !lesson.id) return
                                 event.preventDefault()
-                                restoreLeave(lesson.id)
+                                restoreLeave(lesson.id, date)
                               }}
                               onClick={() => {
                                 if (dragGuard.current) return
@@ -655,6 +681,7 @@ export function SchedulePage() {
                                   message.warning('当前课表不在你的管理校区内，仅可查看')
                                   return
                                 }
+                                if (!ensureScheduleDateManageable(Number(lesson.campusId || activeTimetableCampusId), templateMode ? '' : (lesson.scheduleDate || date))) return
                                 if (selecting && !deleting) {
                                   message.warning('批量排课时请选择空白时间段')
                                   return

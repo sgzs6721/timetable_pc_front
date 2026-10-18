@@ -29,12 +29,12 @@ export function datePart(value?: string): string {
 
 export function weekLimits(item: Timetable | null, viewingMonday: string): { min: string; max: string; canPrev: boolean; canNext: boolean } {
   const weekly = Number(item?.isWeekly) === 1
-  const min = weekly
-    ? (datePart(item?.createTime) ? mondayOf(datePart(item?.createTime)) : '')
-    : (datePart(item?.startDate) ? mondayOf(datePart(item?.startDate)) : '')
-  const max = weekly
-    ? addDays(mondayOf(todayIso()), 7)
-    : (datePart(item?.endDate) ? mondayOf(datePart(item?.endDate)) : '')
+  const min = datePart(item?.startDate)
+    ? mondayOf(datePart(item?.startDate))
+    : weekly && datePart(item?.createTime) ? mondayOf(datePart(item?.createTime)) : ''
+  const max = datePart(item?.endDate)
+    ? mondayOf(datePart(item?.endDate))
+    : weekly ? addDays(mondayOf(todayIso()), 7) : ''
   return {
     min,
     max,
@@ -591,14 +591,14 @@ export function duplicateTimetableName(value?: string): string {
 
 export function editTimetableSignature(values: Partial<Timetable>, locked: boolean): string {
   const name = timetableName(values.name)
-  if (locked) return name
+  if (locked) return JSON.stringify({ name, startDate: String(values.startDate || ''), endDate: String(values.endDate || '') })
   const days = (values.weekDays || []).map((day) => Number(day)).filter((day) => day >= 1 && day <= 7).sort((left, right) => left - right)
   const weekly = Number(values.isWeekly) === 1 ? 1 : 0
   return JSON.stringify({
     name,
     weekly,
-    startDate: weekly === 1 ? '' : String(values.startDate || ''),
-    endDate: weekly === 1 ? '' : String(values.endDate || ''),
+    startDate: String(values.startDate || ''),
+    endDate: String(values.endDate || ''),
     start: clockText(values.startTime),
     end: clockText(values.endTime),
     days,

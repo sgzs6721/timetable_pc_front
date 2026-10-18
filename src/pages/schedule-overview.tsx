@@ -1,6 +1,7 @@
 import { Table } from 'antd'
 import type { Schedule } from './schedule-model'
 import { DAY_LABELS, clockText } from './schedule-board-helpers'
+import { isDirectStudentSchedule, scheduleGenderTone } from './schedule-policy'
 
 export function LookupTable(props: { rows: Schedule[] }) {
   return (
@@ -19,11 +20,12 @@ export function LookupTable(props: { rows: Schedule[] }) {
   )
 }
 
-export function overviewType(targetType?: string): string {
-  const normalized = String(targetType || '').trim().toLowerCase()
+export function overviewType(row: Schedule): string {
+  const normalized = String(row.targetType || '').trim().toLowerCase()
+  if (isDirectStudentSchedule(row)) return ''
   if (normalized === 'course' || normalized === '课程' || normalized === '班级') return '班级'
   if (normalized === 'preset' || normalized === '预设') return '预设'
-  return '学员'
+  return ''
 }
 
 export function overviewWeekday(row: Schedule): string {
@@ -53,7 +55,7 @@ export function overviewStudentCount(rows: Schedule[]): number {
 }
 
 export function overviewDateSections(rows: Schedule[]) {
-  const sections = new Map<string, { key: string; dateLabel: string; weekdayLabel: string; countText: string; items: Array<{ key: string; name: string; type: string; time: string }> }>()
+  const sections = new Map<string, { key: string; dateLabel: string; weekdayLabel: string; countText: string; items: Array<{ key: string; name: string; type: string; time: string; genderTone: 'male' | 'female' | 'neutral' }> }>()
   rows.forEach((row, index) => {
     const weekdayLabel = overviewWeekday(row)
     const dateLabel = overviewDateLabel(row.scheduleDate)
@@ -62,8 +64,9 @@ export function overviewDateSections(rows: Schedule[]) {
     const item = {
       key: `${row.id || index}|${dateKey}|${overviewTime(row)}|${overviewName(row)}`,
       name: overviewName(row),
-      type: overviewType(row.targetType),
+      type: overviewType(row),
       time: overviewTime(row),
+      genderTone: scheduleGenderTone(row),
     }
     const existing = sections.get(key)
     if (existing) {
@@ -77,7 +80,7 @@ export function overviewDateSections(rows: Schedule[]) {
 }
 
 export function overviewStudentSections(rows: Schedule[]) {
-  const sections = new Map<string, { key: string; name: string; type: string; countText: string; items: Array<{ key: string; weekdayLabel: string; time: string; dateKey: string }> }>()
+  const sections = new Map<string, { key: string; name: string; type: string; genderTone: 'male' | 'female' | 'neutral'; countText: string; items: Array<{ key: string; weekdayLabel: string; time: string; dateKey: string }> }>()
   rows.forEach((row, index) => {
     if (!String(row.courseName || '').trim()) return
     const name = overviewName(row)
@@ -92,9 +95,10 @@ export function overviewStudentSections(rows: Schedule[]) {
     if (existing) {
       existing.items.push(item)
       existing.countText = `${existing.items.length} 节课`
+      if (existing.genderTone === 'neutral') existing.genderTone = scheduleGenderTone(row)
       return
     }
-    sections.set(name, { key: name, name, type: overviewType(row.targetType), countText: '1 节课', items: [item] })
+    sections.set(name, { key: name, name, type: overviewType(row), genderTone: scheduleGenderTone(row), countText: '1 节课', items: [item] })
   })
   return Array.from(sections.values()).map((section) => ({
     ...section,

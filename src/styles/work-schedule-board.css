@@ -302,6 +302,19 @@
   background: var(--primary-soft);
 }
 
+.tt-dayhead.is-outside-range,
+.tt-day.is-outside-range {
+  background: repeating-linear-gradient(135deg, #f8fafc 0, #f8fafc 8px, #f1f5f9 8px, #f1f5f9 16px);
+}
+
+.tt-dayhead.is-outside-range {
+  color: #98a2b3;
+}
+
+.tt-day.is-outside-range .tt-slot {
+  cursor: not-allowed;
+}
+
 .tt-time,
 .tt-day {
   border-right: 1px solid #edf1f6;

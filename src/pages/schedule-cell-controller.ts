@@ -7,6 +7,7 @@ import type { CourseMember, Schedule, TargetOption } from './schedule-model'
 import { CARD_MARKER, cardIdFromPricing, courseMembersWarning, courseTargetWarning, fallbackCourseMembers, minOpenWarning, pricingChoices, resolveMinOpen, resolveMaxOpen, sortTargetOptions, studentScheduleBlock } from './schedule-targets'
 import { DAY_LABELS, durationLabel, freeUntil, fromMinutes, parseTrialConfig, toMinutes } from './schedule-board-helpers'
 import type { CellDialogProps } from './schedule-cell-dialog'
+import { isScheduleConflictMessage } from './schedule-policy'
 
 export function useCellDialogController(props: CellDialogProps) {
   const navigate = useNavigate()
@@ -259,7 +260,7 @@ export function useCellDialogController(props: CellDialogProps) {
     const end = fromMinutes(toMinutes(start) + minutes)
     const limit = freeUntil(start, props.dayLessons, cell?.schedule?.id, props.dayEnd)
     if (toMinutes(end) > limit) {
-      message.warning('该时间段空间不足')
+      Modal.info({ title: '排课时间冲突', content: '该时间段与已有课程重叠，请调整时间后再保存。', okText: '重新调整' })
       return false
     }
     setStartTime(start)
@@ -409,13 +410,13 @@ export function useCellDialogController(props: CellDialogProps) {
   async function save(occupy = false) {
     if (saving) return
     if (!occupy && !selected) {
-      message.warning(trialOn ? '请选择校区预设人员' : '请先从候选列表中选择学员或非一对一班级')
+      message.warning(trialOn ? '请选择体验类型' : '请先从候选列表中选择学员或非一对一班级')
       return
     }
     if (!occupy && selected) {
       const pickedName = String(selected.displayName || selected.name || query || '').trim()
       if (!pickedName) {
-        message.warning(trialOn ? '请选择校区预设人员' : '请输入学员姓名，或非一对一班级简称')
+        message.warning(trialOn ? '请选择体验类型' : '请输入学员姓名，或非一对一班级简称')
         return
       }
     }
@@ -458,8 +459,8 @@ export function useCellDialogController(props: CellDialogProps) {
       })
     } catch (error) {
       const text = tell(error, occupy ? '占用失败' : '保存失败')
-      if (!occupy && text.includes('冲突') && coachChoices.length > 1) {
-        Modal.info({ title: '老师时间冲突', content: text, okText: '去调整' })
+      if (isScheduleConflictMessage(text)) {
+        Modal.info({ title: '排课时间冲突', content: text, okText: '重新调整' })
         return
       }
       message.error(text)

@@ -9,6 +9,12 @@ import { DAY_LABELS, clockText, duplicateTimetableName, freeUntil, fromMinutes, 
 import { timetableBody, timetableOwner } from './schedule-board-fields'
 import { toDayCourses } from './schedule-day-dialog'
 import { copyScheduleItem, leaveScheduleItem, moveScheduleItem, removeScheduleItem, type ScheduleMutationTarget } from './schedule-mutations'
+import { buildInstantiatedWeekOptions, scheduleDateIssue, type InstantiatedWeek } from './schedule-policy'
+
+interface CampusScheduleSettings {
+  campusId?: number
+  teacherPastScheduleEditable?: number
+}
 
 export function useScheduleController() {
   const shell = useShell()
@@ -37,6 +43,9 @@ export function useScheduleController() {
   const [lookup, setLookup] = useState<Schedule[] | null>(null)
   const [campusFilter, setCampusFilter] = useState(0)
   const [scheduleCampuses, setScheduleCampuses] = useState<Campus[]>([])
+  const [teacherPastScheduleEditable, setTeacherPastScheduleEditable] = useState<Record<number, boolean>>({})
+  const [instantiatedWeeks, setInstantiatedWeeks] = useState<ReturnType<typeof buildInstantiatedWeekOptions>>([])
+  const [instantiatedWeeksLoading, setInstantiatedWeeksLoading] = useState(false)
   const groupsRequestId = useRef(0)
   const [dragAction, setDragAction] = useState<{
     schedule: Schedule
@@ -70,6 +79,7 @@ export function useScheduleController() {
   const groupsKey = `${shell.currentOrgId || 0}:${campusId || 0}:${archived ? 2 : 1}:${managerView ? 'manager' : 'member'}`
   const timetableListLoading = groupsLoading || groupsLoadedKey !== groupsKey
   const effectiveCampuses = scheduleCampuses.length ? scheduleCampuses : shell.campuses
+  const effectiveCampusKey = effectiveCampuses.map((item) => item.id).join(',')
   const activeTimetableCampusId = Number(current?.campusId || campusId || 0)
   const campusName = effectiveCampuses.find((item) => item.id === activeTimetableCampusId)?.name || '当前校区'
   const currentOwner = current ? timetableOwner(groups, current.id) : undefined
@@ -157,6 +167,7 @@ export function useScheduleController() {
         || all[0]
         || null
       setCurrent(next)
+      if (next && Number(next.isWeekly) !== 1) setMode('instance')
       setGroupsLoadedKey(requestKey)
       if (next?.id !== routeTimetableId) {
         setParams((previous) => {
@@ -180,6 +191,7 @@ export function useScheduleController() {
 
   function selectTimetable(timetable: Timetable) {
     setCurrent(timetable)
+    if (Number(timetable.isWeekly) !== 1) setMode('instance')
     setParams((previous) => {
       const updated = new URLSearchParams(previous)
       updated.set('timetableId', String(timetable.id))
@@ -189,13 +201,22 @@ export function useScheduleController() {
 
   async function loadWeek(timetable = current) {
     if (!timetable) return
-    const list = await getJson<Schedule[]>(`/schedules/timetable/${timetable.id}/week`, { weekStart })
-    setSchedules(list || [])
-    if (Number(timetable.isWeekly) === 1) {
-      const rows = await getJson<Schedule[]>(`/schedules/timetable/${timetable.id}`)
-      setTemplateSchedules(latestTemplateSchedules(rows || []))
-    } else {
-      setTemplateSchedules([])
+    setInstantiatedWeeksLoading(true)
+    try {
+      const [list, weekRows] = await Promise.all([
+        getJson<Schedule[]>(`/schedules/timetable/${timetable.id}/week`, { weekStart }),
+        getJson<InstantiatedWeek[]>(`/schedules/timetable/${timetable.id}/instantiated-weeks`).catch(() => []),
+      ])
+      setSchedules(list || [])
+      setInstantiatedWeeks(buildInstantiatedWeekOptions(weekRows))
+      if (Number(timetable.isWeekly) === 1) {
+        const rows = await getJson<Schedule[]>(`/schedules/timetable/${timetable.id}`)
+        setTemplateSchedules(latestTemplateSchedules(rows || []))
+      } else {
+        setTemplateSchedules([])
+      }
+    } finally {
+      setInstantiatedWeeksLoading(false)
     }
   }
 
@@ -225,13 +246,38 @@ export function useScheduleController() {
     if (!routeTimetableId || current?.id === routeTimetableId) return
     const all = groups.flatMap((group) => (archived ? group.archivedTimetables : group.activeTimetables) || [])
     const routed = all.find((item) => item.id === routeTimetableId)
-    if (routed) setCurrent(routed)
+    if (routed) {
+      setCurrent(routed)
+      if (Number(routed.isWeekly) !== 1) setMode('instance')
+    }
   }, [archived, current?.id, groups, routeTimetableId])
 
   useEffect(() => {
     loadWeek().catch((error) => message.error(tell(error, '周课表加载失败')))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [current?.id, weekStart])
+
+  useEffect(() => {
+    const campusIds = effectiveCampuses.map((item) => Number(item.id || 0)).filter((id) => id > 0)
+    if (!campusIds.length) {
+      setTeacherPastScheduleEditable({})
+      return
+    }
+    let cancelled = false
+    getJson<CampusScheduleSettings[]>('/campus-staff/settings/batch', { campusIds: campusIds.join(',') })
+      .then((settings) => {
+        if (cancelled) return
+        const next: Record<number, boolean> = {}
+        campusIds.forEach((id) => { next[id] = false })
+        ;(settings || []).forEach((item) => {
+          const id = Number(item.campusId || 0)
+          if (id > 0) next[id] = Number(item.teacherPastScheduleEditable || 0) === 1
+        })
+        setTeacherPastScheduleEditable(next)
+      })
+      .catch(() => { if (!cancelled) setTeacherPastScheduleEditable({}) })
+    return () => { cancelled = true }
+  }, [effectiveCampusKey, shell.currentOrgId])
 
   useEffect(() => {
     if (canManageCurrent) return
@@ -252,6 +298,26 @@ export function useScheduleController() {
     else if (limits.max && weekStart > limits.max) setWeekStart(limits.max)
   }, [current, limits.min, limits.max, weekStart])
 
+  function scheduleDateProblem(targetCampusId?: number | null, date?: string | null): string {
+    const resolvedCampusId = Number(targetCampusId || activeTimetableCampusId || 0)
+    if (!canManageCurrent) return '当前课表不在你的管理校区内，仅可查看'
+    if (managerView && resolvedCampusId > 0 && !canManageCampus(resolvedCampusId)) return '外校区排课仅可查看，无法修改'
+    const manager = organizationManager || (resolvedCampusId > 0 && campusScope.includes(resolvedCampusId))
+    return scheduleDateIssue(current, date, teacherPastScheduleEditable[resolvedCampusId] === true, manager)
+  }
+
+  function ensureScheduleDateManageable(targetCampusId?: number | null, date?: string | null): boolean {
+    const problem = scheduleDateProblem(targetCampusId, date)
+    if (!problem) return true
+    message.warning(problem)
+    return false
+  }
+
+  function assertScheduleDateManageable(targetCampusId?: number | null, date?: string | null) {
+    const problem = scheduleDateProblem(targetCampusId, date)
+    if (problem) throw new Error(problem)
+  }
+
   async function saveCell(values: {
     courseName: string
     targetType?: string
@@ -269,6 +335,8 @@ export function useScheduleController() {
     campusId?: number
   }, ranges = cell ? [cell] : []) {
     if (!current || !ranges.length || !canManageCurrent) return
+    const targetCampusId = Number(values.campusId || current.campusId || campusId || 0)
+    ranges.forEach((range) => assertScheduleDateManageable(targetCampusId, mode === 'template' ? '' : range.date))
     const cells = ranges.map((range) => ({
       scheduleId: 'schedule' in range ? range.schedule?.id : undefined,
       timetableId: current.id,
@@ -279,6 +347,7 @@ export function useScheduleController() {
       startTime: range.start,
       endTime: range.end,
       courseName: values.occupy ? '占用' : values.courseName,
+      coachId: values.occupy && String(current.ownerType || 'TEACHER').toUpperCase() !== 'SERVICE' ? current.createByMemberId : undefined,
       targetType: values.occupy ? undefined : values.targetType,
       targetId: values.occupy ? undefined : values.targetId,
       coachIds: values.coachIds,
@@ -295,23 +364,30 @@ export function useScheduleController() {
     else await postJson('/schedules/cell/batch', { cells })
   }
 
-  async function removeSchedule(schedule: Schedule) {
+  async function removeSchedule(schedule: Schedule, operationDate?: string) {
     if (!current || !schedule.id || !canManageCurrent) return
+    assertScheduleDateManageable(Number(schedule.campusId || activeTimetableCampusId), templateMode ? '' : (schedule.scheduleDate || operationDate))
     await removeScheduleItem(schedule, current, activeTimetableCampusId, templateMode)
   }
 
-  async function leaveSchedule(schedule: Schedule) {
+  async function leaveSchedule(schedule: Schedule, operationDate?: string) {
     if (!current || !schedule.id || !canManageCurrent) return null
+    assertScheduleDateManageable(Number(schedule.campusId || activeTimetableCampusId), templateMode ? '' : (schedule.scheduleDate || operationDate))
     return leaveScheduleItem(schedule, current, activeTimetableCampusId)
   }
 
   async function moveSchedule(schedule: Schedule, target: ScheduleMutationTarget) {
     if (!current || !schedule.id || !canManageCurrent) return
+    const targetCampusId = Number(schedule.campusId || activeTimetableCampusId)
+    assertScheduleDateManageable(targetCampusId, templateMode ? '' : schedule.scheduleDate)
+    assertScheduleDateManageable(targetCampusId, templateMode ? '' : target.date)
     await moveScheduleItem(schedule, current, activeTimetableCampusId, target, templateMode)
   }
 
   async function copySchedule(schedule: Schedule, targets: ScheduleMutationTarget[]) {
     if (!current || !schedule.id || !targets.length || !canManageCurrent) return
+    const targetCampusId = Number(schedule.campusId || activeTimetableCampusId)
+    targets.forEach((target) => assertScheduleDateManageable(targetCampusId, templateMode ? '' : target.date))
     await copyScheduleItem(schedule, current, activeTimetableCampusId, templateMode, targets)
   }
 
@@ -461,6 +537,7 @@ export function useScheduleController() {
   function choosePlacement(day: number, date: string, start: string, lessons: Schedule[], incomplete = false) {
     if (!placement?.schedule.id) return
     const source = placement.schedule
+    if (!ensureScheduleDateManageable(Number(source.campusId || activeTimetableCampusId), templateMode ? '' : date)) return
     const duration = Math.max(30, toMinutes(clockText(source.endTime)) - toMinutes(clockText(source.startTime)))
     const dayEnd = slots[slots.length - 1]?.end || '21:00'
     const room = freeUntil(start, lessons, source.id, dayEnd) - toMinutes(start)
@@ -504,6 +581,8 @@ export function useScheduleController() {
     mode,
     schedules,
     templateSchedules,
+    instantiatedWeeks,
+    instantiatedWeeksLoading,
     creating,
     setCreating,
     createSource,
@@ -571,5 +650,7 @@ export function useScheduleController() {
     onTimetableMenu,
     openDay,
     choosePlacement,
+    ensureScheduleDateManageable,
+    assertScheduleDateManageable,
   }
 }

@@ -2,10 +2,11 @@ import { Button, Form, Input, Modal, Segmented, Select, Switch, message } from '
 import { useEffect, useState } from 'react'
 import { getJson, postJson, putJson } from '../api/biz'
 import { BusinessDatePicker } from '../components/BusinessDatePicker'
-import { tell } from './kit'
+import { tell, todayIso } from './kit'
 import type { Timetable } from './schedule-model'
 import { clockText, duplicateTimetableName, editTimetableSignature } from './schedule-board-helpers'
 import { TimetableKindSelect, WeekDaySelect, timetableBody, timetableFormError } from './schedule-board-fields'
+import { latestIsoDate, timetableDateRangeError } from './schedule-policy'
 
 interface TimetableMemberOption {
   id: number
@@ -44,7 +45,7 @@ export function EditTimetableForm(props: { current: Timetable; locked: boolean; 
       initialValues={props.current}
       onFinish={async (values) => {
         if (!dirty || saving) return
-        const problem = timetableFormError({ ...props.current, ...values }, props.locked)
+        const problem = timetableFormError({ ...props.current, ...values }, props.locked, props.current)
         if (problem) {
           message.warning(problem)
           return
@@ -63,8 +64,8 @@ export function EditTimetableForm(props: { current: Timetable; locked: boolean; 
     >
       <Form.Item name="name" label="课表名称" extra="最多12个字符" rules={[{ required: true, message: '请输入课表名称' }]}><Input maxLength={12} placeholder="如：秋季班课表" /></Form.Item>
       <Form.Item name="isWeekly" label="课表类型"><TimetableKindSelect disabled={props.locked} /></Form.Item>
-      <TimetableDateFields disabled={props.locked} />
-      {props.locked ? <p>已排课，不可修改</p> : null}
+      <TimetableDateFields original={props.current} />
+      {props.locked ? <p>已排课，课表类型、上课日和时间不可修改；结束日期仍可往后延长。</p> : null}
       <Form.Item name="startTime" label="开始时间"><Input type="time" min="06:00" max="23:00" step={1800} disabled={props.locked} /></Form.Item>
       <Form.Item name="endTime" label="结束时间"><Input type="time" min="06:00" max="23:00" step={1800} disabled={props.locked} /></Form.Item>
       <Form.Item name="weekDays" label="上课日"><WeekDaySelect disabled={props.locked} /></Form.Item>
@@ -110,6 +111,9 @@ export function CreateTimetable(props: { open: boolean; campusId: number; manage
       setServiceActiveCount(activeServiceTimetables)
     }).catch(() => { setMembers([]); setServiceActiveCount(0) })
   }, [props.open, props.campusId, props.manager, props.selfMemberId])
+  const today = todayIso()
+  const initialStartDate = props.source?.startDate && props.source.startDate >= today ? props.source.startDate : today
+  const initialEndDate = latestIsoDate(today, initialStartDate, props.source?.endDate)
   return (
     <Modal title="创建课表" open={props.open} onCancel={props.onClose} footer={null} destroyOnHidden>
       <Form
@@ -121,8 +125,8 @@ export function CreateTimetable(props: { open: boolean; campusId: number; manage
           startTime: clockText(props.source?.startTime) || '08:00',
           endTime: clockText(props.source?.endTime) || '21:00',
           weekDays: props.source?.weekDays || [1, 2, 3, 4, 5, 6, 7],
-          startDate: props.source?.startDate,
-          endDate: props.source?.endDate,
+          startDate: initialStartDate,
+          endDate: initialEndDate,
           createByMemberId: props.manager ? props.source?.createByMemberId : props.selfMemberId,
           splitWeekend: props.source?.splitWeekend || 0,
           weekendStartTime: props.source?.weekendStartTime,
@@ -189,13 +193,24 @@ export function CreateTimetable(props: { open: boolean; campusId: number; manage
   )
 }
 
-export function TimetableDateFields(props: { disabled?: boolean }) {
-  const weekly = Form.useWatch('isWeekly')
-  if (Number(weekly ?? 1) === 1) return null
+export function TimetableDateFields(props: { original?: Pick<Timetable, 'startDate' | 'endDate'> | null }) {
+  const form = Form.useFormInstance()
+  const startDate = Form.useWatch('startDate', form)
+  const today = todayIso()
+  const originalStartDate = String(props.original?.startDate || '').slice(0, 10)
+  const startLocked = !!originalStartDate && originalStartDate < today
+  const validateRange = () => {
+    const problem = timetableDateRangeError({ startDate: form.getFieldValue('startDate'), endDate: form.getFieldValue('endDate') }, props.original)
+    return problem ? Promise.reject(new Error(problem)) : Promise.resolve()
+  }
   return (
     <>
-      <Form.Item name="startDate" label="开始日期" rules={[{ required: true, message: '请选择开始日期' }]}><BusinessDatePicker disabled={props.disabled} /></Form.Item>
-      <Form.Item name="endDate" label="结束日期" rules={[{ required: true, message: '请选择结束日期' }]}><BusinessDatePicker disabled={props.disabled} /></Form.Item>
+      <Form.Item name="startDate" label="开始日期" dependencies={['endDate']} rules={[{ required: true, message: '请选择开始日期' }, { validator: validateRange }]} extra={startLocked ? '开始日期已生效，不可修改' : undefined}>
+        <BusinessDatePicker disabled={startLocked} minDate={startLocked ? originalStartDate : today} maxDate="2099-12-31" allowClear={false} />
+      </Form.Item>
+      <Form.Item name="endDate" label="结束日期" dependencies={['startDate']} rules={[{ required: true, message: '请选择结束日期' }, { validator: validateRange }]} extra={props.original ? '结束日期只可往后延长' : undefined}>
+        <BusinessDatePicker minDate={latestIsoDate(today, startDate, props.original?.endDate)} maxDate="2099-12-31" allowClear={false} />
+      </Form.Item>
     </>
   )
 }

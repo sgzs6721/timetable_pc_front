@@ -486,7 +486,12 @@ export function Teachers({ campusId, onCampusChanged }: { campusId: number | nul
                 setEditing(null)
                 await load()
               } catch (error) {
-                message.error(tell(error, '保存失败'))
+                const text = tell(error, '保存失败')
+                if (text.includes('不能修改职位')) {
+                  Modal.info({ title: '不能修改职位', content: text, okText: '我知道了' })
+                } else {
+                  message.error(text)
+                }
               }
             }}
           >
@@ -714,9 +719,14 @@ export function Positions({ campusId }: { campusId: number | null }) {
 export function Permissions({ campusId }: { campusId: number | null }) {
   const [preset, setPreset] = useState('standard')
   const [saving, setSaving] = useState(false)
+  const [pastScheduleEditable, setPastScheduleEditable] = useState(false)
+  const [pastScheduleSaving, setPastScheduleSaving] = useState(false)
   useEffect(() => {
     if (!campusId) return
-    getJson<{ permissionPreset?: string }>(`/campus-staff/${campusId}/settings`).then((data) => setPreset(data?.permissionPreset || 'standard')).catch(() => undefined)
+    getJson<{ permissionPreset?: string; teacherPastScheduleEditable?: number }>(`/campus-staff/${campusId}/settings`).then((data) => {
+      setPreset(data?.permissionPreset || 'standard')
+      setPastScheduleEditable(Number(data?.teacherPastScheduleEditable || 0) === 1)
+    }).catch(() => undefined)
   }, [campusId])
   if (!campusId) return <p>请先选择校区。</p>
   const options = [
@@ -739,6 +749,21 @@ export function Permissions({ campusId }: { campusId: number | null }) {
       setSaving(false)
     }
   }
+  async function changePastScheduleEditable(value: boolean) {
+    if (!campusId || pastScheduleSaving || value === pastScheduleEditable) return
+    const previous = pastScheduleEditable
+    setPastScheduleEditable(value)
+    setPastScheduleSaving(true)
+    try {
+      await postJson(`/campus-staff/${campusId}/settings`, { teacherPastScheduleEditable: value ? 1 : 0 })
+      message.success('历史课表权限已保存')
+    } catch (error) {
+      setPastScheduleEditable(previous)
+      message.error(tell(error, '保存失败'))
+    } finally {
+      setPastScheduleSaving(false)
+    }
+  }
   return (
     <section className="work-card">
       <p>为当前校区选择默认权限预设。</p>
@@ -746,6 +771,13 @@ export function Permissions({ campusId }: { campusId: number | null }) {
         {options.map((item) => (
           <button key={item.value} type="button" className={preset === item.value ? 'is-on' : ''} disabled={saving} onClick={() => { choose(item.value).catch(() => undefined) }}>{item.label}</button>
         ))}
+      </div>
+      <div className="permission-switch-row">
+        <div>
+          <strong>老师可修改历史课表</strong>
+          <p>关闭后，普通老师仅可修改今天及之后的排课；机构管理员、协同管理员和校区管理员不受限制。</p>
+        </div>
+        <Switch checked={pastScheduleEditable} loading={pastScheduleSaving} disabled={pastScheduleSaving} onChange={(value) => { changePastScheduleEditable(value).catch(() => undefined) }} />
       </div>
     </section>
   )

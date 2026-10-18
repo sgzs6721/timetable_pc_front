@@ -161,6 +161,30 @@ const behaviorContracts = [
     ],
   },
   {
+    label: '课表有效期、已实例化周次与老师历史排课权限必须和小程序一致',
+    files: ['src/pages/schedule-policy.ts', 'src/pages/schedule-controller.ts', 'src/pages/schedule-timetable-forms.tsx', 'src/pages/campus-staff.tsx'],
+    need: [
+      '结束日期只能往后延长',
+      '排课日期不能早于课表开始日期',
+      '管理员未开启老师修改历史课表权限',
+      '/instantiated-weeks',
+      'teacherPastScheduleEditable',
+      'coachId: values.occupy',
+      '<TimetableDateFields original={props.current} />',
+    ],
+  },
+  {
+    label: '客源录入必须优先当前校区、限制姓名长度并保护销售人员筛选名单',
+    files: ['src/pages/LeadsPage.tsx', 'src/pages/leads-editor.tsx', 'src/nav.ts'],
+    need: [
+      'currentCampusId={shell.campusId}',
+      '客户姓名不能超过6个字',
+      '联系人不能超过6个字',
+      'canFilterLeadSalespeople',
+      'canFilterOwners ? <Select',
+    ],
+  },
+  {
     label: '转入流水仅可改有效期，补缴有效期不能早于补缴日期',
     files: ['src/pages/student-transfer-record-editor.tsx', 'src/pages/student-payments.tsx', 'src/pages/student-payment-editor.tsx'],
     need: [

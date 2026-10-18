@@ -9,9 +9,16 @@ import { CreateTimetable, EditTimetableForm, schedulableCampuses } from './sched
 import { CellDialog } from './schedule-cell-dialog'
 import { DayScheduleDialog } from './schedule-day-dialog'
 import type { useScheduleController } from './schedule-controller'
+import { isScheduleConflictMessage } from './schedule-policy'
+
+function showScheduleMutationError(error: unknown, fallback: string) {
+  const text = tell(error, fallback)
+  if (isScheduleConflictMessage(text)) Modal.info({ title: '排课时间冲突', content: text, okText: '重新调整' })
+  else message.error(text)
+}
 
 export function ScheduleDialogs({ vm }: { vm: ReturnType<typeof useScheduleController> }) {
-  const { setSelecting, current, weekStart, mode, templateSchedules, creating, setCreating, createSource, setCreateSource, editing, setEditing, cell, setCell, setPlacement, batch, setBatch, setDeleting, overview, setOverview, dayDialog, setDayDialog, lookup, setLookup, dragAction, setDragAction, shell, campusId, campusName, manageableScheduleCampuses, activeTimetableCampusId, managesCampus, canManageCurrent, timetableLocked, days, templateMode, boardSchedules, slots, loadGroups, loadWeek, saveCell, removeSchedule, leaveSchedule, moveSchedule, copySchedule } = vm
+  const { setSelecting, current, weekStart, mode, templateSchedules, creating, setCreating, createSource, setCreateSource, editing, setEditing, cell, setCell, setPlacement, batch, setBatch, setDeleting, overview, setOverview, dayDialog, setDayDialog, lookup, setLookup, dragAction, setDragAction, shell, campusId, campusName, manageableScheduleCampuses, activeTimetableCampusId, managesCampus, canManageCurrent, timetableLocked, days, templateMode, boardSchedules, slots, loadGroups, loadWeek, saveCell, removeSchedule, leaveSchedule, moveSchedule, copySchedule, assertScheduleDateManageable } = vm
   const serviceTimetable = String(current?.ownerType || '').toUpperCase() === 'SERVICE'
   const timetableCampuses = serviceTimetable && current?.campusId
     ? manageableScheduleCampuses.filter((item) => Number(item.id) === Number(current.campusId))
@@ -95,13 +102,14 @@ export function ScheduleDialogs({ vm }: { vm: ReturnType<typeof useScheduleContr
           if (!cell?.schedule?.id) return
           const name = cell.schedule.displayName || cell.schedule.courseName || '原排课'
           const scheduleId = cell.schedule.id
-          await leaveSchedule(cell.schedule)
+          await leaveSchedule(cell.schedule, cell.date)
           message.success('已请假')
           await loadWeek()
           setCell({ day: cell.day, date: cell.date, start: cell.start, end: cell.end, slotStart: cell.slotStart, slotEnd: cell.slotEnd, echo: { name, status: 'leave', scheduleId } })
         }}
         onRestore={async () => {
           if (!cell || !current) return
+          assertScheduleDateManageable(Number(cell.schedule?.campusId || activeTimetableCampusId), templateMode ? '' : cell.date)
           if (cell.echo?.status === 'delete') {
             const template = templateSchedules.find((item) => Number(item.dayOfWeek) === cell.day && clockText(item.startTime) === cell.start)
             if (!template?.id) {
@@ -143,7 +151,7 @@ export function ScheduleDialogs({ vm }: { vm: ReturnType<typeof useScheduleContr
         onDelete={async () => {
           if (!cell?.schedule?.id) return
           const occupied = cell.schedule.uiChangeStatus === 4
-          await removeSchedule(cell.schedule)
+          await removeSchedule(cell.schedule, cell.date)
           message.success(occupied ? '占用标识删除成功' : '已删除')
           setCell(null)
           await loadWeek()
@@ -166,6 +174,7 @@ export function ScheduleDialogs({ vm }: { vm: ReturnType<typeof useScheduleContr
         }}
         onStudent={async (action, studentId) => {
           if (!cell?.schedule?.id) return null
+          assertScheduleDateManageable(Number(cell.schedule.campusId || activeTimetableCampusId), templateMode ? '' : (cell.schedule.scheduleDate || cell.date))
           if (action === 'add') await postJson(`/schedules/${cell.schedule.id}/students/${studentId}`)
           if (action === 'remove') await delJson(`/schedules/${cell.schedule.id}/students/${studentId}`)
           if (action === 'leave') await postJson(`/schedules/${cell.schedule.id}/students/${studentId}/leave`, {})
@@ -200,7 +209,7 @@ export function ScheduleDialogs({ vm }: { vm: ReturnType<typeof useScheduleContr
                     setDragAction(null)
                     await loadWeek()
                   } catch (error) {
-                    message.error(tell(error, '复制失败'))
+                    showScheduleMutationError(error, '复制失败')
                   }
                 }}>复制</button>
               ) : null}
@@ -211,7 +220,7 @@ export function ScheduleDialogs({ vm }: { vm: ReturnType<typeof useScheduleContr
                   setDragAction(null)
                   await loadWeek()
                 } catch (error) {
-                  message.error(tell(error, '移动失败'))
+                showScheduleMutationError(error, '移动失败')
                 }
               }}>移动</button>
               <button type="button" className="is-cancel" onClick={() => setDragAction(null)}>取消</button>
@@ -242,7 +251,7 @@ export function ScheduleDialogs({ vm }: { vm: ReturnType<typeof useScheduleContr
                     <ul>
                       {section.items.map((item) => (
                         <li key={item.key}>
-                          <span>{item.name}<small>{item.type}</small></span>
+                          <span className={`overview-person-name is-${item.genderTone}`}>{item.name}{item.type ? <small>{item.type}</small> : null}</span>
                           <time>{item.time}</time>
                         </li>
                       ))}
@@ -260,8 +269,8 @@ export function ScheduleDialogs({ vm }: { vm: ReturnType<typeof useScheduleContr
                 {overviewStudentSections(overview || []).map((section) => (
                   <section key={section.key}>
                     <header>
-                      <b>{section.name}</b>
-                      <span>{section.type}</span>
+                      <b className={`overview-person-name is-${section.genderTone}`}>{section.name}</b>
+                      {section.type ? <span>{section.type}</span> : null}
                       <em>{section.countText}</em>
                     </header>
                     <ul>

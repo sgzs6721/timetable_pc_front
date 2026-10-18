@@ -3,7 +3,7 @@ import { Alert, Button, Empty, Input, Select, Space, Table, Tag, message } from 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { getJson } from '../api/biz'
-import { canViewLeads } from '../nav'
+import { canFilterLeadSalespeople, canViewLeads } from '../nav'
 import { PageHead, PhoneCopyButton, copyPlainText, tell, useShell } from './kit'
 import { LeadDetail } from './leads-detail'
 import { LeadEditor } from './leads-editor'
@@ -20,10 +20,10 @@ export function LeadsPage() {
   if (!canViewLeads(shell.user, org)) {
     return <div className="work-page leads-page"><Alert type="warning" showIcon message="客源管理只对机构管理员和校区管理员开放。" /></div>
   }
-  return <LeadWorkspace key={shell.currentOrgId} userId={shell.user?.id} />
+  return <LeadWorkspace key={shell.currentOrgId} userId={shell.user?.id} currentCampusId={shell.campusId} canFilterOwners={canFilterLeadSalespeople(shell.user, org)} />
 }
 
-function LeadWorkspace({ userId }: { userId?: number }) {
+function LeadWorkspace({ userId, currentCampusId, canFilterOwners }: { userId?: number; currentCampusId?: number | null; canFilterOwners: boolean }) {
   const [params, setParams] = useSearchParams()
   const [filters, setFilters] = useState<Filters>({})
   const [search, setSearch] = useState('')
@@ -76,8 +76,8 @@ function LeadWorkspace({ userId }: { userId?: number }) {
         <Input.Search aria-label="搜索客源" placeholder="搜索姓名、电话、联系人或微信" value={search} maxLength={100} allowClear onChange={(event) => { setSearch(event.target.value); if (!event.target.value) filter({ ...filters, keyword: '' }) }} onSearch={(keyword) => filter({ ...filters, keyword })} />
         {campuses.length > 1 && <Select aria-label="所属校区" placeholder="全部校区" allowClear value={filters.campusId} options={campuses.map((item) => ({ value: item.id, label: item.name }))} onChange={(campusId) => filter({ ...filters, campusId: campusId || undefined })} />}
         <Select aria-label="客户状态" mode="multiple" placeholder="全部状态" allowClear maxTagCount="responsive" value={filters.status ? filters.status.split(',') : []} options={LEAD_STATUSES} onChange={(status: string[]) => filter({ ...filters, status: status.length ? status.join(',') : undefined })} />
-        <Select aria-label="销售负责人" mode="multiple" placeholder="全部销售" allowClear showSearch optionFilterProp="label" maxTagCount="responsive" value={filters.ownerId ? filters.ownerId.split(',').map((id) => Number(id)) : []} options={[{ value: 0, label: '待分配' }, ...salespeople.map((person) => ({ value: person.id, label: person.name }))]} onChange={(ownerIds: number[]) => filter({ ...filters, ownerId: ownerIds.length ? ownerIds.join(',') : undefined })} />
-        {mySales.length === 1 && <Button type={filters.ownerId === String(mySales[0].id) ? 'primary' : 'default'} onClick={() => filter({ ...filters, ownerId: String(mySales[0].id) })}>我负责的</Button>}
+        {canFilterOwners ? <Select aria-label="销售负责人" mode="multiple" placeholder="全部销售" allowClear showSearch optionFilterProp="label" maxTagCount="responsive" value={filters.ownerId ? filters.ownerId.split(',').map((id) => Number(id)) : []} options={[{ value: 0, label: '待分配' }, ...salespeople.map((person) => ({ value: person.id, label: person.name }))]} onChange={(ownerIds: number[]) => filter({ ...filters, ownerId: ownerIds.length ? ownerIds.join(',') : undefined })} /> : null}
+        {canFilterOwners && mySales.length === 1 && <Button type={filters.ownerId === String(mySales[0].id) ? 'primary' : 'default'} onClick={() => filter({ ...filters, ownerId: String(mySales[0].id) })}>我负责的</Button>}
       </div>
       {error && <Alert type="error" showIcon message={error} action={<Button onClick={load}>重试</Button>} />}
       <Table<Lead> rowKey="id" loading={loading} dataSource={error ? [] : data.records} scroll={{ x: 920 }}
@@ -93,7 +93,7 @@ function LeadWorkspace({ userId }: { userId?: number }) {
           { title: '下次跟进', key: 'next', width: 175, render: (_, row) => isLeadClosed(row.status) ? <span className="lead-muted">—</span> : <span className={isLeadDue(row) ? 'lead-due' : 'lead-muted'}>{isLeadDue(row) && <ClockCircleOutlined />} {leadTime(row.nextFollowAt)}</span> },
         ]} />
     </section>
-    {creating && <LeadEditor salespeople={salespeople} campuses={campuses} onClose={() => setCreating(false)} onSaved={(lead) => { setCreating(false); select(lead.id); void load() }} />}
+    {creating && <LeadEditor currentCampusId={currentCampusId} salespeople={salespeople} campuses={campuses} onClose={() => setCreating(false)} onSaved={(lead) => { setCreating(false); select(lead.id); void load() }} />}
     {selectedId && <LeadDetail key={selectedId} id={selectedId} salespeople={salespeople} campuses={campuses} onClose={() => select()} onChanged={load} />}
   </div>
 }

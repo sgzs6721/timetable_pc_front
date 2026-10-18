@@ -20,13 +20,13 @@ Web 端只承载机构管理后台。家长/学员工作区、课表分享、活
 | 学员快速打卡 | 学员列表与详情内 | 卡片选择、课程/服务选择、当前课程老师优先、至少选 1 位且不超过课程配置人数、重复提示、有效期与余额校验 |
 | 学员转校 | 学员详情内 | 多卡选择、目标校区/老师/课程、余额和折扣处理 |
 | 课表列表、课表管理 | `/schedule` | 新建、编辑、默认课表、启停、删除、校区分组、角色范围 |
-| 课表详情 | `/schedule?timetableId=...` | 周课表、半小时格、创建/移动/编辑/删除/请假/恢复、试听、批量创建、日视图和汇总；固定课变更、取消与跨行轮廓同小程序一致 |
+| 课表详情 | `/schedule?timetableId=...` | 周课表、有效期边界、已实例化周次、历史课表权限、创建/移动/编辑/删除/请假/恢复、试听、批量创建、日视图和汇总；固定课变更、取消与跨行轮廓同小程序一致 |
 | 课程管理 | `/courses` | 一对一/班课、老师、简称、单价、开课人数区间（最少/最多）、学员与权益汇总、删除约束 |
 | 课时管理 | `/hours` | 时间周期、老师范围、课时明细、删除与汇总 |
 | 机构管理、机构工资周期 | `/org` | 基本资料、权限、工资周期、协同管理员、微信支付分账配置与解散机构 |
 | 校区管理 | `/campus` | 校区额度、创建/编辑、上线/下线校验、人员和业务快捷入口 |
 | 校区服务 | `/campus` 服务项目 | 服务价格、试听、退费费用、启停与编辑 |
-| 老师/员工/职位/权限 | `/campus` 老师、职位、权限 | 入职、离职、交接、身份与职位约束、权限预设、管理员范围 |
+| 老师/员工/职位/权限 | `/campus` 老师、职位、权限 | 入职、离职、交接、身份与职位约束、权限预设、老师历史课表修改开关、管理员范围 |
 | 校区工资设置 | `/campus` 工资设置 | 工资项、固定/课时工资、批量设置、金额校验 |
 | 教务与校务设置 | `/campus` 教务、校务设置 | 课时规则、试听规则、学员删除时的缴费/打卡记录处理、规章制度、奖惩项 |
 | 日常管理 | `/daily` | 奖惩记录新增/编辑/删除、记薪周期归属、制度展示 |
@@ -81,8 +81,8 @@ Web 端只承载机构管理后台。家长/学员工作区、课表分享、活
 | `subpackages/admin/pages/campus-teacher-setup/campus-teacher-setup` | `/campus` 人员/职位/权限/工资/教务/校务 | 入职、导入、编辑、离职交接及有效学员卡名单、职位、权限、工资项、学员删除设置与校务设置一致 |
 | `subpackages/admin/pages/coach-manage/coach-manage` | `/campus` 人员设置 | 老师列表、带课身份、校区范围和人员维护一致 |
 | `subpackages/schedule/pages/schedule-manage/schedule-manage` | `/schedule` 左侧课表区 | 创建、复制、编辑、默认、归档、恢复、删除和角色范围一致 |
-| `subpackages/schedule/pages/create-timetable/create-timetable` | `/schedule` 创建课表弹窗 | 工作日/周末时段、粒度、固定/单周、来源复制和数量上限一致 |
-| `subpackages/schedule/pages/timetable-detail/timetable-detail` | `/schedule?timetableId=...` | 周切换、模板/实例、半小时格、批量、拖放、请假、恢复、试听和学员状态一致 |
+| `subpackages/schedule/pages/create-timetable/create-timetable` | `/schedule` 创建课表弹窗 | 工作日/周末时段、粒度、固定/单周、开始/结束日期限制、来源复制和数量上限一致 |
+| `subpackages/schedule/pages/timetable-detail/timetable-detail` | `/schedule?timetableId=...` | 周切换、已实例化周次、有效期边界、模板/实例、历史课表权限、半小时格、批量、拖放、请假、恢复、试听和学员状态一致 |
 | `subpackages/finance/pages/payment/payment` | 学员详情“缴费记录”编辑弹窗 | 新增、续费、补缴、退费、调整、转课时、有效期和提成分配一致 |
 | `subpackages/finance/pages/payment-manage/payment-manage` | `/payments` | 时间/类型/校区/关键字筛选、汇总、趋势、分组统计、分页和学员下钻一致 |
 | `subpackages/finance/pages/finance-manage/finance-manage` | `/finance` | 收支概览、时间范围、待支出、流水增改删和校区对比一致 |

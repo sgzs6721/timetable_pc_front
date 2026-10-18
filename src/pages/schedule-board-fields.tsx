@@ -1,7 +1,8 @@
 import { Button, Form, Select, message } from 'antd'
 import { todayIso } from './kit'
-import type { TimetableGroup, Schedule } from './schedule-model'
+import type { Timetable, TimetableGroup, Schedule } from './schedule-model'
 import { DAY_LABELS, clockText, fromMinutes, timetableName, toMinutes } from './schedule-board-helpers'
+import { timetableDateRangeError } from './schedule-policy'
 
 export function WeekDaySelect(props: { value?: number[]; onChange?: (value: number[]) => void; disabled?: boolean }) {
   return (
@@ -28,7 +29,6 @@ export function TimetableKindSelect(props: { value?: number; onChange?: (value: 
   function choose(next: number) {
     if (props.disabled || next === Number(props.value ?? 1)) return
     props.onChange?.(next)
-    if (next !== 0) return
     if (!form.getFieldValue('startDate')) form.setFieldValue('startDate', todayIso())
     if (!form.getFieldValue('endDate')) form.setFieldValue('endDate', todayIso())
   }
@@ -57,10 +57,11 @@ export function timetableFormError(values: {
   splitWeekend?: number
   weekendStartTime?: string
   weekendEndTime?: string
-}, locked = false): string {
+}, locked = false, original?: Pick<Timetable, 'startDate' | 'endDate'> | null): string {
   const validTime = (value?: string) => /^(?:0[6-9]|1\d|2[0-2]):(?:00|30)$/.test(clockText(value)) || clockText(value) === '23:00'
   if (!timetableName(values.name)) return '请输入课表名称'
-  if (locked) return ''
+  const dateProblem = timetableDateRangeError(values, original)
+  if (locked) return dateProblem
   if (String(values.ownerType || 'TEACHER').toUpperCase() !== 'SERVICE' && !values.createByMemberId) return '请选择所属人员'
   if (!(values.weekDays || []).length) return '至少选择一天'
   if (!validTime(values.startTime) || !validTime(values.endTime)) return '课表时间只能选择06:00至23:00内的整点或半点'
@@ -69,12 +70,7 @@ export function timetableFormError(values: {
     if (!validTime(values.weekendStartTime) || !validTime(values.weekendEndTime)) return '周末时间只能选择06:00至23:00内的整点或半点'
     if (clockText(values.weekendStartTime) >= clockText(values.weekendEndTime)) return '结束时间必须晚于开始时间'
   }
-  if (Number(values.isWeekly) !== 1) {
-    if (!values.startDate) return '请选择开始日期'
-    if (!values.endDate) return '请选择结束日期'
-    if (String(values.startDate) > String(values.endDate)) return '结束日期不能早于开始日期'
-  }
-  return ''
+  return dateProblem
 }
 
 export function timetableBody(values: {
@@ -91,7 +87,7 @@ export function timetableBody(values: {
   weekendStartTime?: string
   weekendEndTime?: string
 }, campusId: number, locked = false) {
-  if (locked) return { name: timetableName(values.name) }
+  if (locked) return { name: timetableName(values.name), startDate: values.startDate, endDate: values.endDate }
   const weekly = Number(values.isWeekly) === 1
   const split = Number(values.splitWeekend) === 1
   const ownerType = String(values.ownerType || 'TEACHER').toUpperCase() === 'SERVICE' ? 'SERVICE' : 'TEACHER'
@@ -101,8 +97,8 @@ export function timetableBody(values: {
     ownerType,
     createByMemberId: ownerType === 'TEACHER' ? values.createByMemberId : undefined,
     isWeekly: weekly ? 1 : 0,
-    startDate: weekly ? undefined : values.startDate,
-    endDate: weekly ? undefined : values.endDate,
+    startDate: values.startDate,
+    endDate: values.endDate,
     startTime: clockText(values.startTime),
     endTime: clockText(values.endTime),
     timeIntervalMinutes: 60,
