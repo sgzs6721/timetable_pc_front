@@ -18,7 +18,7 @@ import {
 import { slotContaining } from './schedule-timetable-forms'
 import { useScheduleController } from './schedule-controller'
 import { ScheduleDialogs } from './schedule-dialogs'
-import { buildTimetableSummary, isOutsideTimetableDateRange, isScheduleConflictMessage } from './schedule-policy'
+import { buildTimetableSummary, dateRangeIncludesDayOfWeek, isOutsideTimetableDateRange, isScheduleConflictMessage } from './schedule-policy'
 import { ScheduleWeekPicker } from './schedule-week-picker'
 
 function showScheduleOperationError(error: unknown, fallback: string) {
@@ -32,7 +32,7 @@ function showScheduleOperationError(error: unknown, fallback: string) {
 
 export function SchedulePage() {
   const vm = useScheduleController()
-  const { groups, groupsLoading, archived, setArchived, dayBand, setDayBand, selecting, setSelecting, current, setCurrent, weekStart, setWeekStart, mode, schedules, templateSchedules, instantiatedWeeks, instantiatedWeeksLoading, setCreating, setCell, placement, setPlacement, batch, setBatch, deleting, setDeleting, deleteIds, setDeleteIds, setCampusFilter, setDragAction, dragHover, setDragHover, dragGuard, dragLessonKey, campusId, activeTimetableCampusId, canCreate, canManageCurrent, canManageTimetable, days, splitWeekend, templateMode, boardSchedules, campusLegend, activeCampusId, boardDays, splitHead, slots, limits, loadGroups, loadWeek, switchBoardMode, removeSchedule, moveSchedule, copySchedule, openOverview, onTimetableMenu, openDay, choosePlacement, ensureScheduleDateManageable } = vm
+  const { groups, groupsLoading, archived, setArchived, dayBand, setDayBand, selecting, setSelecting, current, setCurrent, weekStart, setWeekStart, mode, schedules, templateSchedules, instantiatedWeeks, instantiatedWeeksLoading, setCreating, setCell, placement, setPlacement, batch, setBatch, deleting, setDeleting, deleteIds, setDeleteIds, setCampusFilter, setDragAction, dragHover, setDragHover, dragGuard, dragLessonKey, campusId, activeTimetableCampusId, canCreate, canManageCurrent, canManageTimetable, days, splitWeekend, templateMode, boardSchedules, campusLegend, activeCampusId, boardDays, splitHead, slots, limits, loadGroups, loadWeek, switchBoardMode, removeSchedule, moveSchedule, copySchedule, openOverview, onTimetableMenu, openDay, choosePlacement, ensureScheduleDateManageable, ensureTemplateDayManageable } = vm
   const visibleGroups = groups.filter((group) => ((archived ? group.archivedTimetables : group.activeTimetables) || []).length > 0)
   const timetableSummary = buildTimetableSummary(current)
   const setScheduleDragLock = (active: boolean) => {
@@ -345,7 +345,7 @@ export function SchedulePage() {
                   </button>
                   {boardDays.map((day, column) => {
                     const date = addDays(weekStart, day - 1)
-                    const outsideDateRange = !templateMode && isOutsideTimetableDateRange(current, date)
+                    const outsideDateRange = templateMode ? !dateRangeIncludesDayOfWeek(current.startDate, current.endDate, day) : isOutsideTimetableDateRange(current, date)
                     return (
                       <button
                         className={['tt-dayhead', !templateMode && date === todayIso() ? 'is-today' : '', outsideDateRange ? 'is-outside-range' : ''].filter(Boolean).join(' ')}
@@ -353,11 +353,12 @@ export function SchedulePage() {
                         type="button"
                         style={{ gridColumn: column + 2, gridRow: 1 }}
                         onClick={() => {
-                          if (templateMode || selecting || deleting || placement) return
+                          if (selecting || deleting || placement) return
                           if (outsideDateRange) {
-                            ensureScheduleDateManageable(activeTimetableCampusId, date)
+                            if (templateMode) ensureTemplateDayManageable(day); else ensureScheduleDateManageable(activeTimetableCampusId, date)
                             return
                           }
+                          if (templateMode) return
                           openDay(date, day).catch((error) => message.error(tell(error, '当日课程加载失败')))
                         }}
                       >
@@ -369,7 +370,7 @@ export function SchedulePage() {
                   {slots.map((slot, row) => <div className="tt-time" key={slot.start} style={{ gridColumn: 1, gridRow: row + 2 }}>{slot.start}</div>)}
                   {boardDays.map((day, column) => {
                     const date = addDays(weekStart, day - 1)
-                    const outsideDateRange = !templateMode && isOutsideTimetableDateRange(current, date)
+                    const outsideDateRange = templateMode ? !dateRangeIncludesDayOfWeek(current.startDate, current.endDate, day) : isOutsideTimetableDateRange(current, date)
                     const own = outsideDateRange ? [] : boardSchedules.filter((item) => templateMode ? item.dayOfWeek === day : (item.scheduleDate ? item.scheduleDate === date : item.dayOfWeek === day))
                     const shown = activeCampusId
                       ? own.filter((lesson) => Number(lesson.uiChangeStatus || 0) === 4 || Number(lesson.campusId || 0) === activeCampusId)
@@ -385,7 +386,7 @@ export function SchedulePage() {
                               key={key}
                               type="button"
                               className={['tt-slot', selecting && batch.includes(batchKey(date, slot.start, slot.end)) ? 'is-picked' : '', placement?.targets.some((item) => item.date === date && item.start === slot.start) ? 'is-target' : ''].filter(Boolean).join(' ')}
-                              title={outsideDateRange ? '该日期不在课表有效期内' : undefined}
+                              title={outsideDateRange ? (templateMode ? '该星期不在课表日期范围内' : '该日期不在课表有效期内') : undefined}
                               onDragOver={(event) => {
                                 if (outsideDateRange || !canManageCurrent || archived || Number(current.status) === 2) return
                                 event.preventDefault()
@@ -436,7 +437,7 @@ export function SchedulePage() {
                               onClick={() => {
                                 if (dragGuard.current) return
                                 if (outsideDateRange) {
-                                  ensureScheduleDateManageable(activeTimetableCampusId, date)
+                                  if (templateMode) ensureTemplateDayManageable(day); else ensureScheduleDateManageable(activeTimetableCampusId, date)
                                   return
                                 }
                                 if (!canManageCurrent) {
@@ -648,7 +649,7 @@ export function SchedulePage() {
                               type="button"
                               className={lessonClass(lesson, `${deleting && deleteIds.includes(scheduleInstanceKey(lesson)) ? ' is-picked' : ''}${placement?.schedule && scheduleInstanceKey(placement.schedule) === scheduleInstanceKey(lesson) ? ' is-source' : ''}${!partial && detail.mark ? ` is-${detail.mark}` : ''}`)}
                               style={{ top: frame.top, height: frame.height }}
-                              draggable={canManageCurrent && !archived && Number(current.status) !== 2 && lesson.uiChangeStatus !== 4}
+                              draggable={!outsideDateRange && canManageCurrent && !archived && Number(current.status) !== 2 && lesson.uiChangeStatus !== 4}
                               onDragStart={(event) => {
                                 if (!canManageCurrent || lesson.uiChangeStatus === 4) {
                                   event.preventDefault()

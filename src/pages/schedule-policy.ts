@@ -86,6 +86,24 @@ export function isOutsideTimetableDateRange(timetable: Timetable | null | undefi
   return (!!start && target < start) || (!!end && target > end)
 }
 
+/** 固定课表的有效期内是否至少实际出现过目标星期；旧数据缺少边界时保持可编辑。 */
+export function dateRangeIncludesDayOfWeek(
+  startDate?: string | null,
+  endDate?: string | null,
+  dayOfWeek?: number | null,
+): boolean {
+  const targetDay = Number(dayOfWeek || 0)
+  if (targetDay < 1 || targetDay > 7) return true
+  const start = dateObject(isoDate(startDate))
+  const end = dateObject(isoDate(endDate))
+  if (!start || !end) return true
+  if (end < start) return false
+  const startDay = start.getDay() || 7
+  const first = new Date(start)
+  first.setDate(start.getDate() + ((targetDay - startDay + 7) % 7))
+  return first <= end
+}
+
 export function scheduleDateIssue(
   timetable: Timetable | null | undefined,
   date: string | null | undefined,

@@ -2,6 +2,7 @@ import { Button, Drawer, Form, Input, Modal, Select, Table, Tag, message } from 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { getJson, putJson } from '../api/biz'
+import { canViewLeadCampus, isSalesReadOnlyUser } from '../access'
 import { AppIcon, NeedCampus, PageHead, genderText, money, studentStatusText, tell, useShell } from './kit'
 import { StudentDetail } from './student-detail'
 import { AddStudent, CoachTransfer } from './student-profile'
@@ -156,9 +157,17 @@ export function StudentsPage() {
   const userReady = Number(shell.user?.id || 0) > 0
   const currentOrg = shell.organizations.find((item) => item.id === shell.currentOrgId) || null
   const canManageRole = userReady && managesStudents(shell.user, currentOrg, campusId)
+  const salesReadOnly = userReady
+    && isSalesReadOnlyUser(shell.user, currentOrg)
+    && canViewLeadCampus(shell.user, campusId)
+  const canViewAllStudents = canManageRole || salesReadOnly
   const canManage = canManageRole && !campusHidden
-  const scopedCoachId = canManageRole ? coachId : (Number(shell.user?.orgMemberId || 0) || undefined)
-  const readOnlyText = campusHidden ? '校区已下线，学员信息仅可查看' : '当前账号仅可查看学员信息'
+  const scopedCoachId = canViewAllStudents ? coachId : (Number(shell.user?.orgMemberId || 0) || undefined)
+  const readOnlyText = campusHidden
+    ? '校区已下线，学员信息仅可查看'
+    : salesReadOnly
+      ? '销售岗位仅可查看负责校区的学员信息'
+      : '当前账号仅可查看学员信息'
 
   async function load(nextPage = page, nextKeyword = keyword) {
     if (!campusId) return
@@ -181,7 +190,7 @@ export function StudentsPage() {
         getJson<{ visibleInList?: boolean | number | string }>(`/campus/${campusId}`).catch(() => null),
       ])
       const source = data.records || []
-      const visible = canManageRole ? source : source.filter(hasTeacherVisibleStudentCard).map(teacherVisibleStudent)
+      const visible = canViewAllStudents ? source : source.filter(hasTeacherVisibleStudentCard).map(teacherVisibleStudent)
       setRows(visible)
       setTotal(Number(data.total || 0))
       setSummary(summaryData)
@@ -202,7 +211,7 @@ export function StudentsPage() {
     reloadServices()
     getJson<Named[]>('/campus/list').then(setCampuses).catch(() => setCampuses([]))
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [campusId, status, cardCategory, coachId, sortField, sortOrder, canManageRole, userReady, reloadCoaches, reloadGroups, reloadServices])
+  }, [campusId, status, cardCategory, coachId, sortField, sortOrder, canManageRole, canViewAllStudents, userReady, reloadCoaches, reloadGroups, reloadServices])
 
   useEffect(() => {
     const studentId = Number(params.get('studentId') || 0)
@@ -343,7 +352,7 @@ export function StudentsPage() {
   return (
     <CatalogLoadContext.Provider value={catalogLoad}>
     <NeedCampus campusId={campusId}>
-      <PageHead title={!userReady || canManageRole ? '学员管理' : '我的学员'} extra={!userReady ? '正在加载学员' : canManage ? '搜索、打卡、缴费、转校区和更换老师，与小程序使用同一套学员数据。' : readOnlyText} />
+      <PageHead title={!userReady || canViewAllStudents ? '学员管理' : '我的学员'} extra={!userReady ? '正在加载学员' : canManage ? '搜索、打卡、缴费、转校区和更换老师，与小程序使用同一套学员数据。' : readOnlyText} />
       <section className="work-card">
         <div className="students-overview-line">
           <div className="stat-line">
@@ -434,7 +443,7 @@ export function StudentsPage() {
               <span className={`students-sort-arrow is-down${sortOrder === 'desc' ? ' is-active' : ''}`} aria-hidden="true" />
             </button>
           </div>
-          {canManageRole ? (
+          {canViewAllStudents ? (
             <Select
               allowClear
               placeholder="全部老师"

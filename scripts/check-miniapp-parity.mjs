@@ -162,10 +162,13 @@ const behaviorContracts = [
   },
   {
     label: '课表有效期、已实例化周次与老师历史排课权限必须和小程序一致',
-    files: ['src/pages/schedule-policy.ts', 'src/pages/schedule-controller.ts', 'src/pages/schedule-timetable-forms.tsx', 'src/pages/campus-staff.tsx'],
+    files: ['src/pages/schedule-policy.ts', 'src/pages/schedule-controller.ts', 'src/pages/SchedulePage.tsx', 'src/pages/schedule-timetable-forms.tsx', 'src/pages/campus-staff.tsx'],
     need: [
       '结束日期只能往后延长',
       '排课日期不能早于课表开始日期',
+      'dateRangeIncludesDayOfWeek',
+      '该星期不在课表日期范围内',
+      'assertTemplateDayManageable',
       '管理员未开启老师修改历史课表权限',
       '/instantiated-weeks',
       'teacherPastScheduleEditable',
@@ -175,13 +178,26 @@ const behaviorContracts = [
   },
   {
     label: '客源录入必须优先当前校区、限制姓名长度并保护销售人员筛选名单',
-    files: ['src/pages/LeadsPage.tsx', 'src/pages/leads-editor.tsx', 'src/nav.ts'],
+    files: ['src/pages/LeadsPage.tsx', 'src/pages/leads-editor.tsx', 'src/access.ts', 'src/nav.ts'],
     need: [
       'currentCampusId={shell.campusId}',
       '客户姓名不能超过6个字',
       '联系人不能超过6个字',
       'canFilterLeadSalespeople',
       'canFilterOwners ? <Select',
+    ],
+  },
+  {
+    label: '纯销售岗位必须按客源校区只读查看学员和课程，带课销售继续使用本人教学范围',
+    files: ['src/access.ts', 'src/nav.ts', 'src/pages/StudentsPage.tsx', 'src/pages/CoursesPage.tsx'],
+    need: [
+      'isSalesReadOnlyUser',
+      'user?.isSubstituteTeacher !== true',
+      'SALES_READ_ONLY_NAV',
+      'canViewLeadCampus(shell.user, campusId)',
+      'const canViewAllStudents = canManageRole || salesReadOnly',
+      'const canViewAllCourses = canManageCourses || salesReadOnly',
+      '销售岗位仅可查看负责校区',
     ],
   },
   {
@@ -205,15 +221,28 @@ const behaviorContracts = [
     ],
   },
   {
-    label: '机构管理必须支持微信支付分账资料校验、检测保存、停用和只读比例',
-    file: 'src/pages/OrgPage.tsx',
+    label: '校区服务必须按校区支持微信支付分账资料校验、检测保存、停用和只读比例',
+    files: ['src/pages/CampusPage.tsx', 'src/pages/campus-profit-sharing.tsx'],
     need: [
-      '/profit-sharing',
-      "!/^\\d{8,32}$/.test(merchantId)",
+      '`/campus/${id}/profit-sharing`',
+      "!/^\\d{8,32}$/.test(normalizedMerchantId)",
       '商户法定全称不能超过100个字',
-      "persistProfitSharing('商户资料检测通过')",
-      'disableProfitSharing()',
-      '由平台管理员设置，机构端仅展示',
+      "save('商户资料检测通过')",
+      'void disable()',
+      '由平台管理员设置，校区端仅展示',
+      "key: 'profitSharing'",
+    ],
+  },
+  {
+    label: '营销入口必须同时服从平台开关、访问模式、会员状态和角色路由',
+    files: ['src/access.ts', 'src/layouts/AppShell.tsx', 'src/routing/InstitutionRouteGuard.tsx'],
+    need: [
+      'normalizeFeatureAccessMode',
+      "mode === 'developing'",
+      "mode === 'members' && !isPaidMember(user)",
+      'marketingAccessProblem',
+      'shell.marketingEnabled',
+      'shell.marketingAccessMode',
     ],
   },
   {
@@ -228,7 +257,7 @@ const behaviorContracts = [
   },
   {
     label: '首页快捷入口必须按角色、会员状态和校区状态收敛',
-    file: 'src/pages/HomePage.tsx',
+    files: ['src/pages/HomePage.tsx', 'src/pages/home-actions.ts'],
     need: ['MANAGER_QUICK_ACTIONS', 'TEACHER_QUICK_ACTIONS', 'MEMBER_QUICK_ACTIONS', 'navForUser(', 'subscriptionBlocksPath(', 'disabledReason'],
   },
 ]

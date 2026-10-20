@@ -2,7 +2,7 @@ import { Button, Form, Input, InputNumber, Modal, Popconfirm, Select, Space, Swi
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { delJson, getJson, postJson, putJson } from '../api/biz'
-import { subscriptionBlocksPath, subscriptionExpiredText } from '../access'
+import { canManageCampus, canViewLeadCampus, isSalesReadOnlyUser, subscriptionBlocksPath, subscriptionExpiredText } from '../access'
 import { NeedCampus, PageHead, clampDecimalInput, genderText, money, tell, useShell } from './kit'
 
 interface Course {
@@ -373,16 +373,18 @@ export function CoursesPage() {
   const [editing, setEditing] = useState<Course | 'new' | null>(null)
   const [savingCourse, setSavingCourse] = useState(false)
   const [members, setMembers] = useState<Course | null>(null)
-  const role = String(shell.user?.role || '').trim().toLowerCase()
-  const manager = role === 'owner' || role === 'admin' || (shell.user?.campusAdminCampusIds || []).length > 0
+  const currentOrg = shell.organizations.find((item) => item.id === shell.currentOrgId) || null
+  const canManageCourses = canManageCampus(shell.user, shell.campusId, currentOrg)
+  const salesReadOnly = isSalesReadOnlyUser(shell.user, currentOrg)
+    && canViewLeadCampus(shell.user, shell.campusId)
+  const canViewAllCourses = canManageCourses || salesReadOnly
 
   function canModify(show = true) {
-    const currentOrg = shell.organizations.find((item) => item.id === shell.currentOrgId) || null
     if (subscriptionBlocksPath(shell.user, '/courses', currentOrg)) {
       if (show) message.warning(subscriptionExpiredText(shell.user))
       return false
     }
-    if (!manager) {
+    if (!canManageCourses) {
       if (show) message.warning('当前账号无课程管理权限')
       return false
     }
@@ -463,7 +465,7 @@ export function CoursesPage() {
     },
     {
       title: '操作',
-      render: (_: unknown, row: Course) => manager && !readOnly && !row.invalid ? (
+      render: (_: unknown, row: Course) => canManageCourses && !readOnly && !row.invalid ? (
         <Space>
           <Button type="link" onClick={() => { if (canModify()) setEditing(row) }}>编辑</Button>
           {row.internal ? null : (
@@ -487,24 +489,24 @@ export function CoursesPage() {
 
   return (
     <NeedCampus campusId={shell.campusId}>
-      <PageHead title="课程管理" extra={readOnly ? '校区已下线，课程信息仅可查看' : '简称会优先出现在课表上。一对一和其它课程分开统计。'} />
+      <PageHead title="课程管理" extra={readOnly ? '校区已下线，课程信息仅可查看' : salesReadOnly ? '销售岗位仅可查看负责校区的课程信息' : '简称会优先出现在课表上。一对一和其它课程分开统计。'} />
       <section className="work-card course-list-card">
         <h2>课程列表</h2>
         <div className="course-list-actionbar">
-          {manager ? <Button className="course-create-button" type="primary" disabled={readOnly} onClick={() => { if (canModify()) setEditing('new') }}>新建课程</Button> : null}
+          {canManageCourses ? <Button className="course-create-button" type="primary" disabled={readOnly} onClick={() => { if (canModify()) setEditing('new') }}>新建课程</Button> : null}
           <div className="stat-line course-list-stats">
             <span>课程总数<strong>{rows.length}</strong></span>
             <span>一对一<strong>{oneCount}</strong></span>
             <span>其它课程<strong>{rows.length - oneCount}</strong></span>
           </div>
           <div className="work-toolbar course-list-filters">
-            {manager ? <Select allowClear placeholder="全部老师" value={coachFilter ?? undefined} onChange={(value) => setCoachFilter(value ?? null)} style={{ width: 160 }} options={coaches.map((item) => ({ value: item.id, label: item.displayName || item.nickname || item.phone }))} /> : null}
+            {canViewAllCourses ? <Select allowClear placeholder="全部老师" value={coachFilter ?? undefined} onChange={(value) => setCoachFilter(value ?? null)} style={{ width: 160 }} options={coaches.map((item) => ({ value: item.id, label: item.displayName || item.nickname || item.phone }))} /> : null}
             <Select value={filter} onChange={setFilter} style={{ width: 140 }} options={[{ value: 'all', label: '全部类型' }, { value: 'one', label: '一对一' }, { value: 'other', label: '其它' }]} />
             <Input allowClear placeholder="搜索学员/课程" value={keyword} onChange={(event) => setKeyword(event.target.value)} style={{ width: 220 }} />
             <Button onClick={() => load()}>刷新</Button>
           </div>
         </div>
-        <Table rowKey="id" dataSource={visible} columns={columns} pagination={false} locale={{ emptyText: readOnly || !manager ? '暂无课程' : '暂无班级，可创建用于排课或分组管理' }} />
+        <Table rowKey="id" dataSource={visible} columns={columns} pagination={false} locale={{ emptyText: readOnly || !canManageCourses ? '暂无课程' : '暂无班级，可创建用于排课或分组管理' }} />
       </section>
       <Modal title={editing === 'new' ? '新建课程' : '编辑课程'} open={!!editing} onCancel={() => setEditing(null)} footer={null} destroyOnHidden>
         <Form

@@ -28,7 +28,13 @@ import { Avatar, Button, Dropdown, Layout, message } from 'antd'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { getUserInfo, logout } from '../api/auth'
-import { subscriptionBlocksPath, subscriptionExpiredText } from '../access'
+import {
+  marketingAccessProblem,
+  normalizeFeatureAccessMode,
+  subscriptionBlocksPath,
+  subscriptionExpiredText,
+  type FeatureAccessMode,
+} from '../access'
 import { loadHome, setCurrentOrganization } from '../api/home'
 import { getJson } from '../api/biz'
 import { resolveApiAssetUrl } from '../api/http'
@@ -98,6 +104,8 @@ export interface ShellContext {
   reload: () => void
   setPageDescription: (description: string) => void
   leadsEnabled: boolean
+  marketingEnabled: boolean
+  marketingAccessMode: FeatureAccessMode
 }
 
 export function AppShell() {
@@ -112,6 +120,7 @@ export function AppShell() {
   const [ready, setReady] = useState(false)
   const [bootstrapError, setBootstrapError] = useState('')
   const [marketingEnabled, setMarketingEnabled] = useState(true)
+  const [marketingAccessMode, setMarketingAccessMode] = useState<FeatureAccessMode>('all')
   const [leadsEnabled, setLeadsEnabled] = useState(true)
   const [pageContext, setPageContext] = useState({ path: '', description: '' })
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => localStorage.getItem('timetable-sidebar-collapsed') === '1')
@@ -170,13 +179,15 @@ export function AppShell() {
 
   useEffect(() => {
     bootstrap()
-    getJson<{ marketingEnabled?: boolean; leadsEnabled?: boolean }>('/platform-features')
+    getJson<{ marketingEnabled?: boolean; marketingAccessMode?: string; leadsEnabled?: boolean }>('/platform-features')
       .then((features) => {
         setMarketingEnabled(features?.marketingEnabled !== false)
+        setMarketingAccessMode(normalizeFeatureAccessMode(features?.marketingAccessMode))
         setLeadsEnabled(features?.leadsEnabled !== false)
       })
       .catch(() => {
         setMarketingEnabled(true)
+        setMarketingAccessMode('all')
         setLeadsEnabled(true)
       })
   }, [])
@@ -204,18 +215,6 @@ export function AppShell() {
     if (['/home', '/account', '/membership', '/guide', '/feedback'].includes(location.pathname)) return
     navigate('/home', { replace: true })
   }, [noOrganization, location.pathname, navigate])
-
-  useEffect(() => {
-    if (marketingEnabled || location.pathname !== '/marketing') return
-    message.info('营销功能当前未开放')
-    navigate('/home', { replace: true })
-  }, [marketingEnabled, location.pathname, navigate])
-
-  useEffect(() => {
-    if (leadsEnabled || location.pathname !== '/leads') return
-    message.info('客源管理当前未开放')
-    navigate('/home', { replace: true })
-  }, [leadsEnabled, location.pathname, navigate])
 
   async function changeOrg(orgId: number) {
     if (!orgId || orgId === currentOrgId) return
@@ -283,9 +282,22 @@ export function AppShell() {
     },
     setPageDescription,
     leadsEnabled,
+    marketingEnabled,
+    marketingAccessMode,
   }
 
   function openPath(path: string) {
+    if (path === '/marketing') {
+      const problem = marketingAccessProblem(user, marketingEnabled, marketingAccessMode)
+      if (problem) {
+        message.info(problem)
+        return
+      }
+    }
+    if (path === '/leads' && !leadsEnabled) {
+      message.info('客源管理当前未开放')
+      return
+    }
     if (subscriptionBlocksPath(user, path, currentOrg)) {
       message.warning(subscriptionExpiredText(user))
       return

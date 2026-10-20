@@ -1,4 +1,12 @@
 import type { Organization, UserInfo } from './api/types'
+import {
+  canViewLeads,
+  campusAdminIds,
+  isOrganizationManager,
+  isSalesReadOnlyUser,
+} from './access'
+
+export { canFilterLeadSalespeople, canViewLeads } from './access'
 
 export interface NavItem {
   key: string
@@ -34,8 +42,20 @@ const TEACHER_NAV: NavItem[] = [
   { key: 'home', label: '首页', path: '/home' },
   { key: 'schedule', label: '我的课表', path: '/schedule' },
   { key: 'students', label: '我的学员', path: '/students' },
+  { key: 'courses', label: '我的课程', path: '/courses' },
   { key: 'hours', label: '我的课时', path: '/hours' },
   { key: 'salary', label: '我的工资', path: '/salary' },
+  { key: 'guide', label: '需要帮助', path: '/guide' },
+  { key: 'feedback', label: '问题反馈', path: '/feedback' },
+]
+
+const SALES_READ_ONLY_NAV: NavItem[] = [
+  { key: 'home', label: '首页', path: '/home' },
+  LEADS_NAV,
+  { key: 'students', label: '学员管理', path: '/students' },
+  { key: 'courses', label: '课程管理', path: '/courses' },
+  { key: 'salary', label: '我的工资', path: '/salary' },
+  { key: 'account', label: '个人中心', path: '/account' },
   { key: 'guide', label: '需要帮助', path: '/guide' },
   { key: 'feedback', label: '问题反馈', path: '/feedback' },
 ]
@@ -48,31 +68,8 @@ const MEMBER_NAV: NavItem[] = [
   { key: 'feedback', label: '问题反馈', path: '/feedback' },
 ]
 
-/** 网页端客源只开放给机构创建者、协同管理员和校区管理员。销售在小程序跟进。 */
-export function canViewLeads(user: UserInfo | null, org?: Organization | null): boolean {
-  if (!user) return false
-  const role = (user.role || '').toLowerCase()
-  const owner = role === 'owner' || role === 'admin'
-    || (Number(user.id || 0) > 0 && Number(org?.ownerId || 0) === Number(user.id))
-  if (owner || user.canViewAllLeads === true) return true
-  if (user.campusAdmin === true) return true
-  return (user.campusAdminCampusIds || []).some((id) => Number(id) > 0)
-}
-
-/** 销售负责人筛选会暴露人员名单，仅向机构/协同管理员与校区管理员开放。 */
-export function canFilterLeadSalespeople(user: UserInfo | null, org?: Organization | null): boolean {
-  if (!user) return false
-  const role = String(user.role || '').toLowerCase()
-  const organizationManager = role === 'owner' || role === 'admin'
-    || (Number(user.id || 0) > 0 && Number(org?.ownerId || 0) === Number(user.id))
-  return user.canViewAllLeads === true
-    || organizationManager
-    || user.campusAdmin === true
-    || (user.campusAdminCampusIds || []).some((id) => Number(id) > 0)
-}
-
-function withoutLeads(items: NavItem[], user: UserInfo | null, org?: Organization | null): NavItem[] {
-  return canViewLeads(user, org) ? items : items.filter((item) => item.key !== 'leads')
+function withoutLeads(items: NavItem[], user: UserInfo | null): NavItem[] {
+  return canViewLeads(user) ? items : items.filter((item) => item.key !== 'leads')
 }
 
 export function navForUser(user: UserInfo | null, org?: Organization | null): NavItem[] {
@@ -82,15 +79,17 @@ export function navForUser(user: UserInfo | null, org?: Organization | null): Na
     return MANAGER_NAV
   }
   const role = (user.role || '').toLowerCase()
-  const owner = role === 'owner' || (Number(user.id || 0) > 0 && Number(org?.ownerId || 0) === Number(user.id))
-  if (owner || role === 'admin') {
-    return withoutLeads(MANAGER_NAV, user, org)
+  if (isOrganizationManager(user, org)) {
+    return withoutLeads(MANAGER_NAV, user)
   }
-  if (user.campusAdmin || (user.campusAdminCampusIds || []).some((id) => Number(id) > 0)) {
-    return withoutLeads(CAMPUS_ADMIN_NAV, user, org)
+  if (campusAdminIds(user).length > 0) {
+    return withoutLeads(CAMPUS_ADMIN_NAV, user)
   }
   if (user.isSubstituteTeacher) {
-    return TEACHER_NAV
+    return canViewLeads(user) ? [LEADS_NAV, ...TEACHER_NAV] : TEACHER_NAV
+  }
+  if (isSalesReadOnlyUser(user, org)) {
+    return SALES_READ_ONLY_NAV
   }
   if (role === 'coach') {
     return MEMBER_NAV

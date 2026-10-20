@@ -2,6 +2,7 @@ import { Button, Form, Input, InputNumber, Modal, Popconfirm, Select, Space, Tab
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { delJson, getJson, postJson, putJson } from '../api/biz'
+import { canManageCampus } from '../access'
 import { NeedOrg, PageHead, PhoneCopyButton, clampDecimalInput, copyPlainText, tell, useShell } from './kit'
 import { CoursePricings } from './campus-course-pricing'
 import { CampusAffairs } from './campus-affairs'
@@ -9,6 +10,7 @@ import { AcademicSettings } from './campus-academic'
 import { CampusSalary } from './campus-salary'
 import { Permissions, Positions, Teachers } from './campus-staff'
 import type { Campus } from './campus-model'
+import { CampusProfitSharing } from './campus-profit-sharing'
 
 
 function canManageCampusSalary(user: { id?: number; role?: string; campusAdminCampusIds?: number[] } | null, org: { ownerId?: number; campusAdminManageSalary?: number } | null, campusId: number | null): boolean {
@@ -33,6 +35,7 @@ function campusStaffTabKey(value: string | null): string {
 
 function campusServiceTabKey(value: string | null): string {
   if (value === 'pricing') return 'pricing'
+  if (value === 'profitSharing' || value === 'profit-sharing') return 'profitSharing'
   return value === 'trial' ? 'trial' : 'services'
 }
 
@@ -59,6 +62,7 @@ export function CampusPage() {
   }, [search])
   const currentOrg = shell.organizations.find((item) => item.id === shell.currentOrgId) || null
   const salaryAllowed = canManageCampusSalary(shell.user, currentOrg, campusId)
+  const profitSharingAllowed = canManageCampus(shell.user, campusId, currentOrg)
   return (
     <NeedOrg orgId={shell.currentOrgId}>
       <PageHead title="校区管理" extra="校区资料、服务、老师、职位、权限和工资。" />
@@ -75,6 +79,7 @@ export function CampusPage() {
             { key: 'services', label: '服务项目', children: <Services campusId={campusId} /> },
             { key: 'pricing', label: '课程定价', children: <CoursePricings campusId={campusId} /> },
             { key: 'trial', label: '体验类型', children: <AcademicSettings campusId={campusId} section="trial" /> },
+            ...(profitSharingAllowed ? [{ key: 'profitSharing', label: '支付分账', children: <CampusProfitSharing campusId={campusId} /> }] : []),
           ]} /> },
           { key: 'staff', label: '人员设置', children: <Tabs className="campus-sub-tabs" activeKey={staffTab} onChange={setStaffTab} items={[
             { key: 'teachers', label: '老师列表', children: <Teachers campusId={campusId} onCampusChanged={shell.reload} /> },

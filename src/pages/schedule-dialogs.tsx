@@ -18,7 +18,7 @@ function showScheduleMutationError(error: unknown, fallback: string) {
 }
 
 export function ScheduleDialogs({ vm }: { vm: ReturnType<typeof useScheduleController> }) {
-  const { setSelecting, current, weekStart, mode, templateSchedules, creating, setCreating, createSource, setCreateSource, editing, setEditing, cell, setCell, setPlacement, batch, setBatch, setDeleting, overview, setOverview, dayDialog, setDayDialog, lookup, setLookup, dragAction, setDragAction, shell, campusId, campusName, manageableScheduleCampuses, activeTimetableCampusId, managesCampus, canManageCurrent, timetableLocked, days, templateMode, boardSchedules, slots, loadGroups, loadWeek, saveCell, removeSchedule, leaveSchedule, moveSchedule, copySchedule, assertScheduleDateManageable } = vm
+  const { setSelecting, current, weekStart, mode, templateSchedules, creating, setCreating, createSource, setCreateSource, editing, setEditing, cell, setCell, setPlacement, batch, setBatch, setDeleting, overview, setOverview, dayDialog, setDayDialog, lookup, setLookup, dragAction, setDragAction, shell, campusId, campusName, manageableScheduleCampuses, activeTimetableCampusId, managesCampus, canManageCurrent, timetableLocked, days, templateMode, boardSchedules, slots, loadGroups, loadWeek, saveCell, removeSchedule, leaveSchedule, moveSchedule, copySchedule, assertScheduleDateManageable, assertTemplateDayManageable } = vm
   const serviceTimetable = String(current?.ownerType || '').toUpperCase() === 'SERVICE'
   const timetableCampuses = serviceTimetable && current?.campusId
     ? manageableScheduleCampuses.filter((item) => Number(item.id) === Number(current.campusId))
@@ -109,6 +109,7 @@ export function ScheduleDialogs({ vm }: { vm: ReturnType<typeof useScheduleContr
         }}
         onRestore={async () => {
           if (!cell || !current) return
+          assertTemplateDayManageable(cell.day)
           assertScheduleDateManageable(Number(cell.schedule?.campusId || activeTimetableCampusId), templateMode ? '' : cell.date)
           if (cell.echo?.status === 'delete') {
             const template = templateSchedules.find((item) => Number(item.dayOfWeek) === cell.day && clockText(item.startTime) === cell.start)

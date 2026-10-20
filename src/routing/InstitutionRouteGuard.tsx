@@ -2,6 +2,7 @@ import { Button, Result } from 'antd'
 import { Outlet, useLocation, useNavigate, useOutletContext } from 'react-router-dom'
 import type { ShellContext } from '../layouts/AppShell'
 import { navForUser } from '../nav'
+import { marketingAccessProblem } from '../access'
 
 const ALWAYS_AVAILABLE_PATHS = new Set(['/home', '/account', '/membership', '/guide', '/feedback'])
 
@@ -19,14 +20,19 @@ export function InstitutionRouteGuard() {
     ? navForUser(shell.user, currentOrg).map((item) => item.path)
     : []
   const allowedPaths = new Set([...ALWAYS_AVAILABLE_PATHS, ...rolePaths])
+  const featureProblem = location.pathname === '/leads' && !shell.leadsEnabled
+    ? '客源管理当前未开放'
+    : location.pathname === '/marketing'
+      ? marketingAccessProblem(shell.user, shell.marketingEnabled, shell.marketingAccessMode)
+      : ''
 
-  if (allowedPaths.has(location.pathname)) {
+  if (allowedPaths.has(location.pathname) && !featureProblem) {
     return <Outlet context={shell} />
   }
 
-  const description = hasOrganization
+  const description = featureProblem || (hasOrganization
     ? '此功能不在当前角色的权限范围内，请从左侧菜单进入可用功能。'
-    : '当前账号尚未加入机构。你可以返回首页创建机构。'
+    : '当前账号尚未加入机构。你可以返回首页创建机构。')
 
   return (
     <Result
