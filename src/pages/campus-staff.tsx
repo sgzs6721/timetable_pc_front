@@ -101,7 +101,7 @@ function StaffEditSaveButton(props: { person: Person; origin: { auto: boolean; n
   return <Button type="primary" htmlType="submit" disabled={props.loading || same}>保存</Button>
 }
 
-export function Teachers({ campusId, onCampusChanged }: { campusId: number | null; onCampusChanged?: () => void }) {
+export function Teachers({ campusId, canImportCampusStaff, onCampusChanged }: { campusId: number | null; canImportCampusStaff: boolean; onCampusChanged?: () => void }) {
   const [rows, setRows] = useState<Person[]>([])
   const [positions, setPositions] = useState<Position[]>([])
   const [campuses, setCampuses] = useState<Campus[]>([])
@@ -123,9 +123,9 @@ export function Teachers({ campusId, onCampusChanged }: { campusId: number | nul
     if (!campusId) return
     setRows(await getJson(`/campus-teacher/campus/${campusId}`))
     setPositions(await getJson('/org-positions/list', { campusId }))
-    setCampuses(await getJson('/campus/list'))
+    setCampuses(canImportCampusStaff ? await getJson('/campus/list') : [])
   }
-  useEffect(() => { load().catch((error) => message.error(tell(error, '老师加载失败'))) }, [campusId])
+  useEffect(() => { load().catch((error) => message.error(tell(error, '老师加载失败'))) }, [campusId, canImportCampusStaff])
   useEffect(() => {
     if (!sourceId) {
       setSourceStaff([])
@@ -212,7 +212,7 @@ export function Teachers({ campusId, onCampusChanged }: { campusId: number | nul
         </div>
         <div className="staff-list-tools">
           <Input.Search allowClear value={keyword} onChange={(event) => setKeyword(event.target.value)} placeholder="搜索姓名/电话" />
-          {campuses.some((item) => item.id !== campusId) ? <Button onClick={() => setImporting(true)}>从其他校区导入</Button> : null}
+          {canImportCampusStaff && campuses.some((item) => item.id !== campusId) ? <Button onClick={() => setImporting(true)}>从其他校区导入</Button> : null}
           <Button type="primary" onClick={() => {
             setPositions([])
             setAdding(true)
@@ -309,6 +309,10 @@ export function Teachers({ campusId, onCampusChanged }: { campusId: number | nul
         form={importForm}
         layout="vertical"
         onFinish={async (values: { teacherIds: number[]; positionId: number; importSourceCampusId: number }) => {
+          if (!canImportCampusStaff) {
+            message.warning('仅机构管理员或协同管理员可导入')
+            return
+          }
           if (!campuses.some((item) => item.id !== campusId)) {
             message.warning('暂无可导入的校区')
             return

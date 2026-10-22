@@ -32,7 +32,7 @@ function showScheduleOperationError(error: unknown, fallback: string) {
 
 export function SchedulePage() {
   const vm = useScheduleController()
-  const { groups, groupsLoading, archived, setArchived, dayBand, setDayBand, selecting, setSelecting, current, setCurrent, weekStart, setWeekStart, mode, schedules, templateSchedules, instantiatedWeeks, instantiatedWeeksLoading, setCreating, setCell, placement, setPlacement, batch, setBatch, deleting, setDeleting, deleteIds, setDeleteIds, setCampusFilter, setDragAction, dragHover, setDragHover, dragGuard, dragLessonKey, campusId, activeTimetableCampusId, canCreate, canManageCurrent, canManageTimetable, days, splitWeekend, templateMode, boardSchedules, campusLegend, activeCampusId, boardDays, splitHead, slots, limits, loadGroups, loadWeek, switchBoardMode, removeSchedule, moveSchedule, copySchedule, openOverview, onTimetableMenu, openDay, choosePlacement, ensureScheduleDateManageable, ensureTemplateDayManageable } = vm
+  const { groups, groupsLoading, archived, setArchived, dayBand, setDayBand, selecting, setSelecting, current, setCurrent, weekStart, setWeekStart, mode, schedules, templateSchedules, instantiatedWeeks, instantiatedWeeksLoading, setCreating, setCell, placement, setPlacement, batch, setBatch, deleting, setDeleting, deleteIds, setDeleteIds, setCampusFilter, setDragAction, dragHover, setDragHover, dragGuard, dragLessonKey, campusId, activeTimetableCampusId, canCreate, canManageCurrent, canManageTimetable, salesCampusView, days, splitWeekend, templateMode, boardSchedules, campusLegend, activeCampusId, boardDays, splitHead, slots, limits, loadGroups, loadWeek, switchBoardMode, removeSchedule, moveSchedule, copySchedule, openOverview, onTimetableMenu, openDay, choosePlacement, ensureScheduleDateManageable, ensureTemplateDayManageable } = vm
   const visibleGroups = groups.filter((group) => ((archived ? group.archivedTimetables : group.activeTimetables) || []).length > 0)
   const timetableSummary = buildTimetableSummary(current)
   const setScheduleDragLock = (active: boolean) => {
@@ -62,11 +62,11 @@ export function SchedulePage() {
 
   return (
     <NeedCampus campusId={campusId}>
-      <PageHead title="课表管理" extra="按校区查看、新建，并在周视图里排课、请假、占用、拖动、移动和复制。" />
+      <PageHead title={salesCampusView ? '校区课表' : '课表管理'} extra={salesCampusView ? '查看负责校区的活动课表；销售视图不提供排课和课表管理操作。' : '按校区查看、新建，并在周视图里排课、请假、占用、拖动、移动和复制。'} />
       <div className="split schedule-split">
         <section className="schedule-list-column">
           <div className="work-card schedule-list-shell">
-            <div className="schedule-list-controls">
+            {!salesCampusView ? <div className="schedule-list-controls">
               <Tabs
                 className="tabs-nav-only schedule-head-tabs"
                 activeKey={archived ? 'archived' : 'active'}
@@ -96,7 +96,7 @@ export function SchedulePage() {
                   setCreating(true)
                 }}
               />
-            </div>
+            </div> : null}
             <div className="schedule-list-panel">
             {groupsLoading ? <div className="schedule-list-loading" aria-label="课表加载中"><Skeleton active title={{ width: '42%' }} paragraph={{ rows: 5, width: ['92%', '84%', '88%', '76%', '82%'] }} /></div> : <>
             {visibleGroups.map((group) => {
@@ -163,7 +163,7 @@ export function SchedulePage() {
               <div className="empty-card" style={{ marginTop: 0, boxShadow: 'none' }}>
                 <AppIcon name="icon-schedule-empty" size={42} />
                 <h2>{archived ? '没有归档课表' : '还没有课表'}</h2>
-                <p>{archived ? '归档后的课表会出现在这里。' : '创建一张课表后，就可以按周排课。'}</p>
+                <p>{archived ? '归档后的课表会出现在这里。' : salesCampusView ? '当前负责校区还没有可查看的活动课表。' : '创建一张课表后，就可以按周排课。'}</p>
               </div>
             ) : null}
             </>}
@@ -633,7 +633,7 @@ export function SchedulePage() {
                         })}
                         {shown.flatMap((lesson) => {
                           const slices = Number(lesson.uiChangeStatus) === 3
-                            ? visibleLeaveSlices(lesson, own, cancelMarks)
+                            ? (templateMode ? visibleLeaveSlices(lesson, own, cancelMarks) : [])
                             : [{ start: clockText(lesson.startTime), end: clockText(lesson.endTime) }]
                           return slices.map((slice) => {
                           const clipped = slice.start !== clockText(lesson.startTime) || slice.end !== clockText(lesson.endTime)

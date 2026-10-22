@@ -30,6 +30,9 @@
 .lead-filters > .ant-select { width: 220px; }
 .lead-customer { display: flex; gap: var(--space-3); align-items: center; }
 .lead-avatar { display: grid; place-items: center; flex-shrink: 0; width: 36px; height: 36px; border-radius: 11px; color: #2563eb; background: #eef4ff; font-weight: 600; }
+.lead-avatar--male { color: #3478dc; background: #edf5ff; }
+.lead-avatar--female { color: #d9679b; background: #fff0f6; }
+.lead-avatar--person { color: #58708f; background: #eef3f8; }
 .lead-customer small { display: block; color: #94a3b8; margin-top: var(--space-1); }
 .lead-muted { color: #64748b; }
 .lead-due { color: #d97706; }
@@ -106,7 +109,11 @@
 } }
 
 .lead-customer-text { min-width: 0; }
-.lead-customer-name { display: block; max-width: 100%; color: #3d4f66; font-weight: 500; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lead-customer-name { display: flex; align-items: center; gap: 5px; max-width: 100%; color: #3d4f66; font-weight: 500; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lead-gender { flex: 0 0 auto; }
+.lead-gender.is-male { color: #3478dc; }
+.lead-gender.is-female { color: #d9679b; }
+.lead-customer-name .lead-age { display: inline; flex: 0 0 auto; margin: 0; color: #8b98ac; font-size: 12px; font-weight: 400; }
 .lead-customer-text small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .lead-event-head { flex-wrap: wrap; }
 @media (max-width: 760px) { .lead-filters > .ant-input-search { width: 100%; } .lead-filters > .ant-select { flex: 1 1 130px; } }

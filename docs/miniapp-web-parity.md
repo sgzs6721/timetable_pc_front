@@ -11,17 +11,18 @@ Web 端只承载机构管理后台。家长/学员工作区、课表分享、活
 | 小程序页面/模块 | Web 入口 | Web 实现 |
 | --- | --- | --- |
 | 登录、协议、隐私 | `/login`、`/legal/agreement`、`/legal/privacy` | 手机号密码、微信扫码登录、协议与隐私页 |
+| 系统维护 | `/maintenance` | 同时校验 HTTP 503 与业务码 50301，保留登录态和原访问地址，支持主动检测恢复 |
 | 首页工作台 | `/home` | 角色工作台、今日/明日课程、指标、老师分组、学员上课记录、快捷入口 |
 | 我的 | `/account` | Web 登录密码、运营中心配置的网页端地址展示与复制、全部关联机构与权限、创建新机构 |
 | 创建机构、初始化 | `/home`、`/account` | 机构额度、资料、权限、协同管理员、创建后切换与校区引导 |
-| 学员列表、添加学员 | `/students` | 校区汇总、状态/老师筛选、搜索、分页、容量预检、新增与编辑；纯销售按客源校区只读查看，带课销售仍按本人教学范围查看 |
+| 学员列表、添加学员 | `/students` | 校区汇总、状态/老师筛选、搜索、分页、容量预检、新增与编辑；销售（含同时带课人员）按客源授权校区只读查看全部学员 |
 | 学员详情 | `/students?studentId=...` | 基本资料、多个学员卡、缴费、销课、费用项、老师调整、结业/恢复/删除 |
 | 学员缴费与调整 | 学员详情内 | 课时卡、储值卡、时段卡；新增/续费/补缴/退费/调整；非退费服务卡必须保留服务类别；课程与服务分配；有效期和金额校验 |
 | 学员快速打卡 | 学员列表与详情内 | 卡片选择、课程/服务选择、当前课程老师优先、至少选 1 位且不超过课程配置人数、重复提示、有效期与余额校验 |
 | 学员转校 | 学员详情内 | 多卡选择、目标校区/老师/课程、余额和折扣处理 |
-| 课表列表、课表管理 | `/schedule` | 新建、编辑、默认课表、启停、删除、校区分组、角色范围 |
+| 课表列表、课表管理 | `/schedule` | 新建、编辑、默认课表、启停、删除、校区分组、角色范围；销售仅查看负责校区的活动课表 |
 | 课表详情 | `/schedule?timetableId=...` | 周课表、有效期边界、已实例化周次、历史课表权限、创建/移动/编辑/删除/请假/恢复、试听、批量创建、日视图和汇总；短有效期固定课按实际包含的星期禁用范围外列 |
-| 课程管理 | `/courses` | 一对一/班课、老师、简称、单价、开课人数区间（最少/最多）、学员与权益汇总、删除约束；纯销售按客源校区只读查看 |
+| 课程管理 | `/courses` | 一对一/班课、老师、简称、单价、开课人数区间（最少/最多）、学员与权益汇总、删除约束；销售（含同时带课人员）按客源授权校区只读查看全部课程 |
 | 课时管理 | `/hours` | 时间周期、老师范围、课时明细、删除与汇总 |
 | 机构管理、机构工资周期 | `/org` | 基本资料、权限、工资周期、协同管理员与解散机构 |
 | 校区管理 | `/campus` | 校区额度、创建/编辑、上线/下线校验、人员和业务快捷入口 |
@@ -49,6 +50,7 @@ Web 端只承载机构管理后台。家长/学员工作区、课表分享、活
 | 小程序页面 | Web 对应位置 | 对齐结论 |
 | --- | --- | --- |
 | `pages/login/login` | `/login` | 手机号密码登录、协议确认、登录态恢复；微信环境登录在 Web 改为开放平台扫码 |
+| `pages/maintenance/maintenance` | `/maintenance` | 维护响应接管、维护说明、状态检测、服务恢复后原页面或登录页回跳一致 |
 | `pages/index/index` | `/home` | 管理工作台、今日/明日课程、指标、老师分组、上课记录、快捷入口一致 |
 | `pages/students/students` | `/students` | 校区汇总、筛选、搜索、排序、分页、新增、详情、老师调整、快捷打卡一致 |
 | `pages/schedule/schedule` | `/schedule` | 人员课表、归档课表、默认课表、周视图和排课入口一致 |
@@ -58,7 +60,7 @@ Web 端只承载机构管理后台。家长/学员工作区、课表分享、活
 | `subpackages/account/pages/legal/user-agreement/user-agreement` | `/legal/agreement` | 用户协议一致 |
 | `subpackages/account/pages/legal/privacy-policy/privacy-policy` | `/legal/privacy` | 隐私政策一致 |
 | `subpackages/student/pages/add-student/add-student` | `/students` 新增/编辑弹窗 | 学员资料、多卡、课程、老师、服务权益、折扣、有效期和容量预检一致 |
-| `subpackages/student/pages/payment/payment` | 学员详情“缴费记录”编辑弹窗 | 新增、续费、补缴、退费、调整、转课时、提成分配和卡片绑定一致 |
+| `subpackages/student/pages/payment/payment` | 学员详情“缴费记录”编辑弹窗 | 新增、续费、补缴、退费、调整、转课时、提成分配和卡片绑定一致；退费可只退金额而不强制扣减正课或赠课 |
 | `subpackages/student/pages/payment-manage/payment-manage` | `/payments` | 时间/类型/校区/关键字筛选、汇总、趋势、分组统计、分页和下钻一致 |
 | `subpackages/student/pages/student-course-records/student-course-records` | 学员详情“上课记录”及 `/hours` | 课程/老师筛选、卡片范围、课时明细和删除返还一致 |
 | `subpackages/student/pages/student-detail/student-detail` | `/students?studentId=...` 详情抽屉 | 档案、多卡、缴费、销课、家长权限、费用项、结业/恢复/删除一致 |
@@ -78,11 +80,11 @@ Web 端只承载机构管理后台。家长/学员工作区、课表分享、活
 | `subpackages/admin/pages/membership-center/membership-center` | `/membership` | 套餐、新购、续费、升级、学员扩容和支付状态确认一致；Web 使用 Native 二维码支付 |
 | `subpackages/admin/pages/salary-manage/salary-manage` | `/salary` | 周期、老师范围、工资构成、发放/撤销、日期、方式和备注一致 |
 | `subpackages/admin/pages/campus-salary-settings/campus-salary-settings` | `/campus` 工资设置 | 工资项、固定/课时工资、批量设置、金额校验一致 |
-| `subpackages/admin/pages/campus-teacher-setup/campus-teacher-setup` | `/campus` 人员/职位/权限/工资/教务/校务 | 入职、导入、编辑、离职交接及有效学员卡名单、职位、权限、工资项、学员删除设置与校务设置一致 |
+| `subpackages/admin/pages/campus-teacher-setup/campus-teacher-setup` | `/campus` 人员/职位/权限/工资/教务/校务 | 入职、导入、编辑、离职交接及有效学员卡名单、职位、权限、工资项、学员删除设置与校务设置一致；跨校区导入仅机构管理员或协同管理员可用 |
 | `subpackages/admin/pages/coach-manage/coach-manage` | `/campus` 人员设置 | 老师列表、带课身份、校区范围和人员维护一致 |
 | `subpackages/schedule/pages/schedule-manage/schedule-manage` | `/schedule` 左侧课表区 | 创建、复制、编辑、默认、归档、恢复、删除和角色范围一致 |
 | `subpackages/schedule/pages/create-timetable/create-timetable` | `/schedule` 创建课表弹窗 | 工作日/周末时段、粒度、固定/单周、开始/结束日期限制、来源复制和数量上限一致 |
-| `subpackages/schedule/pages/timetable-detail/timetable-detail` | `/schedule?timetableId=...` | 周切换、已实例化周次、有效期边界、模板/实例、历史课表权限、半小时格、批量、拖放、请假、恢复、试听和学员状态一致 |
+| `subpackages/schedule/pages/timetable-detail/timetable-detail` | `/schedule?timetableId=...` | 周切换、已实例化周次、有效期边界、模板/实例、历史课表权限、半小时格、批量、拖放、请假、恢复、试听和学员状态一致；替换课程按实际重叠时段着色，本周视图不重复绘制请假占位 |
 | `subpackages/finance/pages/payment/payment` | 学员详情“缴费记录”编辑弹窗 | 新增、续费、补缴、退费、调整、转课时、有效期和提成分配一致 |
 | `subpackages/finance/pages/payment-manage/payment-manage` | `/payments` | 时间/类型/校区/关键字筛选、汇总、趋势、分组统计、分页和学员下钻一致 |
 | `subpackages/finance/pages/finance-manage/finance-manage` | `/finance` | 收支概览、时间范围、待支出、流水增改删和校区对比一致 |
@@ -166,7 +168,7 @@ Web 端只承载机构管理后台。家长/学员工作区、课表分享、活
 - 营销报名页会识别既有待支付报名，Web 统一引导回小程序完成同一笔报名的支付，不重复创建报名或订单；页面会自动轮询并确认支付结果。
 - 平台营销功能开关与 `developing`、`members`、`all` 访问模式会同步控制 Web 的营销入口和路由；会员专享判断与小程序一致。
 - 微信支付分账使用校区级 `/campus/{campusId}/profit-sharing` 接口，不再调用已移除的机构级接口。
-- `canViewAllLeads` 与 `leadCampusIds` 同时驱动 Web 客源入口；纯销售可在负责校区只读查看学员和课程，带课销售不会因此扩大原有教学数据范围。
+- `canViewAllLeads` 与 `leadCampusIds` 同时驱动 Web 客源入口和销售校区只读范围；销售即使同时带课，也可在负责校区查看全部学员、课程和活动课表，所有写操作仍由原管理权限单独控制。
 
 ## 工程约束与验证
 
@@ -188,7 +190,7 @@ Web 端只承载机构管理后台。家长/学员工作区、课表分享、活
 | `subpackages/leads/pages/detail/detail` | `/leads?leadId=...`：档案、操作时间线、分页历史 |
 | `subpackages/leads/pages/follow/follow` | 详情内记录跟进：沟通方式、结果、状态及下次跟进时间 |
 
-共用 `/api/leads` 接口，数据按机构隔离并按销售职位的校区范围收敛；机构管理员可查看全部客源，校区销售只查看授权校区。普通销售不能使用负责人名单筛选，纯销售可只读查看负责校区的学员与课程；同时承担带课工作的销售仍只查看本人教学数据。状态为新客源、已联系、有意向、待成交、已成交、已结束；已成交/已结束会清空跟进计划，重新跟进可恢复状态。时间以北京时间记录。销售负责人可暂不分配，记录跟进前需分配本机构在职销售。历史记录追加保存，不提供修改或删除。
+共用 `/api/leads` 接口，数据按机构隔离并按销售职位的校区范围收敛；机构管理员可查看全部客源，校区销售只查看授权校区。普通销售不能使用负责人名单筛选，录入和编辑时负责人锁定为本人；所有销售（包括同时带课人员）可只读查看负责校区的全部学员、课程和活动课表。状态为新客源、已联系、有意向、待成交、已成交、已结束；已成交/已结束会清空跟进计划，重新跟进可恢复状态。联系电话仅保留最多 11 位数字；安排下一次跟进时必须同时填写时间和具体事项。时间以北京时间记录。历史记录追加保存，不提供修改或删除。
 
 启用方式：后端使用现有 AutoTable update 模式创建 `customer_lead`、`customer_lead_event` 两张表；部署或重启新版本后端后，再发布两端。客源入口位于 Web 的「客户跟进」导航和首页，小程序首页及「我的 → 客户跟进」。无在职销售时可先录入，再通过现有人员职位配置添加销售后分配。
 

@@ -2,6 +2,7 @@ import type { Organization, UserInfo } from './api/types'
 import {
   canViewLeads,
   campusAdminIds,
+  hasSalesCampusScope,
   isOrganizationManager,
   isSalesReadOnlyUser,
 } from './access'
@@ -53,6 +54,7 @@ const SALES_READ_ONLY_NAV: NavItem[] = [
   { key: 'home', label: '首页', path: '/home' },
   LEADS_NAV,
   { key: 'students', label: '学员管理', path: '/students' },
+  { key: 'schedule', label: '校区课表', path: '/schedule' },
   { key: 'courses', label: '课程管理', path: '/courses' },
   { key: 'salary', label: '我的工资', path: '/salary' },
   { key: 'account', label: '个人中心', path: '/account' },
@@ -86,7 +88,14 @@ export function navForUser(user: UserInfo | null, org?: Organization | null): Na
     return withoutLeads(CAMPUS_ADMIN_NAV, user)
   }
   if (user.isSubstituteTeacher) {
-    return canViewLeads(user) ? [LEADS_NAV, ...TEACHER_NAV] : TEACHER_NAV
+    return hasSalesCampusScope(user, org)
+      ? [LEADS_NAV, ...TEACHER_NAV.map((item) => {
+        if (item.key === 'students') return { ...item, label: '学员管理' }
+        if (item.key === 'schedule') return { ...item, label: '校区课表' }
+        if (item.key === 'courses') return { ...item, label: '课程管理' }
+        return item
+      })]
+      : TEACHER_NAV
   }
   if (isSalesReadOnlyUser(user, org)) {
     return SALES_READ_ONLY_NAV

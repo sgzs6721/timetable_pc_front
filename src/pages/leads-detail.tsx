@@ -3,7 +3,7 @@ import { Alert, Button, Drawer, Empty, Form, Input, Modal, Select, Space, Spin, 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { getJson, postJson } from '../api/biz'
 import { BusinessDateTimePicker } from '../components/BusinessDatePicker'
-import { PhoneCopyButton, copyPlainText, tell } from './kit'
+import { AppIcon, PhoneCopyButton, copyPlainText, tell } from './kit'
 import { LeadEditor } from './leads-editor'
 import { FOLLOW_CHANNELS, LEAD_STATUSES, isLeadClosed, isLeadDue, leadTime, statusInfo, type Lead, type LeadCampus, type LeadEvent, type LeadPage, type LeadSalesperson } from './leads-model'
 
@@ -20,7 +20,15 @@ function FollowEditor({ lead, onClose, onSaved }: { lead: Lead; onClose: () => v
       const values = await form.validateFields()
       setSaving(true); setSaveError('')
       const next = isLeadClosed(values.status) || !values.nextFollowAt ? null : `${values.nextFollowAt.slice(0, 16)}:00`
-      const result = await postJson<Lead>(`/leads/${lead.id}/follow-ups`, { ...values, nextFollowAt: next, version: lead.version })
+      const nextFollowContent = String(values.nextFollowContent || '').trim()
+      if (!next && nextFollowContent) throw new Error('请选择下次跟进时间')
+      if (next && !nextFollowContent) throw new Error('请填写下次跟进事项')
+      const result = await postJson<Lead>(`/leads/${lead.id}/follow-ups`, {
+        ...values,
+        nextFollowAt: next,
+        nextFollowContent: next ? nextFollowContent : null,
+        version: lead.version,
+      })
       message.success('跟进已记录')
       onSaved(result)
     } catch (error) {
@@ -38,13 +46,27 @@ function FollowEditor({ lead, onClose, onSaved }: { lead: Lead; onClose: () => v
       {!isLeadClosed(status) ? <Form.Item name="nextFollowAt" label="下次跟进时间" rules={[{ validator: (_, value) => !value || new Date(`${value.slice(0, 16)}:00+08:00`).getTime() > Date.now() ? Promise.resolve() : Promise.reject(new Error('下次跟进时间必须晚于当前时间')) }]} extra="选填；留空表示暂不安排下一次跟进。">
         <BusinessDateTimePicker placeholder="选择下一次联系时间" />
       </Form.Item> : <Alert type="info" showIcon message="保存后将结束当前跟进计划；后续仍可重新记录跟进。" />}
+      {!isLeadClosed(status) ? <Form.Item
+        name="nextFollowContent"
+        label="下次跟进事项"
+        dependencies={['nextFollowAt']}
+        extra="安排跟进时，时间和事项需要同时填写；两项都留空表示暂不安排。"
+        rules={[{ validator: (_, value) => {
+          const content = String(value || '').trim()
+          const scheduled = Boolean(form.getFieldValue('nextFollowAt'))
+          if (content.length > 200) return Promise.reject(new Error('下次跟进事项不能超过200个字'))
+          if (scheduled && !content) return Promise.reject(new Error('请填写下次跟进事项'))
+          if (!scheduled && content) return Promise.reject(new Error('请先选择下次跟进时间'))
+          return Promise.resolve()
+        } }]}
+      ><Input.TextArea autoSize={{ minRows: 2, maxRows: 4 }} maxLength={200} showCount placeholder="例如：确认试听时间、回访课程意向" /></Form.Item> : null}
     </Form>
     {saveError && <Alert type="error" showIcon message={saveError} />}
   </Modal>
 }
 
-export function LeadDetail({ id, salespeople, campuses, onClose, onChanged }: {
-  id: number; salespeople: LeadSalesperson[]; campuses: LeadCampus[]; onClose: () => void; onChanged: () => void
+export function LeadDetail({ id, salespeople, campuses, currentUserId, canAssignOwner, onClose, onChanged }: {
+  id: number; salespeople: LeadSalesperson[]; campuses: LeadCampus[]; currentUserId?: number; canAssignOwner: boolean; onClose: () => void; onChanged: () => void
 }) {
   const [lead, setLead] = useState<Lead | null>(null)
   const [events, setEvents] = useState<LeadEvent[]>([])
@@ -86,7 +108,7 @@ export function LeadDetail({ id, salespeople, campuses, onClose, onChanged }: {
     {error ? <Alert type="error" showIcon message={error} action={<Button onClick={load}>重试</Button>} /> : loading ? <div className="lead-loading"><Spin /></div> : lead && <>
       <div className="lead-identity">
         <div className="lead-identity-top">
-          <div className="lead-avatar">{lead.name.slice(0, 1)}</div>
+          <div className="lead-avatar lead-avatar--person" aria-label="客源头像"><AppIcon name="icon-person-neutral" size={30} /></div>
           <div>
             <h2>{lead.name} <Tag color={statusInfo(lead.status).color}>{statusInfo(lead.status).label}</Tag></h2>
             {lead.contactName ? <span>联系人：{lead.contactName}</span> : null}
@@ -101,7 +123,7 @@ export function LeadDetail({ id, salespeople, campuses, onClose, onChanged }: {
           <div className="lead-info-row"><span className="lead-info-label">负责人</span><em className={lead.ownerName ? undefined : 'lead-info-muted'}>{lead.ownerName || '待分配'}</em></div>
           {lead.nextFollowAt && !isLeadClosed(lead.status) ? <div className="lead-info-row">
             <span className="lead-info-label">下次跟进</span>
-            <em className={isLeadDue(lead) ? 'lead-info-time lead-due' : 'lead-info-time'}>{leadTime(lead.nextFollowAt)}</em>
+            <em className={isLeadDue(lead) ? 'lead-info-time lead-due' : 'lead-info-time'}>{leadTime(lead.nextFollowAt)}{lead.nextFollowContent ? ` · ${lead.nextFollowContent}` : ''}</em>
           </div> : null}
         </div>
       </div>
@@ -135,7 +157,7 @@ export function LeadDetail({ id, salespeople, campuses, onClose, onChanged }: {
       {events.length < total && <Button block loading={moreLoading} onClick={more}>加载更早记录</Button>}
         </div>
       </section>
-      {editor === 'profile' && <LeadEditor lead={lead} salespeople={salespeople} campuses={campuses} onClose={() => setEditor(null)} onSaved={saved} />}
+      {editor === 'profile' && <LeadEditor lead={lead} salespeople={salespeople} campuses={campuses} currentUserId={currentUserId} canAssignOwner={canAssignOwner} onClose={() => setEditor(null)} onSaved={saved} />}
       {editor === 'follow' && <FollowEditor lead={lead} onClose={() => setEditor(null)} onSaved={saved} />}
     </>}
   </Drawer>

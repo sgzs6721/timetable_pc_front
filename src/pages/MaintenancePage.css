@@ -1,0 +1,39 @@
+.maintenance-page {
+  position: relative;
+  min-height: 100vh;
+  overflow: hidden;
+  padding: 44px clamp(48px, 8vw, 132px) 34px;
+  display: flex;
+  flex-direction: column;
+  color: #173056;
+  background: linear-gradient(145deg, #f7fbff 0%, #edf5ff 48%, #f5fbfa 100%);
+}
+.maintenance-grid { position: absolute; inset: 0; opacity: .38; background-image: linear-gradient(rgba(76, 111, 165, .08) 1px, transparent 1px), linear-gradient(90deg, rgba(76, 111, 165, .08) 1px, transparent 1px); background-size: 42px 42px; mask-image: linear-gradient(to bottom, #000, transparent 78%); }
+.maintenance-glow { position: absolute; top: -230px; right: -80px; width: 720px; height: 720px; border-radius: 50%; background: radial-gradient(circle, rgba(60, 111, 224, .18), rgba(60, 111, 224, 0) 68%); }
+.maintenance-brand { position: relative; z-index: 1; display: flex; align-items: center; gap: 13px; }
+.maintenance-logo { width: 50px; height: 50px; padding: 6px; display: grid; place-items: center; border: 1px solid rgba(71, 112, 181, .16); border-radius: 15px; background: rgba(255, 255, 255, .82); box-shadow: 0 12px 30px rgba(38, 72, 128, .1); }
+.maintenance-brand > span:last-child { display: flex; flex-direction: column; line-height: 1.2; }
+.maintenance-brand strong { color: #203d68; font-size: 18px; letter-spacing: .04em; }
+.maintenance-brand small { margin-top: 4px; color: #7890b0; font-size: 10px; letter-spacing: .18em; text-transform: uppercase; }
+.maintenance-content { position: relative; z-index: 1; width: min(920px, 76vw); margin: auto 0; padding: 52px 0; }
+.maintenance-eyebrow { display: flex; align-items: center; gap: 9px; color: #4b73ba; font-size: 12px; font-weight: 700; letter-spacing: .17em; }
+.maintenance-eyebrow i { width: 8px; height: 8px; border-radius: 50%; background: #31a78b; box-shadow: 0 0 0 6px rgba(49, 167, 139, .12); }
+.maintenance-content h1 { max-width: 700px; margin: 24px 0 0; color: #17335e; font-size: clamp(46px, 5vw, 72px); line-height: 1.08; letter-spacing: -.045em; }
+.maintenance-content h1 span { display: block; color: #3f70d6; }
+.maintenance-description { max-width: 680px; margin: 24px 0 0; color: #617797; font-size: 17px; line-height: 1.85; }
+.maintenance-features { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-top: 38px; }
+.maintenance-features article { min-height: 142px; padding: 21px; display: flex; flex-direction: column; border: 1px solid rgba(90, 124, 177, .14); border-radius: 18px; background: rgba(255, 255, 255, .72); box-shadow: 0 16px 38px rgba(54, 82, 126, .07); backdrop-filter: blur(12px); }
+.maintenance-features article > span { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 11px; color: #3c6fda; background: #eaf2ff; font-size: 18px; }
+.maintenance-features article:nth-child(2) > span { color: #168b7a; background: #e7f7f3; }
+.maintenance-features article:nth-child(3) > span { color: #bd7a20; background: #fff4e4; }
+.maintenance-features strong { margin-top: 16px; color: #2e496f; font-size: 15px; }
+.maintenance-features small { margin-top: 5px; color: #8291a8; font-size: 12px; }
+.maintenance-status { margin-top: 22px; padding: 16px 18px; display: flex; align-items: center; justify-content: space-between; gap: 24px; border: 1px solid rgba(76, 113, 172, .15); border-radius: 18px; background: rgba(255, 255, 255, .82); box-shadow: 0 16px 42px rgba(39, 70, 118, .08); }
+.maintenance-live { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.maintenance-live > i { width: 10px; height: 10px; flex: 0 0 auto; border-radius: 50%; background: #29a487; box-shadow: 0 0 0 7px rgba(41, 164, 135, .12); }
+.maintenance-live span { min-width: 0; display: flex; flex-direction: column; }
+.maintenance-live strong { color: #395476; font-size: 14px; }
+.maintenance-live small { margin-top: 3px; color: #8a99ae; font-size: 12px; }
+.maintenance-status .ant-btn { min-width: 128px; }
+.maintenance-page footer { position: relative; z-index: 1; display: flex; align-items: center; gap: 8px; color: #7288a8; font-size: 12px; }
+@media (max-height: 760px) { .maintenance-page { padding-top: 28px; padding-bottom: 24px; } .maintenance-content { padding: 28px 0; } .maintenance-content h1 { margin-top: 16px; font-size: 46px; } .maintenance-description { margin-top: 16px; } .maintenance-features { margin-top: 24px; } .maintenance-features article { min-height: 118px; padding: 16px; } .maintenance-features strong { margin-top: 10px; } }

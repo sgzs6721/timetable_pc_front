@@ -4,6 +4,7 @@ import { getToken, rememberLoginRedirect } from './session'
 import { AppShell, type ShellContext } from './layouts/AppShell'
 import { LegalPage } from './pages/LegalPage'
 import { LoginPage } from './pages/LoginPage'
+import { MaintenancePage } from './pages/MaintenancePage'
 import { WechatCallbackPage } from './pages/WechatCallbackPage'
 import { InstitutionRouteGuard } from './routing/InstitutionRouteGuard'
 
@@ -58,6 +59,7 @@ export function App() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/maintenance" element={<MaintenancePage />} />
       <Route path="/login/wechat" element={<WechatCallbackPage />} />
       <Route path="/legal/:doc" element={<LegalPage />} />
       <Route element={<RequireAuth />}>

@@ -277,10 +277,12 @@ export function compareDetail(lesson: Schedule, templates: Schedule[]): { mark: 
   const lessonStart = toMinutes(start)
   const lessonEnd = toMinutes(clockText(lesson.endTime))
   if (!(lessonEnd > lessonStart)) return { mark: 'added', added: [], modified: [] }
-  const identityMatches = comparable.filter((item) => sameComparableIdentity(item, lesson))
-  const related = identityMatches.length ? identityMatches : comparable.filter((item) => {
+  // 分段颜色描述的是这一段时间是否仍被固定课占用，而不是固定课属于哪个学员。
+  // 同名课程出现在其它时段时，不能因此隐藏当前替换课程的新增分段。
+  const related = comparable.filter((item) => {
     const left = toMinutes(clockText(item.startTime))
-    return clockText(item.startTime) === start || (left >= lessonStart && left < lessonEnd)
+    const right = toMinutes(clockText(item.endTime))
+    return left < lessonEnd && right > lessonStart
   })
   const overlaps = mergeMinuteRanges(related.map((item) => ({
     start: Math.max(toMinutes(clockText(item.startTime)), lessonStart),

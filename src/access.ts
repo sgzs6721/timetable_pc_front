@@ -45,11 +45,16 @@ export function canViewLeadCampus(user: UserInfo | null, campusId?: number | nul
   return targetCampusId > 0 && (user.leadCampusIds || []).some((id) => Number(id) === targetCampusId)
 }
 
-/** 纯销售岗位可跨本人授课范围查看学员与课程，但不能执行管理操作。 */
-export function isSalesReadOnlyUser(user: UserInfo | null, org?: Organization | null): boolean {
+/** 销售可按授权校区查看教学信息；机构和校区管理员仍使用管理视图。 */
+export function hasSalesCampusScope(user: UserInfo | null, org?: Organization | null): boolean {
   return canViewLeads(user)
     && !isOrganizationManager(user, org)
     && campusAdminIds(user).length === 0
+}
+
+/** 纯销售岗位使用销售只读导航；同时带课的销售仍保留老师入口。 */
+export function isSalesReadOnlyUser(user: UserInfo | null, org?: Organization | null): boolean {
+  return hasSalesCampusScope(user, org)
     && user?.isSubstituteTeacher !== true
 }
 

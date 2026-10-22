@@ -2,7 +2,7 @@ import { Button, Drawer, Form, Input, Modal, Select, Table, Tag, message } from 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { getJson, putJson } from '../api/biz'
-import { canViewLeadCampus, isSalesReadOnlyUser } from '../access'
+import { canViewLeadCampus, canViewLeads } from '../access'
 import { AppIcon, NeedCampus, PageHead, genderText, money, studentStatusText, tell, useShell } from './kit'
 import { StudentDetail } from './student-detail'
 import { AddStudent, CoachTransfer } from './student-profile'
@@ -158,7 +158,7 @@ export function StudentsPage() {
   const currentOrg = shell.organizations.find((item) => item.id === shell.currentOrgId) || null
   const canManageRole = userReady && managesStudents(shell.user, currentOrg, campusId)
   const salesReadOnly = userReady
-    && isSalesReadOnlyUser(shell.user, currentOrg)
+    && canViewLeads(shell.user, currentOrg)
     && canViewLeadCampus(shell.user, campusId)
   const canViewAllStudents = canManageRole || salesReadOnly
   const canManage = canManageRole && !campusHidden

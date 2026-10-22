@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { clearAuthentication, getOrgId, getToken, rememberLoginRedirect } from '../session'
+import { isMaintenanceResponse, redirectToMaintenance } from '../maintenance'
 import type { ApiResult } from './types'
 
 const ONLINE_API_BASE_URL = 'https://timetable.devtesting.top/api'
@@ -10,7 +11,7 @@ function localApiBaseUrl(): string {
   return '/api'
 }
 
-function resolveApiBaseUrl(): string {
+export function resolveApiBaseUrl(): string {
   // 开发环境通过 Vite 同源代理访问后端，避免回环地址与端口差异触发 CORS。
   if (import.meta.env.DEV) {
     return localApiBaseUrl()
@@ -60,6 +61,10 @@ http.interceptors.request.use((config) => {
 http.interceptors.response.use(
   (response) => {
     const body = response.data as ApiResult<unknown>
+    if (isMaintenanceResponse(response.status, body)) {
+      redirectToMaintenance(body)
+      return Promise.reject(new Error('系统正在维护'))
+    }
     if (body && typeof body.code === 'number' && body.code !== 200) {
       if (body.code === 401) {
         expireAccountSession()
@@ -69,6 +74,10 @@ http.interceptors.response.use(
     return response
   },
   (error) => {
+    if (isMaintenanceResponse(error?.response?.status, error?.response?.data)) {
+      redirectToMaintenance(error.response.data)
+      return Promise.reject(new Error('系统正在维护'))
+    }
     const message = error?.response?.data?.message || error?.message || '网络异常'
     if (error?.response?.status === 401) {
       expireAccountSession()

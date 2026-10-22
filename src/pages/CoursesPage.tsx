@@ -2,7 +2,7 @@ import { Button, Form, Input, InputNumber, Modal, Popconfirm, Select, Space, Swi
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { delJson, getJson, postJson, putJson } from '../api/biz'
-import { canManageCampus, canViewLeadCampus, isSalesReadOnlyUser, subscriptionBlocksPath, subscriptionExpiredText } from '../access'
+import { canManageCampus, canViewLeadCampus, canViewLeads, subscriptionBlocksPath, subscriptionExpiredText } from '../access'
 import { NeedCampus, PageHead, clampDecimalInput, genderText, money, tell, useShell } from './kit'
 
 interface Course {
@@ -375,7 +375,7 @@ export function CoursesPage() {
   const [members, setMembers] = useState<Course | null>(null)
   const currentOrg = shell.organizations.find((item) => item.id === shell.currentOrgId) || null
   const canManageCourses = canManageCampus(shell.user, shell.campusId, currentOrg)
-  const salesReadOnly = isSalesReadOnlyUser(shell.user, currentOrg)
+  const salesReadOnly = canViewLeads(shell.user, currentOrg)
     && canViewLeadCampus(shell.user, shell.campusId)
   const canViewAllCourses = canManageCourses || salesReadOnly
 
@@ -420,7 +420,7 @@ export function CoursesPage() {
   async function load() {
     if (!shell.campusId) return
     const [courses, teacherList, campus] = await Promise.all([
-      getJson<Course[]>('/student-groups/list', { campusId: shell.campusId, includeInternal: true, selfOnly: true }),
+      getJson<Course[]>('/student-groups/list', { campusId: shell.campusId, includeInternal: true, selfOnly: !canViewAllCourses }),
       getJson<Coach[]>(`/campus-teacher/campus/${shell.campusId}`),
       getJson<{ visibleInList?: boolean | number | string }>(`/campus/${shell.campusId}`).catch(() => null),
     ])
@@ -432,7 +432,7 @@ export function CoursesPage() {
 
   useEffect(() => {
     load().catch((error) => message.error(tell(error, '课程加载失败')))
-  }, [shell.campusId])
+  }, [shell.campusId, canViewAllCourses])
 
   const text = keyword.trim().toLowerCase()
   const visible = rows.filter((item) => {

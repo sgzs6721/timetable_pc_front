@@ -706,9 +706,6 @@ export function paymentFormError(values: Record<string, unknown>, student: Stude
   const regularAvailable = limits?.regular ?? Number(card?.regularHours ?? card?.remainingHours ?? student.remainingHours ?? 0)
   const giftAvailable = limits?.gift ?? Number(card?.bonusHours ?? student.bonusHours ?? 0)
   if (type === 'refund' && hoursCard) {
-    if (regularAvailable > 0 && hours <= 0) return '请填写退费正课'
-    if (giftAvailable > 0 && gift <= 0) return '请填写退费赠课'
-    if (hours <= 0 && gift <= 0) return '请填写退费正课和退费赠课'
     if (hours > regularAvailable) return `最多可退${regularAvailable}课时正课`
     if (gift > giftAvailable) return `最多可退${giftAvailable}课时赠课`
   }

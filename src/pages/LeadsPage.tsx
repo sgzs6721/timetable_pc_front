@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { getJson } from '../api/biz'
 import { canFilterLeadSalespeople, canViewLeads } from '../nav'
-import { PageHead, PhoneCopyButton, copyPlainText, tell, useShell } from './kit'
+import { AppIcon, PageHead, PhoneCopyButton, copyPlainText, tell, useShell } from './kit'
 import { LeadDetail } from './leads-detail'
 import { LeadEditor } from './leads-editor'
 import { LEAD_STATUSES, isLeadClosed, isLeadDue, leadTime, statusInfo, type Lead, type LeadCampus, type LeadPage, type LeadSalesperson, type LeadSummary } from './leads-model'
@@ -57,7 +57,7 @@ function LeadWorkspace({ userId, currentCampusId, canFilterOwners }: { userId?: 
   function filter(next: Filters) { setFilters(next); setPage(1) }
   function select(id?: number) { setParams(id ? { leadId: String(id) } : {}) }
   const hasFilters = Object.values(filters).some((value) => value !== undefined && value !== '')
-  const mySales = salespeople.filter((person) => person.userId === userId)
+  const mySales = salespeople.filter((person) => Number(person.userId || 0) === Number(userId || 0))
   const cards = [
     { label: '全部客源', value: summary?.total, icon: <TeamOutlined />, tone: 'blue', filter: {} },
     { label: '新客源', value: summary?.fresh, icon: <UserAddOutlined />, tone: 'cyan', filter: { status: 'NEW' } },
@@ -66,7 +66,7 @@ function LeadWorkspace({ userId, currentCampusId, canFilterOwners }: { userId?: 
     { label: '已成交', value: summary?.won, icon: <CheckCircleOutlined />, tone: 'green', filter: { status: 'SOLD' } },
   ]
   return <div className="work-page leads-page">
-    <PageHead title="客源管理" extra="按校区查看客源并分配销售负责人。销售人员在小程序跟进本校区客户。" />
+    <PageHead title="客源管理" extra="按校区查看客源、分配负责人并持续记录跟进。" />
     <section className="lead-overview" aria-label="机构客源概况">{cards.map((card) => <button type="button" key={card.label} className={`lead-stat lead-stat--${card.tone}`} onClick={() => { filter(card.filter); setSearch('') }}>
       <span className="lead-stat-icon">{card.icon}</span><span><small>{card.label}</small><strong>{card.value ?? '—'}</strong></span>
     </button>)}</section>
@@ -84,7 +84,7 @@ function LeadWorkspace({ userId, currentCampusId, canFilterOwners }: { userId?: 
         onRow={(row) => ({ onClick: () => select(row.id), style: { cursor: 'pointer' } })}
         pagination={{ current: page, pageSize: PAGE_SIZE, total: data.total, showSizeChanger: false, showTotal: (total) => `共 ${total} 个客源`, onChange: setPage }}
         locale={{ emptyText: <Empty description={error ? '加载失败，请重试' : hasFilters ? '没有符合筛选条件的客源' : '录入第一位客户，开始跟进'}>{!error && (hasFilters ? <Button onClick={() => { setSearch(''); filter({}) }}>重置筛选</Button> : <Button type="primary" onClick={() => setCreating(true)}>录入客源</Button>)}</Empty> }} columns={[
-          { title: '客户', key: 'name', width: 170, fixed: 'left', render: (_, row) => <div className="lead-customer"><span className="lead-avatar">{row.name.slice(0, 1)}</span><div className="lead-customer-text"><span className="lead-customer-name" title={row.name}>{row.name}</span>{row.contactName ? <small title={row.contactName}>{row.contactName}</small> : null}</div></div> },
+          { title: '客户', key: 'name', width: 190, fixed: 'left', render: (_, row) => <div className="lead-customer"><span className={`lead-avatar lead-avatar--${String(row.gender || '').toLowerCase()}`}><AppIcon name={row.gender === 'MALE' ? 'icon-person-male' : row.gender === 'FEMALE' ? 'icon-person-female' : 'icon-person-neutral'} size={22} /></span><div className="lead-customer-text"><span className="lead-customer-name" title={row.name}>{row.name}{row.gender === 'MALE' || row.gender === 'FEMALE' ? <AppIcon className={row.gender === 'MALE' ? 'lead-gender is-male' : 'lead-gender is-female'} name={row.gender === 'MALE' ? 'icon-gender-male' : 'icon-gender-female'} size={13} /> : null}{row.age != null ? <small className="lead-age">{row.age}岁</small> : null}</span>{row.contactName ? <small title={row.contactName}>{row.contactName}</small> : null}</div></div> },
           { title: '联系电话', dataIndex: 'phone', width: 190, render: (phone: string) => phone ? <Space size={4} onClick={(event) => event.stopPropagation()}><a href={`tel:${phone}`}>{phone}</a><span className="lead-copy-dot">·</span><PhoneCopyButton onClick={async () => { if (await copyPlainText(phone)) message.success('已复制'); else message.error('复制失败') }} /></Space> : '—' },
           { title: '客源渠道', dataIndex: 'source', width: 110, render: (source: string) => source || '—' },
           ...(campuses.length > 1 ? [{ title: '校区', dataIndex: 'campusId', width: 120, render: (id: number | null) => campuses.find((item) => item.id === id)?.name || (id ? '—' : '未分配校区') }] : []),
@@ -93,7 +93,7 @@ function LeadWorkspace({ userId, currentCampusId, canFilterOwners }: { userId?: 
           { title: '下次跟进', key: 'next', width: 175, render: (_, row) => isLeadClosed(row.status) ? <span className="lead-muted">—</span> : <span className={isLeadDue(row) ? 'lead-due' : 'lead-muted'}>{isLeadDue(row) && <ClockCircleOutlined />} {leadTime(row.nextFollowAt)}</span> },
         ]} />
     </section>
-    {creating && <LeadEditor currentCampusId={currentCampusId} salespeople={salespeople} campuses={campuses} onClose={() => setCreating(false)} onSaved={(lead) => { setCreating(false); select(lead.id); void load() }} />}
-    {selectedId && <LeadDetail key={selectedId} id={selectedId} salespeople={salespeople} campuses={campuses} onClose={() => select()} onChanged={load} />}
+    {creating && <LeadEditor currentCampusId={currentCampusId} currentUserId={userId} canAssignOwner={canFilterOwners} salespeople={salespeople} campuses={campuses} onClose={() => setCreating(false)} onSaved={(lead) => { setCreating(false); select(lead.id); void load() }} />}
+    {selectedId && <LeadDetail key={selectedId} id={selectedId} currentUserId={userId} canAssignOwner={canFilterOwners} salespeople={salespeople} campuses={campuses} onClose={() => select()} onChanged={load} />}
   </div>
 }

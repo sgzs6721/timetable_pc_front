@@ -2,7 +2,7 @@ import { Button, Form, Input, InputNumber, Modal, Popconfirm, Select, Space, Tab
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { delJson, getJson, postJson, putJson } from '../api/biz'
-import { canManageCampus } from '../access'
+import { canManageCampus, isOrganizationManager } from '../access'
 import { NeedOrg, PageHead, PhoneCopyButton, clampDecimalInput, copyPlainText, tell, useShell } from './kit'
 import { CoursePricings } from './campus-course-pricing'
 import { CampusAffairs } from './campus-affairs'
@@ -63,6 +63,7 @@ export function CampusPage() {
   const currentOrg = shell.organizations.find((item) => item.id === shell.currentOrgId) || null
   const salaryAllowed = canManageCampusSalary(shell.user, currentOrg, campusId)
   const profitSharingAllowed = canManageCampus(shell.user, campusId, currentOrg)
+  const canImportCampusStaff = isOrganizationManager(shell.user, currentOrg)
   return (
     <NeedOrg orgId={shell.currentOrgId}>
       <PageHead title="校区管理" extra="校区资料、服务、老师、职位、权限和工资。" />
@@ -82,7 +83,7 @@ export function CampusPage() {
             ...(profitSharingAllowed ? [{ key: 'profitSharing', label: '支付分账', children: <CampusProfitSharing campusId={campusId} /> }] : []),
           ]} /> },
           { key: 'staff', label: '人员设置', children: <Tabs className="campus-sub-tabs" activeKey={staffTab} onChange={setStaffTab} items={[
-            { key: 'teachers', label: '老师列表', children: <Teachers campusId={campusId} onCampusChanged={shell.reload} /> },
+            { key: 'teachers', label: '老师列表', children: <Teachers campusId={campusId} canImportCampusStaff={canImportCampusStaff} onCampusChanged={shell.reload} /> },
             { key: 'positions', label: '职位设置', children: <Positions campusId={campusId} /> },
           ]} /> },
           { key: 'salary', label: '工资设置', children: salaryAllowed ? <CampusSalary campusId={campusId} /> : <p>当前不能设置员工工资</p> },

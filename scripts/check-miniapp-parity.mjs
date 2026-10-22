@@ -97,6 +97,11 @@ if (!routes.includes('<Route element={<InstitutionRouteGuard />}>')
   || !institutionRouteGuard.includes("'/home', '/account', '/membership', '/guide', '/feedback'")) {
   authContractFailures.push('机构业务路由必须在请求页面数据前按账号角色拦截越权直达')
 }
+if (!routes.includes('path="/maintenance"')
+  || !http.includes('isMaintenanceResponse(error?.response?.status')
+  || !source('src/pages/MaintenancePage.tsx').includes('/auth/validate?_maintenance_check=')) {
+  authContractFailures.push('HTTP 503 + 50301 必须进入公开维护页，并支持不经过拦截器的恢复检测')
+}
 
 const behaviorContracts = [
   {
@@ -132,8 +137,8 @@ const behaviorContracts = [
   },
   {
     label: '固定课表对比必须过滤删除标记，并把跨行取消时段保持为单一连续块',
-    files: ['src/pages/schedule-board-helpers.tsx', 'src/pages/schedule-cell-dialog.tsx', 'src/styles/work-schedule-board.css'],
-    need: ['Number(row.uiChangeStatus) !== 3 && Number(row.uiChangeStatus) !== 4', 'subtractMinuteRange(range, blockers)', '<em>班级</em>', '让跨行的固定课仍是一个完整取消框'],
+    files: ['src/pages/schedule-board-helpers.tsx', 'src/pages/SchedulePage.tsx', 'src/pages/schedule-cell-dialog.tsx', 'src/styles/work-schedule-board.css'],
+    need: ['Number(row.uiChangeStatus) !== 3 && Number(row.uiChangeStatus) !== 4', 'subtractMinuteRange(range, blockers)', 'left < lessonEnd && right > lessonStart', 'templateMode ? visibleLeaveSlices(lesson, own, cancelMarks) : []', '<em>班级</em>', '让跨行的固定课仍是一个完整取消框'],
   },
   {
     label: '本周拖动固定课实例不能修改模板，拖动时必须隔离页面回弹',
@@ -178,27 +183,52 @@ const behaviorContracts = [
   },
   {
     label: '客源录入必须优先当前校区、限制姓名长度并保护销售人员筛选名单',
-    files: ['src/pages/LeadsPage.tsx', 'src/pages/leads-editor.tsx', 'src/access.ts', 'src/nav.ts'],
+    files: ['src/pages/LeadsPage.tsx', 'src/pages/leads-editor.tsx', 'src/pages/leads-detail.tsx', 'src/pages/leads-model.ts', 'src/access.ts', 'src/nav.ts'],
     need: [
       'currentCampusId={shell.campusId}',
       '客户姓名不能超过6个字',
       '联系人不能超过6个字',
       'canFilterLeadSalespeople',
       'canFilterOwners ? <Select',
+      'canAssignOwner={canFilterOwners}',
+      'LEAD_PHONE_MAX_LENGTH = 11',
+      'nextFollowContent',
+      '请填写下次跟进事项',
     ],
   },
   {
-    label: '纯销售岗位必须按客源校区只读查看学员和课程，带课销售继续使用本人教学范围',
-    files: ['src/access.ts', 'src/nav.ts', 'src/pages/StudentsPage.tsx', 'src/pages/CoursesPage.tsx'],
+    label: '销售岗位（包括带课销售）必须按客源校区只读查看学员、课程和活动课表',
+    files: ['src/access.ts', 'src/nav.ts', 'src/pages/StudentsPage.tsx', 'src/pages/CoursesPage.tsx', 'src/pages/schedule-controller.ts', 'src/pages/SchedulePage.tsx'],
     need: [
+      'hasSalesCampusScope',
       'isSalesReadOnlyUser',
       'user?.isSubstituteTeacher !== true',
       'SALES_READ_ONLY_NAV',
+      "{ key: 'schedule', label: '校区课表', path: '/schedule' }",
+      'canViewLeads(shell.user, currentOrg)',
       'canViewLeadCampus(shell.user, campusId)',
       'const canViewAllStudents = canManageRole || salesReadOnly',
       'const canViewAllCourses = canManageCourses || salesReadOnly',
       '销售岗位仅可查看负责校区',
+      'if (salesCampusView) return false',
+      "Number(item.isDefault) === 1",
+      "title={salesCampusView ? '校区课表'",
     ],
+  },
+  {
+    label: '退费允许只退金额，不能强制填写正课或赠课扣减',
+    file: 'src/pages/student-payments.tsx',
+    need: [
+      'if (type === \'refund\' && hoursCard) {',
+      'if (hours > regularAvailable)',
+      'if (gift > giftAvailable)',
+    ],
+    reject: ['请填写退费正课', '请填写退费赠课'],
+  },
+  {
+    label: '跨校区导入人员仅机构管理员或协同管理员可用',
+    files: ['src/pages/CampusPage.tsx', 'src/pages/campus-staff.tsx'],
+    need: ['canImportCampusStaff={canImportCampusStaff}', '仅机构管理员或协同管理员可导入'],
   },
   {
     label: '转入流水仅可改有效期，补缴有效期不能早于补缴日期',
@@ -265,7 +295,11 @@ const behaviorContracts = [
 const behaviorContractFailures = behaviorContracts.flatMap((contract) => {
   const contents = (contract.files || [contract.file]).map(source).join('\n')
   const missing = contract.need.filter((needle) => !contents.includes(needle))
-  return missing.length ? [`${contract.label}（缺少：${missing.join('、')}）`] : []
+  const forbidden = (contract.reject || []).filter((needle) => contents.includes(needle))
+  return [
+    ...(missing.length ? [`${contract.label}（缺少：${missing.join('、')}）`] : []),
+    ...(forbidden.length ? [`${contract.label}（仍包含：${forbidden.join('、')}）`] : []),
+  ]
 })
 
 if (missingPages.length || missingRoutes.length || authContractFailures.length || behaviorContractFailures.length) {
