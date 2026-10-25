@@ -38,7 +38,7 @@ const { StudentDetail } = load(source('student-detail.tsx'))
 const { StudentPaymentHistory } = load(source('student-payment-history.tsx'))
 const { paymentValidityCell } = load(source('student-payments.tsx'))
 const { periodTransferable, suggestedTransferAmount } = load(source('student-campus-transfer.tsx'))
-const mini = createRequire(import.meta.url)(resolve(root, '../timetable_miniapp1/miniprogram/utils/period-entitlement.js'))
+const mini = createRequire(import.meta.url)(resolve(root, '../timetable_miniapp1/miniprogram/subpackages/student/utils/period-entitlement.js'))
 
 const period = {
   id: 11, cardCategory: 'PERIOD', periodType: 'MONTH', courseCategory: true,
