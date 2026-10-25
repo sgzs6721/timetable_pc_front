@@ -68,6 +68,8 @@ export interface Card {
   lastCourseDate?: string
   expiredHours?: number
   fullyRefunded?: boolean
+  fullyTransferred?: boolean
+  transferOutDate?: string
 }
 
 export interface ServiceRight {
@@ -112,6 +114,7 @@ export interface Named {
 
 export interface PayRecord {
   id: number
+  deleted?: number
   type?: string
   typeText?: string
   amount?: number

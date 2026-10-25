@@ -6,6 +6,7 @@ import { money, tell, todayIso } from './kit'
 import type { Student, Card, Named, PayRecord } from './students-model'
 import { isActiveTeachingCoach, serviceOriginalPrice, sliceDecimal, syncTransferDiscount, syncTransferPrice } from './student-card-desk'
 import { cardCategoryText, personName } from './students-domain'
+import { isTransferredPeriodCard, resolvePeriodEntitlement } from './student-period-entitlement'
 
 export function CampusTransfer(props: { student: Student; campuses: Named[]; onDone: () => Promise<void> }) {
   const [open, setOpen] = useState(false)
@@ -485,13 +486,11 @@ export function needsTransferService(card: Card): boolean {
 
 export function periodTransferable(card: Card, payments: PayRecord[]): boolean {
   if (String(card.cardCategory || '').toUpperCase() !== 'PERIOD') return true
+  if (isTransferredPeriodCard(card)) return false
   const today = todayIso()
-  return payments.some((record) => (
-    (!record.studentCardId || record.studentCardId === card.id)
-    && (record.type === 'new' || record.type === 'renew' || (record.type === 'adjustment' && record.adjustmentReason === 'transfer'))
-    && !!record.validEndDate
-    && record.validEndDate >= today
-  )) || (!payments.length && !!card.validEndDate && card.validEndDate >= today)
+  const scoped = payments.filter((record) => !record.studentCardId || record.studentCardId === card.id)
+  return resolvePeriodEntitlement(scoped).ownedRecords.some((record) => record.validEndDate && record.validEndDate >= today)
+    || (!payments.length && !!card.validEndDate && card.validEndDate >= today)
 }
 
 export function suggestedTransferAmount(card: Card, payments: PayRecord[], hours?: number, includeUnscoped = true): number {
@@ -500,8 +499,9 @@ export function suggestedTransferAmount(card: Card, payments: PayRecord[], hours
   const funding = scoped.filter((record) => record.type === 'new' || record.type === 'renew' || (record.type === 'adjustment' && record.adjustmentReason === 'transfer'))
   if (category === 'STORED_VALUE') return Number(card.remainingAmount || 0)
   if (category === 'PERIOD') {
+    if (isTransferredPeriodCard(card)) return 0
     const today = todayIso()
-    const record = [...funding].reverse().find((item) => item.validEndDate && item.validEndDate >= today)
+    const record = [...resolvePeriodEntitlement(scoped).ownedRecords].reverse().find((item) => item.validEndDate && item.validEndDate >= today)
     return Number(record?.amount || 0)
   }
   const maxHours = Number(card.remainingHours || 0)

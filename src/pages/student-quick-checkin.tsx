@@ -165,6 +165,13 @@ export function QuickCheckIn(props: {
       const preferred = Number(props.preferredCardId || 0)
       const source = activeStudentCards(loaded)
       const eligible = source.filter((card) => checkInCardEligible(card, loaded, source.length === 1 || (preferred > 0 && Number(card.id || 0) === preferred)))
+      if (props.cardSelectionLocked && preferred > 0 && !eligible.some((card) => card.id === preferred)) {
+        const selected = source.find((card) => card.id === preferred)
+        message.warning(selected ? checkInBlockReason(loaded, selected) || '当前卡暂无可用权益，不能打卡' : '该卡已不可用')
+        props.onClose()
+        paymentRequest.catch(() => undefined)
+        return null
+      }
       if (!eligible.length) {
         message.warning(noEligibleCheckInMessage(loaded, source))
         props.onClose()
@@ -202,7 +209,7 @@ export function QuickCheckIn(props: {
       props.onClose()
     })
     return () => { active = false }
-  }, [student, props.preferredCardId])
+  }, [student, props.preferredCardId, props.cardSelectionLocked])
   const cards = (full?.cards || []).filter((card) => card.status !== 0)
   const card = cards.find((item) => item.id === cardId) || cards[0]
   const checkDate = card

@@ -3,6 +3,8 @@ import { Button, Tooltip } from 'antd'
 import { useLayoutEffect, type ReactNode } from 'react'
 import { useOutletContext } from 'react-router-dom'
 import type { ShellContext } from '../layouts/AppShell'
+import type { Card } from './students-model'
+import { hasOnlyTransferredRights } from './student-period-entitlement'
 
 export function useShell(): ShellContext {
   return useOutletContext<ShellContext>()
@@ -125,12 +127,14 @@ export function isPendingPayment(student: {
 
 export function studentStatusText(student: {
   status?: number
+  cards?: Card[]
   cardCategory?: string
   remainingHours?: number
   remainingAmount?: number
   totalAmount?: number
 }): string {
   if (Number(student.status || 0) === 2) return '结业'
+  if (hasOnlyTransferredRights(student.cards || [])) return '已转出'
   if (isPendingPayment(student)) return '待缴费'
   return '在学'
 }

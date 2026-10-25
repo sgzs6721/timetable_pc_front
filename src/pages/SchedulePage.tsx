@@ -21,6 +21,7 @@ import { ScheduleDialogs } from './schedule-dialogs'
 import { buildTimetableSummary, dateRangeIncludesDayOfWeek, isOutsideTimetableDateRange, isScheduleConflictMessage } from './schedule-policy'
 import { ScheduleWeekPicker } from './schedule-week-picker'
 import { buildDayComparison, compareSegmentStyle } from './schedule-day-comparison'
+import { BatchSelectionLayer } from './schedule-batch-selection'
 
 function showScheduleOperationError(error: unknown, fallback: string) {
   const text = tell(error, fallback)
@@ -36,6 +37,15 @@ export function SchedulePage() {
   const { groups, groupsLoading, archived, setArchived, dayBand, setDayBand, selecting, setSelecting, current, setCurrent, weekStart, setWeekStart, mode, schedules, templateSchedules, instantiatedWeeks, instantiatedWeeksLoading, setCreating, setCell, placement, setPlacement, batch, setBatch, deleting, setDeleting, deleteIds, setDeleteIds, setCampusFilter, setDragAction, dragHover, setDragHover, dragGuard, dragLessonKey, campusId, activeTimetableCampusId, canCreate, canManageCurrent, canManageTimetable, salesCampusView, days, splitWeekend, templateMode, boardSchedules, campusLegend, activeCampusId, boardDays, splitHead, slots, limits, loadGroups, loadWeek, switchBoardMode, removeSchedule, moveSchedule, copySchedule, openOverview, onTimetableMenu, openDay, choosePlacement, ensureScheduleDateManageable, ensureTemplateDayManageable } = vm
   const visibleGroups = groups.filter((group) => ((archived ? group.archivedTimetables : group.activeTimetables) || []).length > 0)
   const timetableSummary = buildTimetableSummary(current)
+  const chooseBatchRange = (day: number, date: string, start: string, end: string) => {
+    if (dragGuard.current || archived || Number(current?.status) === 2) return
+    if (!ensureTemplateDayManageable(day) || !ensureScheduleDateManageable(activeTimetableCampusId, templateMode ? '' : date)) return
+    if (boardSchedules.some((lesson) => lessonOverlaps(lesson, day, date, start, end))) {
+      message.warning('批量排课时请选择空白时间段')
+      return
+    }
+    setBatch((previous) => toggleBatchRange(previous, date, start, end))
+  }
   const setScheduleDragLock = (active: boolean) => {
     document.documentElement.classList.toggle('schedule-dragging', active)
     document.body.classList.toggle('schedule-dragging', active)
@@ -226,6 +236,7 @@ export function SchedulePage() {
                         const next = !selecting
                         setSelecting(next)
                         setDeleting(false)
+                        setPlacement(null)
                         setBatch([])
                         setDeleteIds([])
                         if (next) message.info('请选择要排课的空白时间段')
@@ -387,7 +398,7 @@ export function SchedulePage() {
                             <button
                               key={key}
                               type="button"
-                              className={['tt-slot', selecting && batch.includes(batchKey(date, slot.start, slot.end)) ? 'is-picked' : '', placement?.targets.some((item) => item.date === date && item.start === slot.start) ? 'is-target' : ''].filter(Boolean).join(' ')}
+                              className={['tt-slot', placement?.targets.some((item) => item.date === date && item.start === slot.start) ? 'is-target' : ''].filter(Boolean).join(' ')}
                               title={outsideDateRange ? (templateMode ? '该星期不在课表日期范围内' : '该日期不在课表有效期内') : undefined}
                               onDragOver={(event) => {
                                 if (outsideDateRange || !canManageCurrent || archived || Number(current.status) === 2) return
@@ -459,9 +470,7 @@ export function SchedulePage() {
                                   return
                                 }
                                 if (selecting && !deleting) {
-                                  const minutes = toMinutes(slot.end) - toMinutes(slot.start)
-                                  if (minutes >= 60 && blankSegments(slot, own).length === 0) return
-                                  setBatch(toggleBatchRange(batch, date, slot.start, slot.end))
+                                  chooseBatchRange(day, date, slot.start, slot.end)
                                   return
                                 }
                                 if (deleting) {
@@ -486,65 +495,42 @@ export function SchedulePage() {
                             </button>
                           )
                         })}
-                        {!outsideDateRange && (selecting || placement) ? slots.flatMap((slot) => {
+                        {!outsideDateRange && selecting ? <BatchSelectionLayer date={date} slots={slots} lessons={own} batch={batch} onToggle={(start, end) => chooseBatchRange(day, date, start, end)} /> : null}
+                        {!outsideDateRange && placement ? slots.flatMap((slot) => {
                           if (own.some((lesson) => lessonOverlaps(lesson, day, date, slot.start, slot.end))) return []
                           if (blankSegments(slot, own).length) return []
                           const minutes = toMinutes(slot.end) - toMinutes(slot.start)
                           if (minutes < 60) return []
                           const half = fromMinutes(toMinutes(slot.start) + Math.floor(minutes / 2))
                           const dayEnd = slots[slots.length - 1]?.end || slot.end
-                          const sourceDuration = placement
-                            ? Math.max(30, toMinutes(clockText(placement.schedule.endTime)) - toMinutes(clockText(placement.schedule.startTime)))
-                            : 0
+                          const sourceDuration = Math.max(30, toMinutes(clockText(placement.schedule.endTime)) - toMinutes(clockText(placement.schedule.startTime)))
                           const roomFrom = (start: string) => freeUntil(start, own, placement?.schedule.id, dayEnd) - toMinutes(start)
-                          const halves = placement
-                            ? [{ start: slot.start, end: half }, ...(roomFrom(half) >= sourceDuration ? [{ start: half, end: slot.end }] : [])]
-                            : [{ start: slot.start, end: half }, { start: half, end: slot.end }]
-                          const halfButtons = halves.map((range) => {
+                          const halves = [{ start: slot.start, end: half }, ...(roomFrom(half) >= sourceDuration ? [{ start: half, end: slot.end }] : [])]
+                          return halves.map((range) => {
                             const frame = rangeFrame(range.start, range.end, slots)
-                            const picked = selecting && batch.includes(batchKey(date, range.start, range.end))
                             const placed = !!placement?.targets.some((item) => item.date === date && item.start === range.start)
                             return (
                               <button
                                 key={`${date}-half-${range.start}`}
                                 type="button"
-                                className={picked ? 'tt-batch-half is-picked' : placed ? 'tt-batch-half is-target' : 'tt-batch-half'}
+                                className={placed ? 'tt-batch-half is-target' : 'tt-batch-half'}
                                 aria-label={`${range.start}-${range.end}`}
                                 style={{ top: frame.top, height: frame.height }}
                                 onClick={(event) => {
                                   event.stopPropagation()
-                                  if (placement) choosePlacement(day, date, range.start, own)
-                                  else setBatch(toggleBatchRange(batch, date, range.start, range.end))
+                                  choosePlacement(day, date, range.start, own)
                                 }}
                               />
                             )
                           })
-                          if (placement) return halfButtons
-                          const spanEndMin = toMinutes(half) + 60
-                          const spanEnd = fromMinutes(spanEndMin)
-                          if (freeUntil(half, own, undefined, dayEnd) < spanEndMin) return halfButtons
-                          const anchor = rangeFrame(half, slot.end, slots)
-                          return halfButtons.concat(
-                            <button
-                              key={`${date}-span-${half}`}
-                              type="button"
-                              className={batch.includes(batchKey(date, half, spanEnd)) ? 'tt-batch-span is-picked' : 'tt-batch-span'}
-                              aria-label={`${half}-${spanEnd}`}
-                              style={{ top: anchor.top + anchor.height - 20, right: 8 }}
-                              onClick={(event) => {
-                                event.stopPropagation()
-                                setBatch(toggleBatchRange(batch, date, half, spanEnd))
-                              }}
-                            />,
-                          )
                         }) : null}
-                        {slots.flatMap((slot) => blankSegments(slot, own).map((segment) => {
+                        {!selecting && slots.flatMap((slot) => blankSegments(slot, own).map((segment) => {
                           const frame = rangeFrame(segment.start, segment.end, slots)
                           return (
                             <button
                               key={`${date}-${segment.start}-${segment.end}`}
                               type="button"
-                              className={selecting && batch.includes(batchKey(date, segment.start, segment.end)) ? 'tt-blank is-picked' : placement?.targets.some((item) => item.date === date && item.start === segment.start) ? 'tt-blank is-target' : 'tt-blank'}
+                              className={placement?.targets.some((item) => item.date === date && item.start === segment.start) ? 'tt-blank is-target' : 'tt-blank'}
                               aria-label={`${segment.start}-${segment.end}`}
                               style={{ top: frame.top, height: frame.height }}
                               onClick={() => {
@@ -555,10 +541,6 @@ export function SchedulePage() {
                                 }
                                 if (deleting) {
                                   message.warning('请选择有内容的单元格')
-                                  return
-                                }
-                                if (selecting) {
-                                  setBatch(toggleBatchRange(batch, date, segment.start, segment.end))
                                   return
                                 }
                                 if (placement) {
@@ -597,7 +579,7 @@ export function SchedulePage() {
                             </div>
                           )
                         }) : null}
-                        {cancelMarks.map((segment) => {
+                        {!selecting && cancelMarks.map((segment) => {
                           const frame = rangeFrame(segment.start, segment.end, slots)
                           const actionable = !!segment.leaveScheduleId && canManageCurrent && !archived && Number(current.status) !== 2
                           const style = { top: frame.top, height: frame.height }
@@ -765,7 +747,7 @@ export function SchedulePage() {
                   const occupied = batch.some((item) => {
                     const parsed = parseBatchKey(item)
                     const day = days.find((value) => addDays(weekStart, value - 1) === parsed.date) || 1
-                    return schedules.some((lesson) => lessonOverlaps(lesson, day, parsed.date, parsed.start, parsed.end || fromMinutes(toMinutes(parsed.start) + 1)))
+                    return boardSchedules.some((lesson) => lessonOverlaps(lesson, day, parsed.date, parsed.start, parsed.end || fromMinutes(toMinutes(parsed.start) + 1)))
                   })
                   if (occupied) {
                     message.warning('批量排课时请选择空白时间段')
@@ -778,7 +760,6 @@ export function SchedulePage() {
                   }))
                   setCell({ ...ranges[0], slotStart: ranges[0].start, slotEnd: ranges[0].end, schedule: undefined })
                   setBatch(ranges.map((item) => batchKey(item.date, item.start, item.end)))
-                  message.info(`连续时段已合并成 ${ranges.length} 段，确认后一次排课`)
                 }}>{batch.length ? `排课 ${batch.length} 段` : '排课'}</Button>
               ) : null}
             </>

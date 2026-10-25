@@ -1,0 +1,86 @@
+.tt-batch-option {
+  position: absolute;
+  z-index: 3;
+  left: 4px;
+  right: 4px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+}
+
+.tt-batch-option.is-half {
+  right: 38%;
+  z-index: 4;
+}
+
+.tt-batch-option.is-span {
+  left: 62%;
+  z-index: 4;
+}
+
+.tt-batch-option::after,
+.tt-batch-outline.is-merged::after {
+  content: '';
+  position: absolute;
+  top: 8px;
+  right: 6px;
+  width: 16px;
+  height: 16px;
+  box-sizing: border-box;
+  border: 1px solid #93c5fd;
+  border-radius: 4px;
+  background: #fff;
+  pointer-events: none;
+}
+
+.tt-batch-option.is-half::after,
+.tt-batch-option.is-partial::after {
+  left: 6px;
+  right: auto;
+}
+
+.tt-batch-option:hover::after {
+  border-color: var(--primary);
+}
+
+.tt-batch-option.is-picked::after,
+.tt-batch-outline.is-merged::after {
+  content: '✓';
+  display: grid;
+  place-items: center;
+  border-color: var(--primary);
+  color: var(--primary);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.tt-batch-option:disabled {
+  pointer-events: none;
+  opacity: 1;
+  filter: none;
+}
+
+.tt-batch-outline {
+  position: absolute;
+  z-index: 5;
+  left: 4px;
+  right: 4px;
+  padding: 0;
+  box-sizing: border-box;
+  border: 1px dashed var(--primary);
+  border-radius: 4px;
+  background: transparent;
+  pointer-events: none;
+}
+
+.tt-batch-outline.is-merged {
+  z-index: 6;
+  pointer-events: auto;
+}
+
+.tt-batch-outline.is-merged::after {
+  top: 7px;
+  right: 5px;
+}

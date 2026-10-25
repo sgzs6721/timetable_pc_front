@@ -118,7 +118,7 @@ export function useCellDialogController(props: CellDialogProps) {
   const sameCourse = !!cell?.schedule && cell.schedule.targetType === 'course' && selected?.targetType === 'course' && selected.targetId === cell.schedule.targetId
   const occupied = cell?.schedule?.uiChangeStatus === 4
   const onLeave = cell?.schedule?.uiChangeStatus === 3
-  const batching = props.batchCount > 1 && !cell?.schedule
+  const batching = props.batchCount > 0 && !cell?.schedule
   const existing = !!cell?.schedule && !occupied
   const step = 30
 

@@ -65,7 +65,7 @@ export function ScheduleDialogs({ vm }: { vm: ReturnType<typeof useScheduleContr
         dayEnd={slots[slots.length - 1]?.end || '18:00'}
         onClose={() => setCell(null)}
         onSave={async (values) => {
-          const ranges = batch.length > 1
+          const ranges = batch.length > 0 && !cell?.schedule
             ? mergeRanges(batch.map((item) => {
               const parsed = parseBatchKey(item)
               const day = days.find((value) => addDays(weekStart, value - 1) === parsed.date) || 1

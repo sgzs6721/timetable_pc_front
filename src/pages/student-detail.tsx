@@ -12,7 +12,7 @@ import { PaymentEditor } from './student-payment-editor'
 import { CheckInPanel } from './student-checkins'
 import { StudentPaymentHistory } from './student-payment-history'
 import { FeeItems } from './student-fees'
-import { AssignedCoaches, ChoiceTabs, archiveHint, canArchiveStudent, cardBalanceView, cardValidityLine, courseCoachCount, lastCheckInText, orderedStudentCards, paymentBlockReason, personName, saveActiveCardCoaches, showsCardCoaches } from './students-domain'
+import { AssignedCoaches, ChoiceTabs, archiveHint, canArchiveStudent, cardBalanceView, cardValidityLine, checkInBlockReason, isCoachAssignmentDisabled, lastCheckInText, orderedStudentCards, paymentBlockReason, personName, saveActiveCardCoaches, showsCardCoaches } from './students-domain'
 
 export function StudentDetail(props: {
   tab?: string
@@ -52,8 +52,9 @@ export function StudentDetail(props: {
   const serviceNames = (activeCard?.serviceItemNames || []).map((item) => String(item || '').trim()).filter(Boolean)
   const profile = campusProfile(student, props.campuses)
   const created = createdAtText(student.createTime)
-  const statusText = studentStatusText(student)
-  const statusTone = statusText === '结业' ? 'graduated' : statusText === '待缴费' ? 'pending' : 'active'
+  const statusText = studentStatusText({ ...student, cards: activeCard ? [activeCard] : student.cards })
+  const statusTone = statusText === '结业' ? 'graduated' : ['待缴费', '已转出'].includes(statusText) ? 'pending' : 'active'
+  const checkInDisabled = !activeCard || !!checkInBlockReason(student, activeCard)
   const cardFacts = [
     activeCard?.courseCategory !== false && activeCard?.studentGroupName ? { label: '课程', value: activeCard.studentGroupName } : null,
     serviceNames.length ? { label: '适用服务', value: serviceNames.join('、') } : null,
@@ -69,7 +70,7 @@ export function StudentDetail(props: {
   const [coachEditing, setCoachEditing] = useState(false)
   const [coachDraft, setCoachDraft] = useState<number[]>([])
   const [savingCoaches, setSavingCoaches] = useState(false)
-  const coachAssignmentDisabled = Number(student.status || 0) === 2 || courseCoachCount(student, activeCard, props.groups) > 1
+  const coachAssignmentDisabled = isCoachAssignmentDisabled(student, activeCard, props.groups)
   const assignableCoaches = props.coaches.filter((item) => Number(item.status ?? 1) !== 0)
   useEffect(() => {
     if (activeCard?.id && activeCard.id !== activeCardId) setActiveCardId(activeCard.id)
@@ -80,7 +81,7 @@ export function StudentDetail(props: {
     setFeeItemsOpen(false)
     setCoachEditing(false)
   }, [student.id])
-  useEffect(() => { setCoachEditing(false) }, [activeCard?.id])
+  useEffect(() => { setCoachEditing(false) }, [activeCard?.id, coachAssignmentDisabled])
   async function saveProfile(values: { name: string; gender?: number; phone?: string; birthDate?: string; remark?: string }) {
     if (savingProfile) return
     const problem = profileProblem(values, student)
@@ -140,13 +141,15 @@ export function StudentDetail(props: {
                     <span><b>{balance.tag}</b><em>{balance.metric}</em></span>
                   </div> : null}
                   {props.manage ? <div className="student-detail-quick-actions">
-                    <Button disabled={Number(student.status || 0) === 2} onClick={() => setProfileEditing(true)}>编辑</Button>
-                    <Button type="primary" disabled={Number(student.status || 0) === 2 || !activeCard} onClick={() => props.onCheckIn(activeCard?.id)}>打卡</Button>
+                    <Button disabled={Number(student.status || 0) === 2} onClick={() => setProfileEditing(true)}>编辑信息</Button>
                     <Button onClick={() => {
                       const reason = paymentBlockReason(student)
                       if (reason) return message.warning(reason)
                       props.setPayOpen('new')
                     }}>缴费</Button>
+                    <Button type="primary" disabled={checkInDisabled} onClick={() => {
+                      if (!checkInDisabled) props.onCheckIn(activeCard?.id)
+                    }}>打卡</Button>
                   </div> : null}
                 </div>
                 {cards.length > 1 ? <div className="student-card-tabs" role="tablist" aria-label="切换学员卡">
@@ -155,7 +158,7 @@ export function StudentDetail(props: {
                     const selected = card.id === activeCard?.id
                     return <button key={card.id || `${card.cardName}-${card.studentGroupName}`} type="button" role="tab" aria-selected={selected} className={selected ? 'is-active' : ''} onClick={() => setActiveCardId(card.id)}><span>{card.cardName || card.studentGroupName || cardView.tag}</span><em>{cardView.tag} · {cardView.value}</em></button>
                   })}
-                </div> : cards.length ? null : <div className="student-card-tabs"><span className="student-card-tabs-empty">暂无课程卡，请点击“编辑”新增</span></div>}
+                </div> : cards.length ? null : <div className="student-card-tabs"><span className="student-card-tabs-empty">暂无课程卡，请点击“编辑信息”新增</span></div>}
               </section>
 
               <div className="student-detail-side-stack">
@@ -203,16 +206,15 @@ export function StudentDetail(props: {
                     <section className="student-detail-panel student-detail-teachers">
                       <header className="student-detail-section-head">
                         <div><h3>分配的老师</h3></div>
-                        <Button
+                        {!coachAssignmentDisabled ? <Button
                           className="student-coach-assign-link"
                           type="link"
-                          disabled={coachAssignmentDisabled}
                           onClick={() => {
                             const ids = activeCard?.coachMemberIds?.length ? activeCard.coachMemberIds : (student.coachMemberIds || [])
                             setCoachDraft(Array.from(new Set(ids.map(Number).filter((id) => id > 0))))
                             setCoachEditing(true)
                           }}
-                        >分配老师</Button>
+                        >分配老师</Button> : null}
                       </header>
                       <AssignedCoaches student={student} card={activeCard} coaches={props.coaches} groups={props.groups} onChanged={props.onChanged} />
                     </section>
@@ -377,8 +379,9 @@ export function StudentDetail(props: {
           key="save"
           type="primary"
           loading={savingCoaches}
-          disabled={!coachDraft.length}
+          disabled={coachAssignmentDisabled || !coachDraft.length}
           onClick={async () => {
+            if (coachAssignmentDisabled) return
             if (!coachDraft.length) return message.warning('请至少选择一位老师')
             if (coachIdsKey(coachDraft) === coachIdsKey(activeCard?.coachMemberIds?.length ? activeCard.coachMemberIds : student.coachMemberIds)) {
               setCoachEditing(false)

@@ -12,6 +12,7 @@ import {
   deletePaymentTitle,
   groupPayments,
   isTransferInRecord,
+  laterPaymentValidity,
   paymentAmountText,
   paymentAvgText,
   paymentChildLine,
@@ -26,6 +27,7 @@ import {
 } from './student-payments'
 import { CardRecordTabs, cardBalanceView, orderedStudentCards } from './students-domain'
 import { TransferRecordEditor } from './student-transfer-record-editor'
+import { resolvePeriodEntitlement } from './student-period-entitlement'
 
 export function StudentPaymentHistory(props: {
   student: Student
@@ -121,6 +123,9 @@ function PaymentEntry(props: {
   const row = props.row
   const category = String(props.card?.cardCategory || props.student.cardCategory || 'HOURS').toUpperCase()
   const validity = paymentValidityCell(row, props.card, props.student, 'main')
+  const transferred = category === 'PERIOD' && resolvePeriodEntitlement([row]).fullyTransferred
+  const original = laterPaymentValidity(row)
+  const validityText = transferred ? [original.validStartDate, original.validEndDate].filter(Boolean).join(' 至 ') : validity.text
   const remaining = paymentRemainingText(row, props.card, props.student, 'main')
   const avg = paymentAvgText(row)
   const remark = paymentRemarkText(row)
@@ -151,15 +156,16 @@ function PaymentEntry(props: {
           <div><span>赠课</span><strong>{Number(row.giftHours || 0)}</strong></div>
           {avg ? <div><span>折合均价</span><strong>{avg}</strong></div> : null}
         </> : null}
-        {category === 'PERIOD' && validity.text ? <div className="is-wide"><span>{validity.text === '已退费' ? '已退费' : '有效期'}</span>{validity.text === '已退费' ? null : <strong className={validity.tone ? `is-${validity.tone}` : ''}>{validity.text}</strong>}</div> : null}
+        {category === 'PERIOD' && validityText ? <div className="is-wide"><span>{transferred ? '原有效期' : validity.text === '已退费' ? '已退费' : '有效期'}</span>{validity.text === '已退费' ? null : <strong className={validity.tone ? `is-${validity.tone}` : ''}>{validityText}</strong>}</div> : null}
         {category === 'STORED_VALUE' ? <div className="is-wide"><span>{props.card?.courseCategory === false ? '适用服务' : '课程权益'}</span><strong>{props.card?.courseCategory === false ? (services || '未配置服务') : (course || '未配置课程权益')}</strong></div> : null}
       </div>
       {remaining || (category !== 'PERIOD' && validity.text) ? <div className="student-payment-entry-footer"><span>{remaining}</span>{category !== 'PERIOD' && validity.text ? <em className={validity.tone ? `is-${validity.tone}` : ''}>{validity.text}</em> : null}</div> : null}
+      {transferred ? <div className="student-payment-entry-footer"><span>{validity.text}</span></div> : null}
       {remark || commission ? <div className="student-payment-note">{remark ? <span>备注：{remark}</span> : null}{commission ? <span>提成：{commission}</span> : null}</div> : null}
       {row.supplements.length ? <div className="student-payment-adjustments">
         <button type="button" disabled={!foldable} onClick={props.onToggle}><span>{sectionTitle}</span><em>共 {row.supplements.length} 笔{foldable ? (props.open ? ' · 收起' : ' · 展开') : ''}</em></button>
         {shownChildren.map((child) => <div key={child.id} className="student-payment-adjustment-row">
-          <div><strong>{paymentChildLine(child, false)}</strong><span>{child.paymentDate}</span></div>
+          <div><strong>{paymentChildLine(child, false)}</strong><span>{category === 'PERIOD' && child.adjustmentReason === 'transfer' && child.transferDirection === 'out' ? '转出日期：' : ''}{child.paymentDate}</span></div>
           {props.manage ? <div>{canEditPayment(child) ? <Button type="link" onClick={() => props.setPayOpen(child)}>编辑</Button> : isTransferInRecord(child) ? <Button type="link" onClick={() => props.onTransferEdit(child)}>编辑</Button> : null}<Button type="link" danger onClick={() => confirmPaymentDelete(child, props.card, props.onChanged)}>删除</Button></div> : null}
         </div>)}
       </div> : null}

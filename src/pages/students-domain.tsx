@@ -3,6 +3,7 @@ import { createContext, useEffect, useState } from 'react'
 import { putJson } from '../api/biz'
 import { AppIcon, money, tell, todayIso } from './kit'
 import type { Card, Named, Student } from './students-model'
+import { isTransferredPeriodCard } from './student-period-entitlement'
 export function personName(item?: Named): string {
   return item?.displayName || item?.nickname || item?.name || item?.serviceName || item?.phone || '未命名'
 }
@@ -170,6 +171,7 @@ export function listCardHasBalance(card: Card, field: 'remainingHours' | 'remain
 }
 
 export function listCardEffective(card: Card, student: Student): boolean {
+  if (isTransferredPeriodCard(card)) return false
   const category = listCardCategory(card)
   if (category === 'HOURS') {
     const remaining = listCardHasBalance(card, 'remainingHours') ? Number(card.remainingHours || 0) : Number(student.remainingHours || 0)
@@ -244,7 +246,7 @@ export function orderedStudentCards(cards: Card[], today = todayIso()): Card[] {
   const categoryOrder: Record<string, number> = { HOURS: 0, PERIOD: 1, STORED_VALUE: 2 }
   const exhausted = (card: Card) => {
     const category = String(card.cardCategory || '').toUpperCase()
-    if (category === 'PERIOD') return !card.validEndDate || card.validEndDate < today
+    if (category === 'PERIOD') return isTransferredPeriodCard(card) || !card.validEndDate || card.validEndDate < today
     if (category === 'STORED_VALUE') return Number(card.remainingAmount || 0) <= 0
     return Number(card.remainingHours || 0) - Math.max(0, Number(card.expiredHours || 0)) <= 0
   }
@@ -267,6 +269,7 @@ export function cardBalanceView(card: Card): { value: string; tag: string; metri
     const start = String(card.validStartDate || '')
     const end = String(card.validEndDate || '')
     const tag = ({ WEEK: '周卡', MONTH: '月卡', QUARTER: '季卡', HALF_YEAR: '半年卡', YEAR: '年卡' } as Record<string, string>)[String(card.periodType || '')] || '时段卡'
+    if (isTransferredPeriodCard(card)) return { value: card.transferOutDate ? `${card.transferOutDate} 转出` : '权益已转出', tag, metric: '已转出' }
     if (refunded) return { value: '已退费', tag, metric: '已退费' }
     const dated = /^\d{4}-\d{2}-\d{2}$/.test(start) && /^\d{4}-\d{2}-\d{2}$/.test(end)
     const expired = /^\d{4}-\d{2}-\d{2}$/.test(end) && todayIso() > end
@@ -280,6 +283,7 @@ export function cardBalanceView(card: Card): { value: string; tag: string; metri
 }
 
 export function cardValidityLine(card: Card): { label: string; text: string } | null {
+  if (isTransferredPeriodCard(card)) return { label: '转出日期', text: card.transferOutDate || '已转出' }
   const category = String(card.cardCategory || '').toUpperCase()
   const start = String(card.validStartDate || '').trim()
   const end = String(card.validEndDate || '').trim()
@@ -317,6 +321,7 @@ export async function saveActiveCardCoaches(student: Student, card: Card | undef
   }
   const activeCards = (student.cards || []).filter((item) => item.id && (item.status == null || Number(item.status) === 1))
   const target = card?.id ? activeCards.find((item) => item.id === card.id) || card : undefined
+  if (isTransferredPeriodCard(target || card)) throw new Error('时段卡权益已转出，不能调整老师')
   if (target?.id && showsCardCoaches(target)) {
     await putJson(`/student-cards/${target.id}`, {
       cardCategory: target.cardCategory,
@@ -354,7 +359,9 @@ export function AssignedCoaches(props: {
   onChanged: () => Promise<void>
 }) {
   const rows = assignedCoachRows(props.student, props.card, props.coaches)
+  const disabled = isCoachAssignmentDisabled(props.student, props.card, props.groups)
   async function removeCoach(id: number) {
+    if (disabled) return
     if (Number(props.student.status || 0) === 2) {
       message.warning('该学员已结业，不能调整老师')
       return
@@ -381,7 +388,7 @@ export function AssignedCoaches(props: {
           {rows.map((coach) => (
             <li key={coach.id}>
               <span>{coach.name}</span>
-              {rows.length <= 1 ? (
+              {disabled ? null : rows.length <= 1 ? (
                 <Button type="link" htmlType="button" aria-label={`移除${coach.name}`} onClick={() => removeCoach(coach.id)}>×</Button>
               ) : (
                 <Popconfirm title="确认删除" description={`确定删除老师“${coach.name}”吗？`} okText="删除" cancelText="取消" onConfirm={() => removeCoach(coach.id)}>
@@ -531,6 +538,7 @@ export function confirmCheckInDates(dates: string[], usedDates: string[]): Promi
 
 export function checkInBlockReason(student: Student, card?: Card): string {
   if (Number(student.status || 0) === 2) return '该学员已结业，不能打卡'
+  if (isTransferredPeriodCard(card)) return '时段卡权益已转出，不能打卡'
   const category = String(card?.cardCategory || student.cardCategory || 'HOURS').toUpperCase()
   const amount = Number(card?.remainingAmount ?? student.remainingAmount ?? 0)
   const hours = Number(card?.remainingHours ?? student.remainingHours ?? 0)
@@ -561,7 +569,7 @@ export function canArchiveStudent(student: Student): boolean {
   return cards.every((card) => {
     const category = String(card.cardCategory || 'HOURS').toUpperCase()
     if (category === 'STORED_VALUE') return Number(card.remainingAmount || 0) === 0
-    if (category === 'PERIOD') return !!card.validEndDate && card.validEndDate < today
+    if (category === 'PERIOD') return isTransferredPeriodCard(card) || (!!card.validEndDate && card.validEndDate < today)
     return Number(card.remainingHours || 0) === 0
   })
 }
@@ -623,8 +631,13 @@ export function archiveHint(student: Student): string {
   return canArchiveStudent(student) ? '所有卡权益均已用尽或到期，可执行结业归档' : '仍有卡存在剩余课时、余额或尚未到期，不能归档'
 }
 
+export function isCoachAssignmentDisabled(student: Student, card: Card | undefined, groups: Named[]): boolean {
+  return Number(student.status || 0) === 2 || isTransferredPeriodCard(card) || courseCoachCount(student, card, groups) > 1
+}
+
 export function assignBlock(student: Student, groups: Named[], coaches: Named[], card?: Card): string {
   if (Number(student.status || 0) === 2) return '该学员已结业，不能分配老师'
+  if (isTransferredPeriodCard(card)) return '时段卡权益已转出，不能调整老师'
   const groupId = Number(card?.studentGroupId || student.studentGroupId || 0)
   const group = groups.find((item) => item.id === groupId)
   const coachIds = group?.coachIds?.length ? group.coachIds : (group?.coachId ? [group.coachId] : [])
@@ -663,6 +676,7 @@ export function activeStudentCards(student: Student): Card[] {
 }
 
 export function checkInCardEligible(card: Card, student: Student, useStudentBalance: boolean): boolean {
+  if (isTransferredPeriodCard(card)) return false
   const category = String(card.cardCategory || student.cardCategory || 'HOURS').toUpperCase()
   const remainingHours = Number(card.remainingHours ?? (useStudentBalance ? student.remainingHours : 0) ?? 0)
   const remainingAmount = Number(card.remainingAmount ?? (useStudentBalance ? student.remainingAmount : 0) ?? 0)
@@ -675,6 +689,7 @@ export function checkInCardEligible(card: Card, student: Student, useStudentBala
 }
 
 export function noEligibleCheckInMessage(student: Student, cards: Card[]): string {
+  if (cards.some(isTransferredPeriodCard)) return '时段卡权益已转出，不能打卡'
   const category = String(student.cardCategory || cards[0]?.cardCategory || 'HOURS').toUpperCase()
   const start = isoDay(student.periodValidStartDate || cards[0]?.validStartDate || '')
   if (start && todayIso() < start) return '未到有效期，不能打卡'

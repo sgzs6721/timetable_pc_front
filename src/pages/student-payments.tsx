@@ -5,6 +5,7 @@ import { clampDecimalInput, todayIso } from './kit'
 import type { Student, Card, Named, PayRecord } from './students-model'
 import { checkInAmountText, checkInHoursText, chronologicalSortKey } from './student-checkins'
 import { personName } from './students-domain'
+import { resolvePeriodEntitlement } from './student-period-entitlement'
 
 export function isTransferInRecord(record: PayRecord): boolean {
   const direction = String(record.transferDirection || '').trim().toLowerCase()
@@ -227,6 +228,10 @@ function paymentLotFullyRefunded(record: PayRecord, card: Card | undefined, stud
 }
 
 export function paymentValidityCell(record: PayRecord, card: Card | undefined, student: Student, kind: 'main' | 'child'): { text: string; tone: '' | 'expired' | 'soon' } {
+  if (String(card?.cardCategory || student.cardCategory || '').toUpperCase() === 'PERIOD') {
+    const entitlement = resolvePeriodEntitlement([record])
+    if (entitlement.fullyTransferred) return { text: kind === 'child' ? `转出日期：${entitlement.transferOutDate}` : `已转出${entitlement.transferOutDate ? ' · ' + entitlement.transferOutDate : ''}`, tone: '' }
+  }
   if (kind === 'main' && paymentLotFullyRefunded(record, card, student)) return { text: '已退费', tone: '' }
   if (kind === 'child') {
     if (record.type === 'adjustment' && record.adjustmentReason !== 'transfer') return { text: '', tone: '' }

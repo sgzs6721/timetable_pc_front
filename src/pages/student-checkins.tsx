@@ -8,7 +8,7 @@ import type { Student, Card, Named, PayRecord, CheckRecord } from './students-mo
 import { buildCheckInCoachSelection } from './student-card-desk'
 import { CheckInCoursePicker } from './student-quick-checkin'
 import { isTransferInRecord } from './student-payments'
-import { CardRecordTabs, boundedDateMax, cardBalanceView, checkInBounds, personName } from './students-domain'
+import { CardRecordTabs, boundedDateMax, cardBalanceView, checkInBlockReason, checkInBounds, personName } from './students-domain'
 import { consumeItemReferenceKey, isCampusServiceConsumeItem, resolveConsumeItemReferenceFields } from './consume-item'
 
 export function CheckInPanel(props: { student: Student; rows: CheckRecord[]; payments: PayRecord[]; groups: Named[]; financialHidden: boolean; coaches: Named[]; focusCardId?: number; onCardChange?: (cardId?: number) => void; onCheckIn: (cardId?: number) => void; onChanged: () => Promise<void>; manage: boolean }) {
@@ -43,7 +43,9 @@ export function CheckInCard(props: { student: Student; card?: Card; rows: CheckR
       <section className="student-record-summary student-check-summary">
         <header>
           <div><span className="student-record-summary-name">{props.student.name}</span><h3>打卡记录总览</h3></div>
-          {props.manage ? <Button type="primary" disabled={Number(props.student.status || 0) === 2} onClick={props.onCheckIn}>打卡</Button> : null}
+          {props.manage ? <Button type="primary" disabled={!!checkInBlockReason(props.student, props.card)} onClick={() => {
+            if (!checkInBlockReason(props.student, props.card)) props.onCheckIn?.()
+          }}>打卡</Button> : null}
         </header>
         <div className="student-record-metrics">
           {summary.metrics.map((item) => <div key={item.label}><strong>{item.value}</strong><span>{item.label}</span></div>)}

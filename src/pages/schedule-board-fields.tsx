@@ -222,14 +222,18 @@ export function toggleBatchRange(batch: string[], date: string, start: string, e
   if (batch.includes(key)) return batch.filter((item) => item !== key)
   const startMin = toMinutes(start)
   const endMin = toMinutes(end)
-  return [
+  const next = [
     ...batch.filter((item) => {
       const parsed = parseBatchKey(item)
-      if (parsed.date !== date || !parsed.end) return false
+      if (parsed.date !== date) return true
+      if (!parsed.end) return false
       return toMinutes(parsed.end) <= startMin || toMinutes(parsed.start) >= endMin
     }),
     key,
   ]
+  // 与小程序一致：每次点击后立即合并，同一天的连续选区只保留一个键。
+  return mergeRanges(next.map((item) => ({ ...parseBatchKey(item), day: 0 })))
+    .map((item) => batchKey(item.date, item.start, item.end))
 }
 
 export function mergeRanges(items: Array<{ day: number; date: string; start: string; end: string }>) {
@@ -243,7 +247,7 @@ export function mergeRanges(items: Array<{ day: number; date: string; start: str
     const sorted = [...list].sort((a, b) => a.start.localeCompare(b.start))
     let current = { ...sorted[0] }
     sorted.slice(1).forEach((item) => {
-      if (current.end === item.start) current = { ...current, end: item.end }
+      if (current.end >= item.start) current = { ...current, end: current.end > item.end ? current.end : item.end }
       else {
         merged.push(current)
         current = { ...item }

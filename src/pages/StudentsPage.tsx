@@ -9,8 +9,8 @@ import { AddStudent, CoachTransfer } from './student-profile'
 import { QuickCheckIn } from './student-quick-checkin'
 import type { CheckRecord, Named, PayLaunch, PayRecord, Student } from './students-model'
 import {
-  CatalogHold, CatalogLoadContext, assignBlock, campusOffline, cardBalanceView,
-  hasTeacherVisibleStudentCard, listBalanceText, listCardCategory, listCoachText,
+  CatalogHold, CatalogLoadContext, assignBlock, campusOffline, cardBalanceView, checkInBlockReason,
+  hasTeacherVisibleStudentCard, isCoachAssignmentDisabled, listBalanceText, listCardCategory, listCoachText,
   listDisplayCard, listServiceOnly, managesStudents, orderedStudentCards, personName,
   teacherVisibleStudent, type CatalogLoad, type CatalogStatus,
 } from './students-domain'
@@ -281,6 +281,9 @@ export function StudentsPage() {
       message.warning('该学员已结业，不能打卡')
       return
     }
+    const selected = (row.cards || []).find((card) => card.id === preferredCardId)
+    const reason = selected ? checkInBlockReason(row, selected) : ''
+    if (reason) return message.warning(reason)
     setCheckCardId(preferredCardId || listDisplayCard(row, cardCategory)?.id)
     setCheckCardLocked(Number(preferredCardId || 0) > 0)
     setCheckStudent(row)
@@ -297,7 +300,7 @@ export function StudentsPage() {
     { title: '老师', align: 'center' as const, render: (_: unknown, row: Student) => {
       const card = listDisplayCard(row, cardCategory)
       const text = listCoachText(row, card, coaches)
-      const pending = canManage && !listServiceOnly(row, card) && text === '待分配'
+      const pending = canManage && !listServiceOnly(row, card) && !isCoachAssignmentDisabled(row, card, groups) && text === '待分配'
       return pending ? (
         <button type="button" className="cell-link" onClick={() => openAssign(row)}>{text}</button>
       ) : text
@@ -320,7 +323,7 @@ export function StudentsPage() {
                 <span className="student-card-balance-value">{balance.value}</span>
               </>
               return canManage ? (
-                <button key={card.id} className={balanceClass || undefined} type="button" title={`${balance.tag} · ${balance.value}`} onClick={() => openQuick(row, card.id)}>{content}</button>
+                <button key={card.id} className={balanceClass || undefined} type="button" disabled={!!checkInBlockReason(row, card)} title={`${balance.tag} · ${balance.value}`} onClick={() => openQuick(row, card.id)}>{content}</button>
               ) : (
                 <span key={card.id} className={balanceClass || undefined} title={`${balance.tag} · ${balance.value}`}>{content}</span>
               )
@@ -334,7 +337,7 @@ export function StudentsPage() {
     } },
     { title: <span className="students-status-column-title">状态</span>, align: 'center' as const, render: (_: unknown, row: Student) => {
       const text = studentStatusText(row)
-      const tone = text === '待缴费' ? 'status-warn' : text === '结业' ? 'status-muted' : 'status-ok'
+      const tone = text === '待缴费' ? 'status-warn' : ['结业', '已转出'].includes(text) ? 'status-muted' : 'status-ok'
       return <div className="students-status-cell"><Tag className={tone}>{text}</Tag></div>
     } },
     {
@@ -482,6 +485,8 @@ export function StudentsPage() {
               try {
                 const activeCards = (assignStudent.cards || []).filter((card) => card.status == null || Number(card.status) === 1)
                 const shown = listDisplayCard(assignStudent, cardCategory)
+                const reason = assignBlock(assignStudent, groups, coaches, shown)
+                if (reason) return message.warning(reason)
                 if (shown?.id) {
                   if (!shown.cardCategory && !assignStudent.cardCategory) {
                     message.warning('卡类型缺失，请刷新后重试')
