@@ -93,12 +93,14 @@ export function StudentDetail(props: {
     setSavingProfile(true)
     try {
       const birthDate = String(values.birthDate || '').trim()
+      // 基础资料只提交可编辑字段，避免夹带旧卡类型、卡片或课程绑定触发改卡校验。
       await putJson(`/students/${student.id}`, {
-        ...values,
         name: values.name.trim(),
+        gender: values.gender,
         phone: String(values.phone || '').trim(),
         birthDate: birthDate || undefined,
         clearBirthDate: !birthDate,
+        remark: String(values.remark || '').trim(),
       })
       message.success('资料已保存')
       setProfileEditing(false)
@@ -346,7 +348,13 @@ export function StudentDetail(props: {
       <div className="student-profile-edit-shell">
         <section className="student-profile-edit-section">
           <header><h3>学员资料</h3><p>修改姓名、联系方式和基础档案</p></header>
-          <Form className="student-profile-form" layout="vertical" initialValues={student} onFinish={saveProfile}>
+          <Form className="student-profile-form" layout="vertical" initialValues={{
+            name: student.name,
+            gender: student.gender,
+            phone: student.phone,
+            birthDate: student.birthDate,
+            remark: student.remark,
+          }} onFinish={saveProfile}>
             <div className="student-profile-grid">
               <Form.Item name="name" label="姓名" rules={[{ required: true, whitespace: true, message: '请输入学员姓名' }, { max: 6, message: '学员姓名不能超过6个字' }]}><Input maxLength={6} /></Form.Item>
               <Form.Item name="phone" label="联系电话" extra={<PhoneActions />} rules={[{ pattern: /^$|^1[3-9]\d{9}$/, message: '请输入11位正确手机号' }]}><Input maxLength={11} placeholder="选填" /></Form.Item>
