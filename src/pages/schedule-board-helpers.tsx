@@ -394,6 +394,8 @@ function compareSlotStatus(slot: string, lessons: Schedule[], templates: Schedul
   const matched = !!active && Number(active.uiChangeStatus) !== 4 && sameSchedule(template, active)
   if (active && !leave && matched) return ''
   if (!active && !leave) return 'cancelled'
+  // 已修改的实际实例优先于旧请假记录；仍需标出最新固定课未被覆盖的部分。
+  if (Number(active?.uiChangeStatus) === 2) return 'modified'
   if (leave && !slotTemplates.some((item) => sameComparableIdentity(item, leave))) return ''
   return active ? 'modified' : 'cancelled'
 }
@@ -409,7 +411,7 @@ function coveringLeaveId(template: Schedule, start: number, end: number, lessons
 
 export function cancelledCompareSegments(day: number, date: string, weekLessons: Schedule[], templates: Schedule[]): CancelledCompareSegment[] {
   const dayTemplates = templates.filter((item) => Number(item.dayOfWeek) === day && comparableTemplate(item))
-  const lessons = weekLessons.filter((lesson) => !lesson.scheduleDate || lesson.scheduleDate === date)
+  const lessons = weekLessons.filter((lesson) => lesson.scheduleDate ? lesson.scheduleDate === date : Number(lesson.dayOfWeek) === day)
   const slots = new Set<string>()
   dayTemplates.forEach((item) => slots.add(clockText(item.startTime)))
   lessons.forEach((item) => slots.add(clockText(item.startTime)))

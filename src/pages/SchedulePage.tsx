@@ -4,8 +4,8 @@ import { useEffect } from 'react'
 import { postJson, putJson } from '../api/biz'
 import { AppIcon, NeedCampus, PageHead, tell, todayIso } from './kit'
 import {
-  DAY_LABELS, addDays, boardHoursText, cancelledCompareSegments, clockText,
-  compareDetail, formatTimetableTime, freeUntil, fromMinutes, visibleLeaveSlices,
+  DAY_LABELS, addDays, boardHoursText, clockText,
+  formatTimetableTime, freeUntil, fromMinutes, visibleLeaveSlices,
   ownerGenderIcon, scheduleInstanceKey, templateEchoForCell, timetableMeta,
   toMinutes,
   weekRangeLabel,
@@ -20,6 +20,7 @@ import { useScheduleController } from './schedule-controller'
 import { ScheduleDialogs } from './schedule-dialogs'
 import { buildTimetableSummary, dateRangeIncludesDayOfWeek, isOutsideTimetableDateRange, isScheduleConflictMessage } from './schedule-policy'
 import { ScheduleWeekPicker } from './schedule-week-picker'
+import { buildDayComparison, compareSegmentStyle } from './schedule-day-comparison'
 
 function showScheduleOperationError(error: unknown, fallback: string) {
   const text = tell(error, fallback)
@@ -45,7 +46,7 @@ export function SchedulePage() {
   }, [])
   const restoreLeave = (scheduleId: number, operationDate?: string) => {
     if (!scheduleId || archived || Number(current?.status) === 2 || !canManageCurrent) return
-    const schedule = boardSchedules.find((item) => Number(item.id || 0) === scheduleId)
+    const schedule = schedules.find((item) => Number(item.id || 0) === scheduleId)
     if (!ensureScheduleDateManageable(Number(schedule?.campusId || activeTimetableCampusId), templateMode ? '' : (schedule?.scheduleDate || operationDate))) return
     Modal.confirm({
       title: '销假',
@@ -375,7 +376,8 @@ export function SchedulePage() {
                     const shown = activeCampusId
                       ? own.filter((lesson) => Number(lesson.uiChangeStatus || 0) === 4 || Number(lesson.campusId || 0) === activeCampusId)
                       : own
-                    const cancelMarks = templateMode ? [] : cancelledCompareSegments(day, date, own, templateSchedules)
+                    const comparison = buildDayComparison(current, templateMode, day, date, schedules, templateSchedules)
+                    const cancelMarks = comparison.cancelled
                     return (
                       <div className={['tt-day', !templateMode && date === todayIso() ? 'is-today' : '', outsideDateRange ? 'is-outside-range' : ''].filter(Boolean).join(' ')} key={day} style={{ gridColumn: column + 2, gridRow: `2 / span ${slots.length}` }}>
                         {slots.map((slot) => {
@@ -614,7 +616,7 @@ export function SchedulePage() {
                                 if (segment.leaveScheduleId) restoreLeave(segment.leaveScheduleId, date)
                               }}
                               onClick={() => {
-                                const leave = own.find((item) => Number(item.id) === segment.leaveScheduleId)
+                                const leave = comparison.schedules.find((item) => Number(item.id) === segment.leaveScheduleId)
                                 if (!leave || selecting || deleting || placement) return
                                 if (!ensureScheduleDateManageable(Number(leave.campusId || activeTimetableCampusId), date)) return
                                 setCell({
@@ -638,11 +640,8 @@ export function SchedulePage() {
                           return slices.map((slice) => {
                           const clipped = slice.start !== clockText(lesson.startTime) || slice.end !== clockText(lesson.endTime)
                           const frame = clipped ? rangeFrame(slice.start, slice.end, slots) : cardFrame(lesson, slots)
-                          const detail = templateMode ? { mark: '' as const, added: [], modified: [] } : compareDetail(lesson, templateSchedules.filter((item) => Number(item.dayOfWeek) === day))
+                          const detail = comparison.detail(lesson)
                           const partial = detail.added.length > 0 && detail.modified.length > 0
-                          const lessonStart = toMinutes(clockText(lesson.startTime))
-                          const lessonEnd = toMinutes(clockText(lesson.endTime))
-                          const span = Math.max(lessonEnd - lessonStart, 1)
                           return (
                             <button
                               key={`${scheduleInstanceKey(lesson)}|${slice.start}`}
@@ -713,9 +712,9 @@ export function SchedulePage() {
                               }}
                             >
                               {partial ? [...detail.added.map((range) => (
-                                <i key={`add-${range.start}`} className="tt-compare is-added" style={{ top: `${((range.start - lessonStart) / span) * 100}%`, height: `${((range.end - range.start) / span) * 100}%` }} />
+                                <i key={`add-${range.start}`} className="tt-compare is-added" style={compareSegmentStyle(lesson, range)} />
                               )), ...detail.modified.map((range) => (
-                                <i key={`mod-${range.start}`} className="tt-compare is-modified" style={{ top: `${((range.start - lessonStart) / span) * 100}%`, height: `${((range.end - range.start) / span) * 100}%` }} />
+                                <i key={`mod-${range.start}`} className="tt-compare is-modified" style={compareSegmentStyle(lesson, range)} />
                               ))] : null}
                               <b className={campusLegend.length > 1 && Number(lesson.campusId || 0) > 0 && lesson.uiChangeStatus !== 4 ? `campus-tone-${campusLegend.find((item) => item.id === Number(lesson.campusId))?.tone ?? 0}` : undefined}>{lesson.uiChangeStatus === 4 ? '占用' : lesson.displayName || lesson.courseName}</b>
                               {lesson.uiChangeStatus !== 4 ? <small>{[lesson.coachName, clipped ? slice.start : clockText(lesson.startTime), clipped ? slice.end : clockText(lesson.endTime)].filter(Boolean).join(' ')}</small> : null}
