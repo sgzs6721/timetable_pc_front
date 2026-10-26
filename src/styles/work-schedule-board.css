@@ -596,8 +596,8 @@ body.schedule-dragging .tt-card[draggable='true'] {
   padding: var(--space-2) var(--space-3);
   border: 1px dashed #ef4444;
   border-radius: 10px;
-  /* 遮住小时行分割线，让跨行的固定课仍是一个完整取消框。 */
-  background: #fff;
+  /* 取消课程只保留轮廓，让跨时段区域的原始表格线透出。 */
+  background: transparent;
   color: transparent;
   pointer-events: none;
 }
