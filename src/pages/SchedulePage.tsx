@@ -21,6 +21,7 @@ import { ScheduleDialogs } from './schedule-dialogs'
 import { buildTimetableSummary, dateRangeIncludesDayOfWeek, isOutsideTimetableDateRange, isScheduleConflictMessage } from './schedule-policy'
 import { ScheduleWeekPicker } from './schedule-week-picker'
 import { buildDayComparison, compareSegmentStyle } from './schedule-day-comparison'
+import { ServiceScheduleLayer } from './schedule-service-layer'
 import { BatchSelectionLayer } from './schedule-batch-selection'
 
 function showScheduleOperationError(error: unknown, fallback: string) {
@@ -35,6 +36,7 @@ function showScheduleOperationError(error: unknown, fallback: string) {
 export function SchedulePage() {
   const vm = useScheduleController()
   const { groups, groupsLoading, archived, setArchived, dayBand, setDayBand, selecting, setSelecting, current, setCurrent, weekStart, setWeekStart, mode, schedules, templateSchedules, instantiatedWeeks, instantiatedWeeksLoading, setCreating, setCell, placement, setPlacement, batch, setBatch, deleting, setDeleting, deleteIds, setDeleteIds, setCampusFilter, setDragAction, dragHover, setDragHover, dragGuard, dragLessonKey, campusId, activeTimetableCampusId, canCreate, canManageCurrent, canManageTimetable, salesCampusView, days, splitWeekend, templateMode, boardSchedules, campusLegend, activeCampusId, boardDays, splitHead, slots, limits, loadGroups, loadWeek, switchBoardMode, removeSchedule, moveSchedule, copySchedule, openOverview, onTimetableMenu, openDay, choosePlacement, ensureScheduleDateManageable, ensureTemplateDayManageable } = vm
+  const serviceTimetable = current?.ownerType === 'SERVICE'
   const visibleGroups = groups.filter((group) => ((archived ? group.archivedTimetables : group.activeTimetables) || []).length > 0)
   const timetableSummary = buildTimetableSummary(current)
   const chooseBatchRange = (day: number, date: string, start: string, end: string) => {
@@ -388,7 +390,7 @@ export function SchedulePage() {
                       ? own.filter((lesson) => Number(lesson.uiChangeStatus || 0) === 4 || Number(lesson.campusId || 0) === activeCampusId)
                       : own
                     const comparison = buildDayComparison(current, templateMode, day, date, schedules, templateSchedules)
-                    const cancelMarks = comparison.cancelled
+                    const cancelMarks = serviceTimetable ? [] : comparison.cancelled
                     return (
                       <div className={['tt-day', !templateMode && date === todayIso() ? 'is-today' : '', outsideDateRange ? 'is-outside-range' : ''].filter(Boolean).join(' ')} key={day} style={{ gridColumn: column + 2, gridRow: `2 / span ${slots.length}` }}>
                         {slots.map((slot) => {
@@ -615,7 +617,10 @@ export function SchedulePage() {
                             />
                           )
                         })}
-                        {shown.flatMap((lesson) => {
+                        {serviceTimetable && !deleting ? <ServiceScheduleLayer schedules={shown.filter((row) => !templateMode || Number(row.uiChangeStatus) !== 3)} slots={slots} day={day} date={date} timetableId={current.id} templateMode={templateMode} canEdit={canManageCurrent && Number(current.status) !== 2 && !archived && !outsideDateRange && !selecting && !placement} onOpen={(cell) => {
+                          if (ensureTemplateDayManageable(day) && ensureScheduleDateManageable(activeTimetableCampusId, templateMode ? '' : date)) setCell(cell)
+                        }} /> : null}
+                        {shown.filter((lesson) => !serviceTimetable || deleting || Number(lesson.uiChangeStatus) === 4).flatMap((lesson) => {
                           const slices = Number(lesson.uiChangeStatus) === 3
                             ? (templateMode ? visibleLeaveSlices(lesson, own, cancelMarks) : [])
                             : [{ start: clockText(lesson.startTime), end: clockText(lesson.endTime) }]
@@ -630,7 +635,7 @@ export function SchedulePage() {
                               type="button"
                               className={lessonClass(lesson, `${deleting && deleteIds.includes(scheduleInstanceKey(lesson)) ? ' is-picked' : ''}${placement?.schedule && scheduleInstanceKey(placement.schedule) === scheduleInstanceKey(lesson) ? ' is-source' : ''}${!partial && detail.mark ? ` is-${detail.mark}` : ''}`)}
                               style={{ top: frame.top, height: frame.height }}
-                              draggable={!outsideDateRange && canManageCurrent && !archived && Number(current.status) !== 2 && lesson.uiChangeStatus !== 4}
+                              draggable={!serviceTimetable && !outsideDateRange && canManageCurrent && !archived && Number(current.status) !== 2 && lesson.uiChangeStatus !== 4}
                               onDragStart={(event) => {
                                 if (!canManageCurrent || lesson.uiChangeStatus === 4) {
                                   event.preventDefault()

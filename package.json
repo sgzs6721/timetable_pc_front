@@ -10,6 +10,8 @@
     "check:parity": "node scripts/check-miniapp-parity.mjs",
     "test:schedule-compare": "node --test tests/schedule-comparison.test.mjs tests/schedule-miniapp-comparison.test.mjs",
     "test:schedule-batch": "node --test tests/schedule-batch-selection.test.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "preview:parity": "node scripts/preview-parity.mjs",
     "build": "npm run check:source-size && npm run check:ui-contract && tsc --noEmit && vite build",
     "preview": "vite preview"
   },

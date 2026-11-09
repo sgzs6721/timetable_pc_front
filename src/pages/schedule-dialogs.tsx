@@ -146,8 +146,7 @@ export function ScheduleDialogs({ vm }: { vm: ReturnType<typeof useScheduleContr
           await postJson(`/schedules/${scheduleId}/restore`)
           message.success('已销假')
           await loadWeek()
-          const fresh = (await getJson<Schedule[]>(`/schedules/timetable/${current.id}/week`, { weekStart })).find((item) => item.id === scheduleId)
-          setCell(fresh ? { ...cell, start: clockText(fresh.startTime) || cell.start, end: clockText(fresh.endTime) || cell.end, schedule: fresh, echo: undefined } : null)
+          setCell(null)
         }}
         onDelete={async () => {
           if (!cell?.schedule?.id) return

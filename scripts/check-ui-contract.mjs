@@ -94,7 +94,7 @@ if (!financeCss.includes('.profit-chart-scroll.is-sparse')) {
   failures.push('少量校区的经营图表必须居中展示，避免大面积单侧留白')
 }
 if (!homeSource.includes('className="home-module-section"')
-  || !homeSource.includes('navForUser(user || null, currentOrg)')
+  || !homeSource.includes('navForUser(user || null, currentOrg, shell.campusId)')
   || !homeSource.includes('disabled={Boolean(item.disabledReason)}')) {
   failures.push('首页功能模块必须按角色权限渲染，并为不可用入口提供真实 disabled 状态')
 }

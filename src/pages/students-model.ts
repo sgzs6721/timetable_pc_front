@@ -32,6 +32,8 @@ export interface Student {
   studentGroupIds?: number[]
   periodValidStartDate?: string
   periodValidEndDate?: string
+  transferredOut?: boolean
+  fullyRefunded?: boolean
   canDelete?: boolean
   deleteBlockedReason?: string
   cards?: Card[]

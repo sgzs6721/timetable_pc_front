@@ -7,8 +7,10 @@ import {
   UnorderedListOutlined,
   WalletOutlined,
 } from '@ant-design/icons'
-import { Skeleton, Table } from 'antd'
+import { Button, Skeleton, Space, Table } from 'antd'
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
+
+import { allCampusSummary } from './finance-summary'
 
 type DetailMode = 'all' | 'income' | 'paid' | 'pending'
 type SingleDetailMode = Exclude<DetailMode, 'all'>
@@ -20,6 +22,9 @@ interface CampusFinanceRow {
 }
 
 export function FinanceOverviewDashboard(props: {
+  expectedCampusCount?: number
+  onSettings?: (campusId: number) => void
+  onRecord?: (campusId: number) => void
   loading: boolean
   rows: CampusFinanceRow[]
   fallbackOverview: Record<string, unknown> | null
@@ -47,6 +52,7 @@ export function FinanceOverviewDashboard(props: {
   const projectedBalance = income - expected
   const coverage = expected > 0 ? Math.min(100, paid / expected * 100) : 0
   const pendingDetails = detailRows(overview, 'pending')
+  const all = allCampusSummary(props.rows, props.expectedCampusCount)
 
   const switchDetail = (mode: DetailMode) => {
     setDetailMode(mode)
@@ -55,6 +61,12 @@ export function FinanceOverviewDashboard(props: {
 
   return (
     <div className="finance-overview-dashboard" aria-busy={props.loading}>
+      <section className="work-card" aria-label="全部校区收支汇总">
+        <h2>全部校区 · 收支汇总</h2>
+        <div className="finance-summary-grid">{([
+          ['总收入', all.income], ['总支出', all.expense], ['待支出', all.pending], ['已支出', all.paid],
+        ] as const).map(([label, value]) => <article className="finance-summary-card" key={label}><span>{label}</span><strong style={{ display: 'block', fontSize: 24 }}>{props.loading || !all.available ? '—' : currency(value)}</strong></article>)}</div>
+      </section>
       <section className="finance-overview-hero" aria-labelledby="finance-overview-title">
         <div className="finance-overview-topline">
           {props.filter}
@@ -62,7 +74,8 @@ export function FinanceOverviewDashboard(props: {
         <header className="finance-overview-head">
           <div>
             <h2 id="finance-overview-title">财务收支总览</h2>
-            <p>{campusName} · {props.periodLabel}</p>
+            <p>{campusName} · {props.periodLabel} · 收入包含缴费、服务和手工收入</p>
+            <Space><Button onClick={() => props.onRecord?.(Number(selectedCampusId))}>录入收支</Button><Button onClick={() => props.onSettings?.(Number(selectedCampusId))}>财务设置</Button></Space>
           </div>
           {props.loading ? <Skeleton.Input className="finance-balance-loading" active size="small" /> : (
             <div className={`finance-balance-badge ${projectedBalance >= 0 ? 'is-positive' : 'is-negative'}`}>
@@ -400,7 +413,7 @@ function detailRows(overview: Record<string, unknown>, mode: DetailMode): Array<
     ]
     return rows.sort((left, right) => String(right.bizDate || '').localeCompare(String(left.bizDate || '')))
   }
-  if (mode === 'income') return overview.incomeDetails as Array<Record<string, unknown>> || []
+  if (mode === 'income') return (overview.incomeDetails as Array<Record<string, unknown>> || []).map((row) => row.detailType === 'service' ? { ...row, statusLabel: '服务收入' } : row)
   if (mode === 'paid') return overview.paidExpenseDetails as Array<Record<string, unknown>> || []
   return overview.pendingExpenseDetails as Array<Record<string, unknown>> || []
 }

@@ -263,7 +263,7 @@ function hoursClockText(value: unknown): string {
 }
 
 function hoursStudentText(row: Record<string, unknown>): string {
-  return String(row.studentDisplayName || '').trim() || '未命名学员'
+  return String(row.studentDisplayName || '').trim() || (hoursServiceRecord(row) ? '服务' : '未命名学员')
 }
 
 function hoursServiceRecord(row: Record<string, unknown>): boolean {

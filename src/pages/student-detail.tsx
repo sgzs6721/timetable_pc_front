@@ -52,7 +52,7 @@ export function StudentDetail(props: {
   const serviceNames = (activeCard?.serviceItemNames || []).map((item) => String(item || '').trim()).filter(Boolean)
   const profile = campusProfile(student, props.campuses)
   const created = createdAtText(student.createTime)
-  const statusText = studentStatusText({ ...student, cards: activeCard ? [activeCard] : student.cards })
+  const statusText = studentStatusText(student)
   const statusTone = statusText === '结业' ? 'graduated' : ['待缴费', '已转出'].includes(statusText) ? 'pending' : 'active'
   const checkInDisabled = !activeCard || !!checkInBlockReason(student, activeCard)
   const cardFacts = [

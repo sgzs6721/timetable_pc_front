@@ -100,19 +100,19 @@ function trialTypeKey(name: string | undefined, include: boolean, percent?: numb
   return `${String(name || '').trim()}|${include ? 1 : 0}|${ratio}`
 }
 
-function TrialTypeAddButton(props: { types: TrialType[] }) {
+function TrialTypeAddButton(props: { types: TrialType[]; saving: boolean }) {
   const name = Form.useWatch('studentName') as string | undefined
   const blocked = trialTypeNameError(name, props.types) || (props.types.length >= 10 ? '最多 10 个体验类型' : '')
-  return <Button htmlType="submit" disabled={!!blocked}>新增</Button>
+  return <Button htmlType="submit" loading={props.saving} disabled={!!blocked || props.saving}>新增</Button>
 }
 
-function TrialTypeSaveButton(props: { row: TrialType; types: TrialType[] }) {
+function TrialTypeSaveButton(props: { row: TrialType; types: TrialType[]; saving: boolean }) {
   const name = Form.useWatch('studentName') as string | undefined
   const include = Form.useWatch('includeSalary') as boolean | undefined
   const percent = Form.useWatch('salaryPercent') as number | undefined
   const blocked = trialTypeNameError(name, props.types, props.row.id)
   const same = trialTypeKey(name, include !== false, percent) === trialTypeKey(props.row.studentName, Number(props.row.includeSalary) !== 0, trialPercent(props.row.salaryRatio, props.row.includeSalary))
-  return <Button type="primary" htmlType="submit" disabled={!!blocked || same}>保存</Button>
+  return <Button type="primary" htmlType="submit" loading={props.saving} disabled={!!blocked || same || props.saving}>保存</Button>
 }
 
 function academicPayload(state: { autoEnabled: boolean; autoMode: string; autoTime: string; fixedEnabled: boolean; fixedDay: number; fixedTime: string }): string {
@@ -139,6 +139,7 @@ export function AcademicSettings({ campusId, section = 'all' }: { campusId: numb
   const [types, setTypes] = useState<TrialType[]>([])
   const [creating, setCreating] = useState(false)
   const [editing, setEditing] = useState<TrialType | null>(null)
+  const [typeSaving, setTypeSaving] = useState(false)
   const [trialEnabled, setTrialEnabled] = useState(true)
   const [halfHour, setHalfHour] = useState(true)
   const [oneHour, setOneHour] = useState(true)
@@ -328,34 +329,42 @@ export function AcademicSettings({ campusId, section = 'all' }: { campusId: numb
       </section> : null}
       {section !== 'trial' ? <RefundSettings refund={refund} saved={refundSaved} tab={refundTab} campusId={campusId} onTab={setRefundTab} onChange={setRefund} onSaved={setRefundSaved} /> : null}
     </div>
-    {section !== 'academic' ? <Modal title="新建体验类型" open={creating} onCancel={() => setCreating(false)} footer={null} destroyOnHidden>
+    {section !== 'academic' ? <Modal title="新建体验类型" open={creating} onCancel={() => { if (!typeSaving) setCreating(false) }} footer={null} destroyOnHidden>
       <Form layout="vertical" initialValues={{ includeSalary: true, salaryPercent: 100 }} onFinish={async (values: { studentName: string; includeSalary?: boolean; salaryPercent?: number }) => {
+        if (typeSaving) return
         const nameError = trialTypeNameError(values.studentName, types)
         if (nameError) { message.warning(nameError); return }
         if (types.length >= 10) { message.warning('最多 10 个体验类型'); return }
         const include = values.includeSalary !== false
-        await postJson(`/campus-staff/${campusId}/default-students`, { studentName: String(values.studentName || '').trim(), includeSalary: include ? 1 : 0, salaryRatio: trialRatio(values.salaryPercent, include) })
-        message.success('已添加'); setCreating(false); await load()
+        setTypeSaving(true)
+        try {
+          await postJson(`/campus-staff/${campusId}/default-students`, { studentName: String(values.studentName || '').trim(), includeSalary: include ? 1 : 0, salaryRatio: trialRatio(values.salaryPercent, include) })
+          message.success('已添加'); setCreating(false); await load()
+        } catch (error) { message.error(tell(error, '新增失败，请重试')) } finally { setTypeSaving(false) }
       }}>
         <Form.Item name="studentName" label="体验名称" rules={[{ required: true, message: '体验类型不能为空' }]}><Input placeholder="最多 6 个字" maxLength={6} /></Form.Item>
         <Form.Item name="includeSalary" label={<span>计入工资 <small className="form-label-note">按老师课时费比例结算</small></span>} valuePropName="checked"><Switch /></Form.Item>
         <Form.Item noStyle shouldUpdate>{(form) => form.getFieldValue('includeSalary') === false ? null : <Form.Item name="salaryPercent" label="单课时比例"><InputNumber min={0} max={100} addonAfter="%" style={{ width: '100%' }} /></Form.Item>}</Form.Item>
-        <TrialTypeAddButton types={types} />
+        <TrialTypeAddButton types={types} saving={typeSaving} />
       </Form>
     </Modal> : null}
-    {section !== 'academic' ? <Modal title="编辑体验类型" open={!!editing} onCancel={() => setEditing(null)} footer={null} destroyOnHidden>
+    {section !== 'academic' ? <Modal title="编辑体验类型" open={!!editing} onCancel={() => { if (!typeSaving) setEditing(null) }} footer={null} destroyOnHidden>
       {editing ? <Form layout="vertical" initialValues={{ studentName: editing.studentName, includeSalary: Number(editing.includeSalary) !== 0, salaryPercent: trialPercent(editing.salaryRatio, editing.includeSalary) }} onFinish={async (values: { studentName: string; includeSalary?: boolean; salaryPercent?: number }) => {
+        if (typeSaving) return
         const nameError = trialTypeNameError(values.studentName, types, editing.id)
         if (nameError) { message.warning(nameError); return }
         const include = values.includeSalary !== false
         if (trialTypeKey(values.studentName, include, values.salaryPercent) === trialTypeKey(editing.studentName, Number(editing.includeSalary) !== 0, trialPercent(editing.salaryRatio, editing.includeSalary))) return
-        await putJson(`/campus-staff/${campusId}/default-students/${editing.id}`, { studentName: String(values.studentName || '').trim(), includeSalary: include ? 1 : 0, salaryRatio: trialRatio(values.salaryPercent, include) })
-        message.success('已更新'); setEditing(null); await load()
+        setTypeSaving(true)
+        try {
+          await putJson(`/campus-staff/${campusId}/default-students/${editing.id}`, { studentName: String(values.studentName || '').trim(), includeSalary: include ? 1 : 0, salaryRatio: trialRatio(values.salaryPercent, include) })
+          message.success('已更新'); setEditing(null); await load()
+        } catch (error) { message.error(tell(error, '保存失败，请重试')) } finally { setTypeSaving(false) }
       }}>
         <Form.Item name="studentName" label="名称" extra="最多6个字" rules={[{ required: true, message: '体验类型不能为空' }]}><Input maxLength={6} /></Form.Item>
         <Form.Item name="includeSalary" label="计入工资" extra="按老师课时费比例结算" valuePropName="checked"><Switch /></Form.Item>
         <Form.Item noStyle shouldUpdate>{(form) => form.getFieldValue('includeSalary') === false ? null : <Form.Item name="salaryPercent" label="单课时比例"><InputNumber min={0} max={100} addonAfter="%" style={{ width: '100%' }} /></Form.Item>}</Form.Item>
-        <TrialTypeSaveButton row={editing} types={types} />
+        <TrialTypeSaveButton row={editing} types={types} saving={typeSaving} />
       </Form> : null}
     </Modal> : null}
   </>

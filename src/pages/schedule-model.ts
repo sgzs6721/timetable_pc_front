@@ -73,6 +73,9 @@ export interface Schedule {
   effectiveStartDate?: string
   studentGroupId?: number
   primaryStudentId?: number
+  templateSeriesId?: number
+  timetableOwnerType?: string
+  pricingCourseTypeLabel?: string
   templateScheduleId?: number
 }
 
@@ -109,6 +112,8 @@ export interface CardChoice {
   remainingHours?: number
   expiredHours?: number
   remainingAmount?: number
+  validStartDate?: string
+  consumeDeadline?: string
   validEndDate?: string
   available?: boolean
   unavailableReason?: string

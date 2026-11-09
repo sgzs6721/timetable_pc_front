@@ -17,6 +17,7 @@ import './styles/ui-consistency.css'
 import './styles/calendar.css'
 import './styles/dialogs.css'
 import './styles/buttons.css'
+import './pages/schedule-service.css'
 
 const buttonConfig = { autoInsertSpace: false }
 const appTheme = {

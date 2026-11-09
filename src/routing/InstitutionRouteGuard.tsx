@@ -17,7 +17,7 @@ export function InstitutionRouteGuard() {
   const currentOrg = shell.organizations.find((item) => item.id === shell.currentOrgId) || null
   const hasOrganization = shell.organizations.length > 0
   const rolePaths = hasOrganization
-    ? navForUser(shell.user, currentOrg).map((item) => item.path)
+    ? navForUser(shell.user, currentOrg, shell.campusId).map((item) => item.path)
     : []
   const allowedPaths = new Set([...ALWAYS_AVAILABLE_PATHS, ...rolePaths])
   const featureProblem = location.pathname === '/leads' && !shell.leadsEnabled

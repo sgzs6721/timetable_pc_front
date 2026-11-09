@@ -181,12 +181,12 @@ export function HomePage() {
   const managerView = view === 'manager' || view === 'campus'
   const showSchedule = view !== 'member'
   const quickActions = useMemo(() => {
-    const permittedPaths = new Set(navForUser(user || null, currentOrg).map((item) => item.path))
+    const permittedPaths = new Set(navForUser(user || null, currentOrg, shell.campusId).map((item) => item.path))
     permittedPaths.add('/account')
     if (shell.leadsEnabled === false) permittedPaths.delete('/leads')
     if (shell.marketingEnabled === false) permittedPaths.delete('/marketing')
     const campus = shell.campuses.find((item) => item.id === campusId)
-    return quickActionsFor(view, user || null, currentOrg)
+    return quickActionsFor(view, user || null, currentOrg, shell.campusId)
       .filter((item) => permittedPaths.has(item.path))
       .map((item) => {
         let disabledReason = ''

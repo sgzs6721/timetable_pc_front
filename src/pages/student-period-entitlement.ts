@@ -1,3 +1,4 @@
+import { signedPaymentAmount } from './student-payments'
 import type { Card, PayRecord } from './students-model'
 
 export function isTransferredPeriodCard(card?: Card): boolean {
@@ -41,13 +42,28 @@ export function resolvePeriodEntitlement(records: PayRecord[] = []) {
   return { ownedRecords, fullyTransferred, transferOutDate }
 }
 
-export function hasOnlyTransferredRights(cards: Card[]): boolean {
+export function hasOnlyTransferredRights(cards: Card[], today = new Date().toLocaleDateString('sv-SE')): boolean {
   const active = cards.filter((card) => Number(card.deleted || 0) !== 1 && (card.status == null || Number(card.status) === 1))
-  const otherRights = active.some((card) => !isTransferredPeriodCard(card) && (
-    String(card.cardCategory || '').toUpperCase() === 'PERIOD'
-      ? !!card.validEndDate
-      : String(card.cardCategory || '').toUpperCase() === 'STORED_VALUE'
-        ? Number(card.remainingAmount || 0) > 0 : Number(card.remainingHours || 0) > 0
-  ))
-  return active.some(isTransferredPeriodCard) && !otherRights
+  if (!active.some((card) => card.fullyTransferred === true)) return false
+  return !active.some((card) => {
+    if (card.fullyTransferred || card.fullyRefunded) return false
+    if (String(card.cardCategory).toUpperCase() === 'PERIOD') return card.validEndDate === undefined || (!!card.validEndDate && card.validEndDate >= today)
+    const balance = String(card.cardCategory).toUpperCase() === 'STORED_VALUE' ? card.remainingAmount : card.remainingHours
+    return balance == null || Number(balance) > 0
+  })
+}
+
+export function periodFullyRefunded(card: Card, records: PayRecord[], includeUnscoped = true): boolean {
+  if (card.fullyRefunded) return true
+  const flat: PayRecord[] = []
+  const seen = new Set<number>()
+  const visit = (row: PayRecord, parentCardId?: number) => {
+    if (row.deleted === 1 || seen.has(row.id)) return
+    seen.add(row.id)
+    const cardId = row.studentCardId ?? parentCardId
+    if (cardId === card.id || (includeUnscoped && !cardId)) flat.push({ ...row, studentCardId: cardId })
+    ;(row.supplements || []).forEach((child) => visit(child, cardId))
+  }
+  records.forEach((row) => visit(row))
+  return flat.some((row) => row.type === 'refund') && Math.round(flat.reduce((sum, row) => sum + signedPaymentAmount(row), 0) * 100) <= 0
 }

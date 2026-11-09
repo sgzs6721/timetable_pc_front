@@ -7,6 +7,7 @@ import type { CourseMember, Schedule, TargetOption } from './schedule-model'
 import { CARD_MARKER, cardIdFromPricing, courseMembersWarning, courseTargetWarning, fallbackCourseMembers, minOpenWarning, pricingChoices, resolveMinOpen, resolveMaxOpen, sortTargetOptions, studentScheduleBlock } from './schedule-targets'
 import { DAY_LABELS, durationLabel, freeUntil, fromMinutes, parseTrialConfig, toMinutes } from './schedule-board-helpers'
 import type { CellDialogProps } from './schedule-cell-dialog'
+import { serviceBlockers, serviceStartOptions } from './schedule-service'
 import { isScheduleConflictMessage } from './schedule-policy'
 
 export function useCellDialogController(props: CellDialogProps) {
@@ -205,15 +206,17 @@ export function useCellDialogController(props: CellDialogProps) {
     && Number(pricing?.remainingAmount || 0) < pricingRequiredAmount
   const showPricing = !!selected && selected.targetType === 'student' && (choices.length > 1 || !!pricing?.service)
   const duration = Math.max(0, toMinutes(endTime) - toMinutes(startTime))
-  const room = freeUntil(startTime, props.dayLessons, cell.schedule?.id, props.dayEnd) - toMinutes(startTime)
+  const blockers = serviceBlockers(props.dayLessons, props.serviceTimetable)
+  const room = freeUntil(startTime, blockers, cell.schedule?.id, props.dayEnd) - toMinutes(startTime)
   const slotStart = cell.slotStart || cell.start
-  const slotRoom = freeUntil(slotStart, props.dayLessons, cell.schedule?.id, props.dayEnd) - toMinutes(slotStart)
+  const slotRoom = freeUntil(slotStart, blockers, cell.schedule?.id, props.dayEnd) - toMinutes(slotStart)
   const trialRoom = !trialConfig.half && trialConfig.hour ? Math.max(room, slotRoom >= 60 ? slotRoom : 0) : room
   const trialSwitchDisabled = !trialConfig.enabled || trialRoom < 30 || (!trialConfig.half && trialConfig.hour && trialRoom < 60)
   const keyword = query.trim()
   const visibleOptions = sortTargetOptions(options.filter((item) => {
     if (trialOn && item.targetType !== 'preset') return false
     if (!trialOn && item.targetType === 'preset') return false
+    if (props.serviceTimetable && !trialOn && !['student', 'service'].includes(item.targetType)) return false
     const name = `${item.displayName || ''} ${item.name || ''}`
     return !keyword || name.includes(keyword) || target === `${item.targetType}:${item.targetId}`
   }))
@@ -258,7 +261,7 @@ export function useCellDialogController(props: CellDialogProps) {
 
   function applyRange(start: string, minutes: number) {
     const end = fromMinutes(toMinutes(start) + minutes)
-    const limit = freeUntil(start, props.dayLessons, cell?.schedule?.id, props.dayEnd)
+    const limit = freeUntil(start, blockers, cell?.schedule?.id, props.dayEnd)
     if (toMinutes(end) > limit) {
       Modal.info({ title: '排课时间冲突', content: '该时间段与已有课程重叠，请调整时间后再保存。', okText: '重新调整' })
       return false
@@ -310,7 +313,7 @@ export function useCellDialogController(props: CellDialogProps) {
   function chooseHalf(position: 'first' | 'second') {
     if (!cell) return
     const start = position === 'second' ? fromMinutes(toMinutes(cell.start) + 30) : cell.start
-    const limit = freeUntil(start, props.dayLessons, cell.schedule?.id, props.dayEnd)
+    const limit = freeUntil(start, blockers, cell.schedule?.id, props.dayEnd)
     if (toMinutes(start) + 30 > limit) {
       message.warning('该时段已被占用')
       return
@@ -325,7 +328,7 @@ export function useCellDialogController(props: CellDialogProps) {
     const base = cell.slotStart || cell.start
     const second = fromMinutes(toMinutes(base) + 30)
     const start = position === 'second' ? second : base
-    const limit = freeUntil(start, props.dayLessons, cell.schedule?.id, props.dayEnd)
+    const limit = freeUntil(start, blockers, cell.schedule?.id, props.dayEnd)
     if (toMinutes(start) + 60 > limit) {
       message.warning('该开始时间下方空间不足')
       return
@@ -347,7 +350,7 @@ export function useCellDialogController(props: CellDialogProps) {
     const minutes = position === 'second'
       ? Math.max(toMinutes(baseEnd) - toMinutes(start), step)
       : Math.max(toMinutes(baseEnd) - toMinutes(baseStart), step)
-    const limit = freeUntil(start, props.dayLessons, cell.schedule?.id, props.dayEnd)
+    const limit = freeUntil(start, blockers, cell.schedule?.id, props.dayEnd)
     if (toMinutes(start) >= toMinutes(baseEnd) || toMinutes(start) + minutes > limit) {
       message.warning('该开始时间下方空间不足')
       return
@@ -410,7 +413,7 @@ export function useCellDialogController(props: CellDialogProps) {
   async function save(occupy = false) {
     if (saving) return
     if (!occupy && !selected) {
-      message.warning(trialOn ? '请选择体验类型' : '请先从候选列表中选择学员或非一对一班级')
+      message.warning(trialOn ? '请选择体验类型' : props.serviceTimetable ? '请选择服务项目或学员' : '请先从候选列表中选择学员或非一对一班级')
       return
     }
     if (!occupy && selected) {
@@ -451,8 +454,8 @@ export function useCellDialogController(props: CellDialogProps) {
         studentId: selected?.targetType === 'student' ? selected.targetId : undefined,
         studentCardId: cardIdFromPricing(pricing?.pricingCourseType),
         pricingStudentGroupId: pricing?.pricingStudentGroupId,
-        pricingCourseType: pricing?.pricingCourseType,
-        serviceQuantity: pricing?.service ? serviceQuantity : undefined,
+        pricingCourseType: selected?.targetType === 'service' ? selected.pricingCourseType : pricing?.pricingCourseType,
+        serviceQuantity: selected?.targetType === 'service' ? 1 : pricing?.service ? serviceQuantity : undefined,
         memberCardBindings: bindings,
         excludedStudentIds: selected?.targetType === 'course' ? excluded : undefined,
         campusId: dialogCampusId || props.campusId,
@@ -524,14 +527,15 @@ export function useCellDialogController(props: CellDialogProps) {
   const lessonSlotStart = cell.slotStart || cell.start
   const lessonSlotEnd = cell.slotEnd || cell.end
   const lessonSecondStart = fromMinutes(toMinutes(lessonSlotStart) + step)
-  const showLessonHalf = !trialOn && !batching && !existing && toMinutes(lessonSecondStart) < toMinutes(lessonSlotEnd)
+  const serviceStarts = props.serviceTimetable ? serviceStartOptions(lessonSlotStart, lessonSlotEnd, duration, props.dayEnd, props.dayLessons, cell.schedule?.id, startTime) : []
+  const showLessonHalf = !props.serviceTimetable && !trialOn && !batching && !existing && toMinutes(lessonSecondStart) < toMinutes(lessonSlotEnd)
   const firstHalfMinutes = Math.max(toMinutes(lessonSlotEnd) - toMinutes(lessonSlotStart), step)
   const secondHalfMinutes = Math.max(toMinutes(lessonSlotEnd) - toMinutes(lessonSecondStart), step)
-  const firstHalfAvailable = toMinutes(lessonSlotStart) + firstHalfMinutes <= freeUntil(lessonSlotStart, props.dayLessons, cell.schedule?.id, props.dayEnd)
-  const secondHalfAvailable = toMinutes(lessonSecondStart) < toMinutes(lessonSlotEnd) && toMinutes(lessonSecondStart) + secondHalfMinutes <= freeUntil(lessonSecondStart, props.dayLessons, cell.schedule?.id, props.dayEnd)
+  const firstHalfAvailable = toMinutes(lessonSlotStart) + firstHalfMinutes <= freeUntil(lessonSlotStart, blockers, cell.schedule?.id, props.dayEnd)
+  const secondHalfAvailable = toMinutes(lessonSecondStart) < toMinutes(lessonSlotEnd) && toMinutes(lessonSecondStart) + secondHalfMinutes <= freeUntil(lessonSecondStart, blockers, cell.schedule?.id, props.dayEnd)
   const trialHourBase = cell.slotStart || cell.start
   const trialHourSecond = fromMinutes(toMinutes(trialHourBase) + 30)
-  const trialHourSecondAvailable = freeUntil(trialHourSecond, props.dayLessons, cell.schedule?.id, props.dayEnd) - toMinutes(trialHourSecond) >= 60
+  const trialHourSecondAvailable = freeUntil(trialHourSecond, blockers, cell.schedule?.id, props.dayEnd) - toMinutes(trialHourSecond) >= 60
   const durationMax = Math.min(240, Math.floor(Math.max(room, 0) / step) * step)
   const durationHint = !trialOn && durationMax > step ? `最多${durationLabel(durationMax)}` : !trialOn && room < step ? '下方空间不足' : ''
   const recordRows = recordsScope === 'week' ? weekRecords : records
@@ -652,6 +656,8 @@ export function useCellDialogController(props: CellDialogProps) {
     shownMembers,
     shownInstances,
     cardMember,
+    serviceStarts,
+    chooseServiceStart: (start: string) => { if (serviceStarts.includes(start)) applyRange(start, duration) },
     shiftStart,
     shiftDuration,
     chooseHalf,

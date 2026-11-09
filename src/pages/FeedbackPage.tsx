@@ -1,4 +1,5 @@
 import { Button, Form, Input, Select, Table, Tabs, message } from 'antd'
+import { Link } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { getJson, postJson } from '../api/biz'
 import { PageHead, tell, useShell } from './kit'
@@ -49,6 +50,7 @@ export function FeedbackPage() {
   return (
     <section>
       <PageHead title="问题反馈" extra="提交后可以在这里查看处理状态和回复。" />
+      <p>使用方法可以先查看 <Link to="/guide">使用指南</Link>；遇到异常或有改进建议，可在这里提交。</p>
       <Tabs activeKey={tab} onChange={setTab} items={[
         { key: 'submit', label: '提交反馈', children: (
       <section className="work-card feedback-submit-card">

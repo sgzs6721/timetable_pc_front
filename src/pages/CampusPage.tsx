@@ -62,7 +62,8 @@ export function CampusPage() {
   }, [search])
   const currentOrg = shell.organizations.find((item) => item.id === shell.currentOrgId) || null
   const salaryAllowed = canManageCampusSalary(shell.user, currentOrg, campusId)
-  const profitSharingAllowed = canManageCampus(shell.user, campusId, currentOrg)
+  const profitSharingAllowed = canManageCampus(shell.user, campusId, currentOrg) && shell.marketingEnabled && shell.marketingAccessMode !== 'developing'
+  useEffect(() => { if (!profitSharingAllowed && serviceTab === 'profitSharing') setServiceTab('pricing') }, [profitSharingAllowed, serviceTab])
   const canImportCampusStaff = isOrganizationManager(shell.user, currentOrg)
   return (
     <NeedOrg orgId={shell.currentOrgId}>

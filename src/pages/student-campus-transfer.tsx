@@ -6,7 +6,7 @@ import { money, tell, todayIso } from './kit'
 import type { Student, Card, Named, PayRecord } from './students-model'
 import { isActiveTeachingCoach, serviceOriginalPrice, sliceDecimal, syncTransferDiscount, syncTransferPrice } from './student-card-desk'
 import { cardCategoryText, personName } from './students-domain'
-import { isTransferredPeriodCard, resolvePeriodEntitlement } from './student-period-entitlement'
+import { isTransferredPeriodCard, periodFullyRefunded, resolvePeriodEntitlement } from './student-period-entitlement'
 
 export function CampusTransfer(props: { student: Student; campuses: Named[]; onDone: () => Promise<void> }) {
   const [open, setOpen] = useState(false)
@@ -46,7 +46,7 @@ export function CampusTransfer(props: { student: Student; campuses: Named[]; onD
         const refreshed = { ...current }
         let chosen = false
         cards.forEach((card) => {
-          const disabled = !periodTransferable(card, rows || [])
+          const disabled = !periodTransferable(card, rows || [], cards.length === 1)
           const existing = refreshed[card.id!]
           refreshed[card.id!] = {
             ...(existing || { hours: Number(card.remainingHours || 0), coachIds: [], serviceIds: [], discount: {}, price: {}, ...transferValidityDraft(card) }),
@@ -124,7 +124,7 @@ export function CampusTransfer(props: { student: Student; campuses: Named[]; onD
       message.warning('请选择目标校区')
       return
     }
-    const chosen = cards.filter((card) => drafts[card.id!]?.selected && periodTransferable(card, payments))
+    const chosen = cards.filter((card) => drafts[card.id!]?.selected && periodTransferable(card, payments, cards.length === 1))
     if (cards.length && !chosen.length) {
       message.warning('请选择要转移的卡片')
       return
@@ -247,7 +247,7 @@ export function CampusTransfer(props: { student: Student; campuses: Named[]; onD
             const draft = drafts[card.id!]
             if (!draft) return { key: String(card.id), label: cardCategoryText(card.cardCategory), children: null }
             const category = String(card.cardCategory || '').toUpperCase()
-            const disabled = !periodTransferable(card, payments)
+            const disabled = !periodTransferable(card, payments, cards.length === 1)
             const moving = category === 'HOURS' ? Number(draft.hours || 0) > 0 || Number(draft.amount || 0) > 0 : category === 'STORED_VALUE' ? Number(draft.amount || 0) > 0 : true
             const suggested = suggestedTransferAmount(card, payments, category === 'HOURS' ? Number(draft.hours || 0) : undefined, cards.length === 1)
             return {
@@ -260,7 +260,7 @@ export function CampusTransfer(props: { student: Student; campuses: Named[]; onD
                 }}>
                   转入这张卡
                 </Checkbox>
-                <div>{disabled ? '当前没有可转移的有效期' : category === 'HOURS' ? `当前可转 ${card.remainingHours || 0} 课时` : category === 'STORED_VALUE' ? `当前可转 ${money(card.remainingAmount)}` : '有效期原样转入目标校区'}</div>
+                <div>{disabled ? (card.fullyRefunded ? '已退费，不能转校区' : '当前没有可转移的有效期') : category === 'HOURS' ? `当前可转 ${card.remainingHours || 0} 课时` : category === 'STORED_VALUE' ? `当前可转 ${money(card.remainingAmount)}` : '有效期原样转入目标校区'}</div>
                 {!draft.selected && !disabled ? <p>本次不转移此卡；可切换其他标签同时勾选多张卡。</p> : null}
                 {draft.selected && !disabled ? (
                   <Space direction="vertical" style={{ width: '100%', marginTop: 8 }}>
@@ -484,11 +484,12 @@ export function needsTransferService(card: Card): boolean {
   return (card.serviceItemIds || []).length > 0
 }
 
-export function periodTransferable(card: Card, payments: PayRecord[]): boolean {
+export function periodTransferable(card: Card, payments: PayRecord[], includeUnscoped = true): boolean {
+  if (card.fullyRefunded || card.fullyTransferred) return false
   if (String(card.cardCategory || '').toUpperCase() !== 'PERIOD') return true
-  if (isTransferredPeriodCard(card)) return false
+  if (periodFullyRefunded(card, payments, includeUnscoped)) return false
   const today = todayIso()
-  const scoped = payments.filter((record) => !record.studentCardId || record.studentCardId === card.id)
+  const scoped = payments.filter((record) => (includeUnscoped && !record.studentCardId) || record.studentCardId === card.id)
   return resolvePeriodEntitlement(scoped).ownedRecords.some((record) => record.validEndDate && record.validEndDate >= today)
     || (!payments.length && !!card.validEndDate && card.validEndDate >= today)
 }
@@ -499,7 +500,7 @@ export function suggestedTransferAmount(card: Card, payments: PayRecord[], hours
   const funding = scoped.filter((record) => record.type === 'new' || record.type === 'renew' || (record.type === 'adjustment' && record.adjustmentReason === 'transfer'))
   if (category === 'STORED_VALUE') return Number(card.remainingAmount || 0)
   if (category === 'PERIOD') {
-    if (isTransferredPeriodCard(card)) return 0
+    if (periodFullyRefunded(card, scoped, includeUnscoped) || isTransferredPeriodCard(card)) return 0
     const today = todayIso()
     const record = [...resolvePeriodEntitlement(scoped).ownedRecords].reverse().find((item) => item.validEndDate && item.validEndDate >= today)
     return Number(record?.amount || 0)

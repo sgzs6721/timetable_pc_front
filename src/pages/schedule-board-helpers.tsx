@@ -228,15 +228,21 @@ export function pickLatestTemplate(versions: Schedule[]): Schedule | null {
 }
 
 export function latestTemplateSchedules(rows: Schedule[]): Schedule[] {
+  const series = new Map<number, Schedule[]>()
+  const legacy = rows.filter((row) => {
+    if (row.scheduleDate || !row.templateSeriesId) return true
+    series.set(row.templateSeriesId, [...(series.get(row.templateSeriesId) || []), row])
+    return false
+  })
   const buckets = new Map<string, Schedule[]>()
-  for (const row of rows) {
+  for (const row of legacy) {
     if (row.scheduleDate) continue
     const slot = `${row.dayOfWeek}|${clockText(row.startTime)}|${clockText(row.endTime)}|${row.coachId || 0}`
     const list = buckets.get(slot) || []
     list.push(row)
     buckets.set(slot, list)
   }
-  const picked: Schedule[] = []
+  const picked: Schedule[] = [...series.values()].map(pickLatestTemplate).filter((row): row is Schedule => !!row)
   buckets.forEach((versions) => {
     if (!templateVersionsConflict(versions)) {
       const latest = pickLatestTemplate(versions)

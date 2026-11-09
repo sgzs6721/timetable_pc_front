@@ -45,6 +45,10 @@ export function canViewLeadCampus(user: UserInfo | null, campusId?: number | nul
   return targetCampusId > 0 && (user.leadCampusIds || []).some((id) => Number(id) === targetCampusId)
 }
 
+export function canViewCampusSalesMenus(user: UserInfo | null, campusId?: number | null, org?: Organization | null): boolean {
+  return canManageCampus(user, campusId, org) || canViewLeadCampus(user, campusId)
+}
+
 /** 销售可按授权校区查看教学信息；机构和校区管理员仍使用管理视图。 */
 export function hasSalesCampusScope(user: UserInfo | null, org?: Organization | null): boolean {
   return canViewLeads(user)

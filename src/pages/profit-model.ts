@@ -1,11 +1,14 @@
 import type { PeriodOption } from './kit'
 
-export type ProfitMetricKey = 'revenue' | 'teacherCost' | 'operatingExpense' | 'profit'
-export type DetailMetricKey = Exclude<ProfitMetricKey, 'profit'>
+export type ProfitMetricKey = 'revenue' | 'otherIncome' | 'teacherCost' | 'operatingExpense' | 'profit'
+export type DetailMetricKey = Exclude<ProfitMetricKey, 'profit' | 'otherIncome'>
 
 export interface ProfitDailyItem {
   date: string
   revenue?: number
+  otherIncome?: number
+  income?: number
+  expense?: number
   teacherCost?: number
   manualExpense?: number
   recurringExpense?: number
@@ -17,6 +20,9 @@ export interface ProfitDailyData {
   startDate?: string
   endDate?: string
   totalRevenue?: number
+  totalOtherIncome?: number
+  totalIncome?: number
+  totalExpense?: number
   totalTeacherCost?: number
   totalOperatingExpense?: number
   totalProfit?: number
@@ -63,6 +69,7 @@ export interface ProfitChartGroup {
 
 export const PROFIT_METRICS: Array<{ key: ProfitMetricKey; label: string }> = [
   { key: 'revenue', label: '销课收入' },
+  { key: 'otherIncome', label: '其他收入' },
   { key: 'teacherCost', label: '课时成本' },
   { key: 'operatingExpense', label: '经营支出' },
   { key: 'profit', label: '利润' },
@@ -76,6 +83,7 @@ export const DETAIL_ENDPOINTS: Record<DetailMetricKey, string> = {
 
 export function metricAmount(data: ProfitDailyData | null | undefined, metric: ProfitMetricKey): number {
   if (metric === 'revenue') return numberOf(data?.totalRevenue)
+  if (metric === 'otherIncome') return numberOf(data?.totalOtherIncome)
   if (metric === 'teacherCost') return numberOf(data?.totalTeacherCost)
   if (metric === 'operatingExpense') return numberOf(data?.totalOperatingExpense)
   return numberOf(data?.totalProfit)
@@ -115,4 +123,20 @@ function localIsoDate(date: Date): string {
   const month = String(date.getMonth() + 1).padStart(2, '0')
   const day = String(date.getDate()).padStart(2, '0')
   return `${date.getFullYear()}-${month}-${day}`
+}
+
+export function profitIncome(data: ProfitDailyData): number {
+  return data.totalIncome == null ? numberOf(data.totalRevenue) + numberOf(data.totalOtherIncome) : numberOf(data.totalIncome)
+}
+
+export function profitExpense(data: ProfitDailyData): number {
+  return data.totalExpense == null ? numberOf(data.totalTeacherCost) + numberOf(data.totalOperatingExpense) : numberOf(data.totalExpense)
+}
+
+export function dailyIncome(item: ProfitDailyItem): number {
+  return item.income == null ? numberOf(item.revenue) + numberOf(item.otherIncome) : numberOf(item.income)
+}
+
+export function dailyExpense(item: ProfitDailyItem): number {
+  return item.expense == null ? numberOf(item.teacherCost) + numberOf(item.operatingExpense) : numberOf(item.expense)
 }

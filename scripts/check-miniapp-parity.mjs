@@ -23,6 +23,7 @@ const registeredPages = [
 ]
 // Web 只承载机构管理后台；待办、家长/学员工作区与学员营销落地页只在小程序提供。
 const webExcludedPages = new Set(registeredPages.filter((page) => page.startsWith('subpackages/parent/pages/') || [
+  'subpackages/support/pages/parent-guide/parent-guide',
   'subpackages/todo/pages/todo-list/todo-list',
   'subpackages/todo/pages/todo-edit/todo-edit',
   'subpackages/marketing/pages/campaign-landing/campaign-landing',
@@ -92,7 +93,7 @@ if (!session.includes('window.crypto.getRandomValues(bytes)')
   authContractFailures.push('微信扫码登录必须使用随机、限时、一次性校验的 OAuth state')
 }
 if (!routes.includes('<Route element={<InstitutionRouteGuard />}>')
-  || !institutionRouteGuard.includes('navForUser(shell.user, currentOrg)')
+  || !institutionRouteGuard.includes('navForUser(shell.user, currentOrg, shell.campusId)')
   || !institutionRouteGuard.includes('status="403"')
   || !institutionRouteGuard.includes("'/home', '/account', '/membership', '/guide', '/feedback'")) {
   authContractFailures.push('机构业务路由必须在请求页面数据前按账号角色拦截越权直达')
@@ -138,7 +139,7 @@ const behaviorContracts = [
   {
     label: '固定课表对比必须过滤删除标记，并把跨行取消时段保持为单一连续块',
     files: ['src/pages/schedule-board-helpers.tsx', 'src/pages/SchedulePage.tsx', 'src/pages/schedule-cell-dialog.tsx', 'src/styles/work-schedule-board.css'],
-    need: ['Number(row.uiChangeStatus) !== 3 && Number(row.uiChangeStatus) !== 4', 'subtractMinuteRange(range, blockers)', 'left < lessonEnd && right > lessonStart', 'templateMode ? visibleLeaveSlices(lesson, own, cancelMarks) : []', '<em>班级</em>', '让跨行的固定课仍是一个完整取消框'],
+    need: ['Number(row.uiChangeStatus) !== 3 && Number(row.uiChangeStatus) !== 4', 'subtractMinuteRange(range, blockers)', 'left < lessonEnd && right > lessonStart', 'templateMode ? visibleLeaveSlices(lesson, own, cancelMarks) : []', '<em>班级</em>', '.tt-cancel'],
   },
   {
     label: '本周拖动固定课实例不能修改模板，拖动时必须隔离页面回弹',

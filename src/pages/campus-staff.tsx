@@ -198,11 +198,15 @@ export function Teachers({ campusId, canImportCampusStaff, onCampusChanged }: { 
     }
   }
   if (!campusId) return <p>请先选择校区。</p>
+  const positionOrder = new Map(positions.map((item, index) => [item.id, index]))
   const visibleRows = rows.filter((item) => {
     const query = keyword.trim().toLowerCase()
     if (!query) return true
     return [item.displayName, item.nickname, item.phone, item.positionName].some((value) => String(value || '').toLowerCase().includes(query))
-  })
+  }).sort((a, b) => Number(Number(a.status) === 0) - Number(Number(b.status) === 0)
+    || (positionOrder.get(a.positionId || 0) ?? positions.length) - (positionOrder.get(b.positionId || 0) ?? positions.length)
+    || Number(!!b.isSubstituteTeacher) - Number(!!a.isSubstituteTeacher)
+    || a.id - b.id)
   return (
     <section className="work-card staff-settings-card">
       <header className="staff-list-head">

@@ -171,7 +171,7 @@ export function listCardHasBalance(card: Card, field: 'remainingHours' | 'remain
 }
 
 export function listCardEffective(card: Card, student: Student): boolean {
-  if (isTransferredPeriodCard(card)) return false
+  if (card.fullyRefunded || card.fullyTransferred) return false
   const category = listCardCategory(card)
   if (category === 'HOURS') {
     const remaining = listCardHasBalance(card, 'remainingHours') ? Number(card.remainingHours || 0) : Number(student.remainingHours || 0)
@@ -246,7 +246,7 @@ export function orderedStudentCards(cards: Card[], today = todayIso()): Card[] {
   const categoryOrder: Record<string, number> = { HOURS: 0, PERIOD: 1, STORED_VALUE: 2 }
   const exhausted = (card: Card) => {
     const category = String(card.cardCategory || '').toUpperCase()
-    if (category === 'PERIOD') return isTransferredPeriodCard(card) || !card.validEndDate || card.validEndDate < today
+    if (category === 'PERIOD') return card.fullyRefunded === true || isTransferredPeriodCard(card) || !card.validEndDate || card.validEndDate < today
     if (category === 'STORED_VALUE') return Number(card.remainingAmount || 0) <= 0
     return Number(card.remainingHours || 0) - Math.max(0, Number(card.expiredHours || 0)) <= 0
   }
@@ -538,14 +538,16 @@ export function confirmCheckInDates(dates: string[], usedDates: string[]): Promi
 
 export function checkInBlockReason(student: Student, card?: Card): string {
   if (Number(student.status || 0) === 2) return '该学员已结业，不能打卡'
+  if (card?.fullyRefunded || (!card && student.fullyRefunded)) return '该卡已退费，不能打卡'
   if (isTransferredPeriodCard(card)) return '时段卡权益已转出，不能打卡'
+  if (card?.fullyTransferred) return '该卡权益已转出，不能打卡'
   const category = String(card?.cardCategory || student.cardCategory || 'HOURS').toUpperCase()
   const amount = Number(card?.remainingAmount ?? student.remainingAmount ?? 0)
   const hours = Number(card?.remainingHours ?? student.remainingHours ?? 0)
   if (category === 'STORED_VALUE' && amount <= 0) return '剩余金额为0，不能打卡'
   if (category === 'PERIOD') {
-    const end = String(card?.validEndDate || student.periodValidEndDate || '')
-    const start = String(card?.validStartDate || student.periodValidStartDate || '')
+    const end = String(card?.validEndDate || ((!card || student.cards?.length === 1) ? student.periodValidEndDate : '') || '')
+    const start = String(card?.validStartDate || ((!card || student.cards?.length === 1) ? student.periodValidStartDate : '') || '')
     if (!/^\d{4}-\d{2}-\d{2}$/.test(end) || (/^\d{4}-\d{2}-\d{2}$/.test(start) && todayIso() < start)) return '时段卡未生效，不能打卡'
   }
   if (category !== 'STORED_VALUE' && category !== 'PERIOD' && hours <= 0) return '剩余课时为0，不能打卡'
@@ -569,7 +571,7 @@ export function canArchiveStudent(student: Student): boolean {
   return cards.every((card) => {
     const category = String(card.cardCategory || 'HOURS').toUpperCase()
     if (category === 'STORED_VALUE') return Number(card.remainingAmount || 0) === 0
-    if (category === 'PERIOD') return isTransferredPeriodCard(card) || (!!card.validEndDate && card.validEndDate < today)
+    if (category === 'PERIOD') return card.fullyRefunded === true || isTransferredPeriodCard(card) || (!!card.validEndDate && card.validEndDate < today)
     return Number(card.remainingHours || 0) === 0
   })
 }
@@ -676,7 +678,7 @@ export function activeStudentCards(student: Student): Card[] {
 }
 
 export function checkInCardEligible(card: Card, student: Student, useStudentBalance: boolean): boolean {
-  if (isTransferredPeriodCard(card)) return false
+  if (card.fullyRefunded || card.fullyTransferred) return false
   const category = String(card.cardCategory || student.cardCategory || 'HOURS').toUpperCase()
   const remainingHours = Number(card.remainingHours ?? (useStudentBalance ? student.remainingHours : 0) ?? 0)
   const remainingAmount = Number(card.remainingAmount ?? (useStudentBalance ? student.remainingAmount : 0) ?? 0)

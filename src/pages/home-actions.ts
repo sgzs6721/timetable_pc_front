@@ -1,4 +1,4 @@
-import { canViewLeads, isSalesReadOnlyUser } from '../access'
+import { canViewCampusSalesMenus, isSalesReadOnlyUser } from '../access'
 import type { Organization, UserInfo } from '../api/types'
 
 export type HomeView = 'manager' | 'campus' | 'substitute' | 'member'
@@ -14,10 +14,11 @@ export interface HomeQuickAction {
   requiresActiveCampus?: boolean
 }
 
+const MARKETING_ACTION: HomeQuickAction = { key: 'marketing', label: '营销活动', description: '招生活动与推广', icon: 'icon-marketing', tone: 'rose', path: '/marketing' }
 const LEADS_ACTION: HomeQuickAction = { key: 'leads', label: '客源管理', description: '客源录入与销售跟进', icon: 'icon-leads', tone: 'blue', path: '/leads' }
 
 const MANAGER_QUICK_ACTIONS: HomeQuickAction[] = [
-  LEADS_ACTION,
+  LEADS_ACTION, MARKETING_ACTION,
   { key: 'org', label: '机构管理', description: '机构信息与基础配置', icon: 'icon-org', tone: 'slate', path: '/org' },
   { key: 'campus', label: '校区管理', description: '校区人员、业务与权限', icon: 'icon-campus', tone: 'orange', path: '/campus' },
   { key: 'hours', label: '课时管理', description: '课时记录与核算', icon: 'icon-hours', tone: 'blue', path: '/hours', requiresActiveCampus: true },
@@ -43,14 +44,14 @@ const MEMBER_QUICK_ACTIONS: HomeQuickAction[] = [
 ]
 
 const SALES_READ_ONLY_QUICK_ACTIONS: HomeQuickAction[] = [
-  LEADS_ACTION,
+  LEADS_ACTION, MARKETING_ACTION,
   { key: 'students', label: '学员管理', description: '查看负责校区学员', icon: 'icon-students', tone: 'cyan', path: '/students' },
   { key: 'courses', label: '课程管理', description: '查看负责校区课程', icon: 'icon-timetable-card', tone: 'orange', path: '/courses' },
   ...MEMBER_QUICK_ACTIONS,
 ]
 
-export function quickActionsFor(view: HomeView, user: UserInfo | null, org: Organization | null): HomeQuickAction[] {
-  if (isSalesReadOnlyUser(user, org)) return SALES_READ_ONLY_QUICK_ACTIONS
+export function quickActionsFor(view: HomeView, user: UserInfo | null, org: Organization | null, campusId?: number | null): HomeQuickAction[] {
+  if (isSalesReadOnlyUser(user, org)) return SALES_READ_ONLY_QUICK_ACTIONS.filter((item) => !['leads', 'marketing'].includes(item.key) || canViewCampusSalesMenus(user, campusId, org))
   const actions = view === 'manager'
     ? MANAGER_QUICK_ACTIONS
     : view === 'campus'
@@ -58,6 +59,6 @@ export function quickActionsFor(view: HomeView, user: UserInfo | null, org: Orga
       : view === 'substitute'
         ? TEACHER_QUICK_ACTIONS
         : MEMBER_QUICK_ACTIONS
-  if (!canViewLeads(user)) return actions.filter((item) => item.key !== 'leads')
-  return actions.some((item) => item.key === 'leads') ? actions : [LEADS_ACTION, ...actions]
+  if (!canViewCampusSalesMenus(user, campusId, org)) return actions.filter((item) => !['leads', 'marketing'].includes(item.key))
+  return actions.some((item) => item.key === 'leads') ? actions : [LEADS_ACTION, MARKETING_ACTION, ...actions]
 }

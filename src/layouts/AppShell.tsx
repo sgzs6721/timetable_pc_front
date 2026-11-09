@@ -203,11 +203,11 @@ export function AppShell() {
         { key: '/guide', label: '需要帮助' },
         { key: '/feedback', label: '问题反馈' },
       ]
-      : navForUser(user, currentOrg)
+      : navForUser(user, currentOrg, campusId)
         .filter((item) => item.path !== '/marketing' || marketingEnabled)
         .filter((item) => item.path !== '/leads' || leadsEnabled)
         .map((item) => ({ key: item.path, label: item.label }))),
-    [user, currentOrg, noOrganization, marketingEnabled, leadsEnabled],
+    [user, currentOrg, campusId, noOrganization, marketingEnabled, leadsEnabled],
   )
 
   useEffect(() => {

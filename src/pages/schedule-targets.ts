@@ -3,6 +3,7 @@ import { todayIso } from './kit'
 import type { CardChoice, TargetOption, PricingChoice, CourseMember } from './schedule-model'
 
 export function targetTypeOrder(type?: string): number {
+  if (type === 'service') return 0
   if (type === 'student') return 1
   if (type === 'course') return 2
   if (type === 'preset') return 3

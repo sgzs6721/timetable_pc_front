@@ -34,7 +34,7 @@ onStudent: (action: 'add' | 'remove' | 'leave' | 'restore', studentId: number) =
 export function CellDialog(input: CellDialogProps) {
   const vm = useCellDialogController(input)
   if (!vm) return null
-  const { props, optionsLoading, optionsError, target, setTarget, query, setQuery, searchOpen, setSearchOpen, pricingKey, setPricingKey, pricingOpen, setPricingOpen, serviceQuantity, setServiceQuantity, members, membersLoaded, excluded, setExcluded, memberCards, membersOpen, setMembersOpen, instancesOpen, setInstancesOpen, cardDraftId, setCardDraftId, trialConfig, trialOn, setTrialOn, trialDuration, setTrialDuration, halfPosition, note, setNote, startTime, endTime, coachIds, setCoachIds, recordsOpen, setRecordsOpen, recordsScope, setRecordsScope, recordsLoading, saving, leaving, setLeaving, deleting, setDeleting, restoring, setRestoring, dialogCampusId, cell, campusChoices, dialogCampusName, selected, choices, instances, sameCourse, occupied, onLeave, batching, existing, pricing, pricingRequiredAmount, pricingQuantityBlocked, saveBlocked, showPricing, duration, room, trialSwitchDisabled, keyword, visibleOptions, coachChoices, canLeave, openWarning, scheduleUnchanged, lessonSlotStart, lessonSecondStart, showLessonHalf, firstHalfAvailable, secondHalfAvailable, trialHourBase, trialHourSecond, trialHourSecondAvailable, durationHint, recordRows, shownMembers, shownInstances, cardMember, shiftStart, shiftDuration, chooseHalf, chooseTrialHour, chooseLessonHalf, changeDialogCampus, choose, confirmOccupy, save, openRecords, openStudentRecords, toggleStudent, openCardPicker, closeCardPicker, confirmCardPicker } = vm
+  const { props, optionsLoading, optionsError, target, setTarget, query, setQuery, searchOpen, setSearchOpen, pricingKey, setPricingKey, pricingOpen, setPricingOpen, serviceQuantity, setServiceQuantity, members, membersLoaded, excluded, setExcluded, memberCards, membersOpen, setMembersOpen, instancesOpen, setInstancesOpen, cardDraftId, setCardDraftId, trialConfig, trialOn, setTrialOn, trialDuration, setTrialDuration, halfPosition, note, setNote, startTime, endTime, coachIds, setCoachIds, recordsOpen, setRecordsOpen, recordsScope, setRecordsScope, recordsLoading, saving, leaving, setLeaving, deleting, setDeleting, restoring, setRestoring, dialogCampusId, cell, campusChoices, dialogCampusName, selected, choices, instances, sameCourse, occupied, onLeave, batching, existing, pricing, pricingRequiredAmount, pricingQuantityBlocked, saveBlocked, showPricing, duration, room, trialSwitchDisabled, keyword, visibleOptions, coachChoices, canLeave, openWarning, scheduleUnchanged, lessonSlotStart, lessonSecondStart, showLessonHalf, firstHalfAvailable, secondHalfAvailable, trialHourBase, trialHourSecond, trialHourSecondAvailable, durationHint, recordRows, shownMembers, shownInstances, cardMember, serviceStarts, chooseServiceStart, shiftStart, shiftDuration, chooseHalf, chooseTrialHour, chooseLessonHalf, changeDialogCampus, choose, confirmOccupy, save, openRecords, openStudentRecords, toggleStudent, openCardPicker, closeCardPicker, confirmCardPicker } = vm
 
   return (
     <Modal className="sheet-modal" open centered onCancel={props.onClose} footer={null} destroyOnHidden width={620} closable={false}>
@@ -137,24 +137,24 @@ export function CellDialog(input: CellDialogProps) {
                 </label>
               ) : null}
               <div className="sheet-field is-search">
-                <span>{trialOn ? '体验类型' : props.serviceTimetable ? '服务学员' : selected?.targetType === 'course' || (!selected && cell.schedule?.targetType === 'course') ? '课程' : '学员'}</span>
+                <span>{trialOn ? '体验类型' : props.serviceTimetable ? '服务 / 学员' : selected?.targetType === 'course' || (!selected && cell.schedule?.targetType === 'course') ? '课程' : '学员'}</span>
                 <div>
                   <input
                     value={query}
-                    placeholder={trialOn ? '选择体验类型' : props.serviceTimetable ? '搜索持有可用服务卡的学员' : '搜索学员姓名或非一对一课程简称'}
+                    placeholder={trialOn ? '选择体验类型' : props.serviceTimetable ? '搜索服务项目或持卡学员' : '搜索学员姓名或非一对一课程简称'}
                     onFocus={() => setSearchOpen(true)}
                     onChange={(event) => { setQuery(event.target.value); setSearchOpen(true); if (target) setTarget('') }}
                   />
                   {query || target ? <button type="button" onClick={() => { setQuery(''); setTarget(''); setSearchOpen(true) }}>×</button> : null}
                   {searchOpen ? (
                     <div className="sheet-menu">
-                      {optionsLoading ? <p>候选项加载中...</p> : optionsError ? <p>{optionsError}</p> : !visibleOptions.length ? <p>{trialOn ? '当前校区尚未设置体验类型，请前往校区设置的「体验类型」中添加' : props.serviceTimetable ? keyword ? '没有找到持有可用服务卡的学员' : '暂无持有可用服务的储值卡或时段卡学员' : keyword ? '没有找到匹配学员或课程，请换个关键词试试' : '暂无学员或课程，请换老师或校区'}</p> : visibleOptions.map((item) => {
+                      {optionsLoading ? <p>候选项加载中...</p> : optionsError ? <p>{optionsError}</p> : !visibleOptions.length ? <p>{trialOn ? '当前校区尚未设置体验类型，请前往校区设置的「体验类型」中添加' : props.serviceTimetable ? keyword ? '没有找到匹配的服务项目或学员' : '暂无可选服务项目或持卡学员' : keyword ? '没有找到匹配学员或课程，请换个关键词试试' : '暂无学员或课程，请换老师或校区'}</p> : visibleOptions.map((item) => {
                         const blocked = !!courseTargetWarning(item) || !!studentScheduleBlock(item)
                         const icon = genderIconName(item.gender)
                         const hoursLabel = scheduleHoursLabel(item)
                         return (
                           <button type="button" key={`${item.targetType}:${item.targetId}`} className={target === `${item.targetType}:${item.targetId}` ? 'is-on' : ''} disabled={blocked} onClick={() => choose(item)}>
-                            {item.targetType === 'course' ? (
+                            {item.targetType === 'service' ? <><b>{item.displayName || item.name}</b><em>服务</em></> : item.targetType === 'course' ? (
                               <>
                                 <b>{item.displayName || item.name}</b>
                                 <em>班级</em>
@@ -314,7 +314,12 @@ export function CellDialog(input: CellDialogProps) {
 
               {!batching && !trialOn ? (
                 <div className="sheet-duration">
-                  {showLessonHalf ? (
+                  {props.serviceTimetable ? (
+                    <div className="sheet-duration-section is-start">
+                      <span>开始时间</span>
+                      <Select aria-label="服务开始时间" value={startTime} options={serviceStarts.map((value) => ({ value, label: value }))} onChange={chooseServiceStart} style={{ width: 125 }} />
+                    </div>
+                  ) : showLessonHalf ? (
                     <div className="sheet-duration-section is-start is-time-choice">
                       <span>开始时间</span>
                       <small>可切换</small>

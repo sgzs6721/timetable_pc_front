@@ -477,7 +477,7 @@ export function PaymentEditor(props: {
           })
           const serviceRightReady = (id: number) => {
             const right = serviceRightNumbers(id)
-            return right.discount > 0 || right.unit > 0
+            return right.discount > 0 || right.unit > 0 || props.services.find((item) => item.id === id)?.price === 0
           }
           if (pricingGroup) {
             const discount = Number(values.courseDiscount)
@@ -522,8 +522,8 @@ export function PaymentEditor(props: {
               return {
                 courseType: `service:${id}`,
                 courseTypeLabel: service ? personName(service) : '',
-                discount: discount > 0 ? discount : undefined,
-                unitPrice: unit > 0 ? unit : undefined,
+                discount: discount > 0 ? discount : service?.price === 0 ? 100 : undefined,
+                unitPrice: unit > 0 ? unit : service?.price === 0 ? 0 : undefined,
               }
             }),
           ]

@@ -1,6 +1,6 @@
 import type { Organization, UserInfo } from './api/types'
 import {
-  canViewLeads,
+  canViewCampusSalesMenus,
   campusAdminIds,
   hasSalesCampusScope,
   isOrganizationManager,
@@ -15,6 +15,7 @@ export interface NavItem {
   path: string
 }
 
+const MARKETING_NAV: NavItem = { key: 'marketing', label: '营销活动', path: '/marketing' }
 const LEADS_NAV: NavItem = { key: 'leads', label: '客源管理', path: '/leads' }
 
 const MANAGER_NAV: NavItem[] = [
@@ -52,7 +53,7 @@ const TEACHER_NAV: NavItem[] = [
 
 const SALES_READ_ONLY_NAV: NavItem[] = [
   { key: 'home', label: '首页', path: '/home' },
-  LEADS_NAV,
+  LEADS_NAV, MARKETING_NAV,
   { key: 'students', label: '学员管理', path: '/students' },
   { key: 'schedule', label: '校区课表', path: '/schedule' },
   { key: 'courses', label: '课程管理', path: '/courses' },
@@ -70,11 +71,12 @@ const MEMBER_NAV: NavItem[] = [
   { key: 'feedback', label: '问题反馈', path: '/feedback' },
 ]
 
-function withoutLeads(items: NavItem[], user: UserInfo | null): NavItem[] {
-  return canViewLeads(user) ? items : items.filter((item) => item.key !== 'leads')
+export function navForUser(user: UserInfo | null, org?: Organization | null, campusId?: number | null): NavItem[] {
+  const items = roleNavigation(user, org)
+  return campusId === undefined || canViewCampusSalesMenus(user, campusId, org) ? items : items.filter((item) => !['leads', 'marketing'].includes(item.key))
 }
 
-export function navForUser(user: UserInfo | null, org?: Organization | null): NavItem[] {
+function roleNavigation(user: UserInfo | null, org?: Organization | null): NavItem[] {
   if (!user) {
     // 首屏恢复账号上下文期间，先完整渲染静态管理菜单，避免侧栏从“仅首页”跳变。
     // 内容区仍由 AppShell 的 ready 状态拦截；账号返回后会立即按真实角色收敛菜单。
@@ -82,14 +84,14 @@ export function navForUser(user: UserInfo | null, org?: Organization | null): Na
   }
   const role = (user.role || '').toLowerCase()
   if (isOrganizationManager(user, org)) {
-    return withoutLeads(MANAGER_NAV, user)
+    return MANAGER_NAV
   }
   if (campusAdminIds(user).length > 0) {
-    return withoutLeads(CAMPUS_ADMIN_NAV, user)
+    return CAMPUS_ADMIN_NAV
   }
   if (user.isSubstituteTeacher) {
     return hasSalesCampusScope(user, org)
-      ? [LEADS_NAV, ...TEACHER_NAV.map((item) => {
+      ? [LEADS_NAV, MARKETING_NAV, ...TEACHER_NAV.map((item) => {
         if (item.key === 'students') return { ...item, label: '学员管理' }
         if (item.key === 'schedule') return { ...item, label: '校区课表' }
         if (item.key === 'courses') return { ...item, label: '课程管理' }

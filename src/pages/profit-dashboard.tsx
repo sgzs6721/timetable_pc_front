@@ -9,7 +9,7 @@ import {
 import { Table } from 'antd'
 import { useMemo, useState, type CSSProperties } from 'react'
 import {
-  currency,
+  currency, profitIncome, profitExpense, dailyIncome, dailyExpense,
   dailyMetricAmount,
   metricAmount,
   numberOf,
@@ -18,13 +18,15 @@ import {
   type ProfitCampusSection,
 } from './profit-model'
 
-type ComparisonMetric = 'profit' | 'revenue' | 'margin'
-type TrendMetric = 'revenue' | 'cost' | 'profit'
+type ComparisonMetric = 'profit' | 'income' | 'margin'
+type TrendMetric = 'income' | 'cost' | 'profit'
 
 interface CampusPerformanceRow {
   id: number
   name: string
   revenue: number
+  otherIncome: number
+  income: number
   teacherCost: number
   operatingExpense: number
   totalCost: number
@@ -39,6 +41,8 @@ interface CampusPerformanceRow {
 interface DailyPerformanceRow {
   date: string
   revenue: number
+  otherIncome: number
+  income: number
   teacherCost: number
   operatingExpense: number
   totalCost: number
@@ -96,12 +100,13 @@ export function ProfitDashboard(props: {
         <div className="executive-kpi-grid">
           <KpiCard
             tone="revenue"
-            label="销课收入"
-            value={currency(totals.revenue)}
-            note={`日均 ${currency(totalDays ? totals.revenue / totalDays : 0)}`}
-            delta={changeRate(totals.revenue, previousTotals.revenue)}
+            label="总收入"
+            value={currency(totals.income)}
+            note={`销课 ${currency(totals.revenue)} · 其他 ${currency(totals.otherIncome)}`}
+            delta={changeRate(totals.income, previousTotals.income)}
             compareLabel={props.previousPeriodLabel}
             clickable={!!detailSection && totals.revenue > 0}
+            actionLabel="查看销课明细"
             onClick={() => detailSection && props.onDetail('revenue', detailSection, detailSection.daily.startDate || '', detailSection.daily.endDate || '')}
           />
           <KpiCard
@@ -117,7 +122,7 @@ export function ProfitDashboard(props: {
             tone={totals.profit < 0 ? 'loss' : 'profit'}
             label="经营利润"
             value={currency(totals.profit)}
-            note="销课收入 − 课时成本 − 经营支出"
+            note="总收入 − 总支出"
             delta={changeRate(totals.profit, previousTotals.profit)}
             compareLabel={props.previousPeriodLabel}
             inverseDelta={false}
@@ -209,6 +214,7 @@ function KpiCard(props: {
   deltaUnit?: string
   inverseDelta?: boolean
   clickable?: boolean
+  actionLabel?: string
   onClick?: () => void
 }) {
   const deltaPositive = numberOf(props.delta) >= 0
@@ -232,7 +238,7 @@ function KpiCard(props: {
         )}
         <small>{props.compareLabel ? `对比 ${props.compareLabel}` : ''}</small>
       </span>
-      {props.clickable ? <span className="executive-kpi-action">查看明细 <RightOutlined /></span> : null}
+      {props.clickable ? <span className="executive-kpi-action">{props.actionLabel || '查看明细'} <RightOutlined /></span> : null}
     </>
   )
   return props.clickable ? (
@@ -252,9 +258,9 @@ function InsightItem(props: { icon: React.ReactNode; label: string; value: strin
 }
 
 function OperatingTrendChart(props: { rows: DailyPerformanceRow[] }) {
-  const [visible, setVisible] = useState<Record<TrendMetric, boolean>>({ revenue: true, cost: true, profit: true })
+  const [visible, setVisible] = useState<Record<TrendMetric, boolean>>({ income: true, cost: true, profit: true })
   const series: Array<{ key: TrendMetric; label: string; color: string }> = [
-    { key: 'revenue', label: '销课收入', color: '#14a67a' },
+    { key: 'income', label: '总收入', color: '#14a67a' },
     { key: 'cost', label: '总成本', color: '#f59e0b' },
     { key: 'profit', label: '利润', color: '#4f6ff5' },
   ]
@@ -291,7 +297,7 @@ function OperatingTrendChart(props: { rows: DailyPerformanceRow[] }) {
           </button>
         ))}
       </div>
-      {!props.rows.length || !props.rows.some((row) => row.revenue || row.totalCost || row.profit) ? (
+      {!props.rows.length || !props.rows.some((row) => row.income || row.totalCost || row.profit) ? (
         <div className="executive-chart-empty">当前周期暂无趋势数据</div>
       ) : (
         <div className="executive-chart-wrap">
@@ -394,6 +400,8 @@ function CampusComparison(props: {
       render: (name: string, row: CampusPerformanceRow) => <span className="executive-campus-name"><strong>{name}</strong>{row.id === props.selectedCampusId ? <small>当前筛选</small> : null}</span>,
     },
     { title: '销课收入', dataIndex: 'revenue', width: 135, sorter: (a: CampusPerformanceRow, b: CampusPerformanceRow) => a.revenue - b.revenue, render: currency },
+    { title: '其他收入', dataIndex: 'otherIncome', width: 135, render: currency },
+    { title: '总收入', dataIndex: 'income', width: 135, render: currency },
     { title: '课时成本', dataIndex: 'teacherCost', width: 125, sorter: (a: CampusPerformanceRow, b: CampusPerformanceRow) => a.teacherCost - b.teacherCost, render: currency },
     { title: '经营支出', dataIndex: 'operatingExpense', width: 125, sorter: (a: CampusPerformanceRow, b: CampusPerformanceRow) => a.operatingExpense - b.operatingExpense, render: currency },
     { title: '总成本', dataIndex: 'totalCost', width: 125, sorter: (a: CampusPerformanceRow, b: CampusPerformanceRow) => a.totalCost - b.totalCost, render: currency },
@@ -420,7 +428,7 @@ function CampusComparison(props: {
         <div className="executive-metric-switch" aria-label="校区排名指标">
           {([
             ['profit', '按利润'],
-            ['revenue', '按收入'],
+            ['income', '按收入'],
             ['margin', '按利润率'],
           ] as Array<[ComparisonMetric, string]>).map(([key, label]) => (
             <button key={key} type="button" className={metric === key ? 'is-active' : ''} aria-pressed={metric === key} onClick={() => setMetric(key)}>{label}</button>
@@ -476,6 +484,8 @@ function DailyPerformanceTable(props: {
   const columns = [
     { title: '日期', dataIndex: 'date', width: 138, sorter: (a: DailyPerformanceRow, b: DailyPerformanceRow) => a.date.localeCompare(b.date), render: (date: string) => <span className="executive-date-cell"><strong>{date}</strong><small>{weekdayLabel(date)}</small></span> },
     { title: '销课收入', dataIndex: 'revenue', width: 145, sorter: (a: DailyPerformanceRow, b: DailyPerformanceRow) => a.revenue - b.revenue, render: (value: number, row: DailyPerformanceRow) => metricCell('revenue', row, value) },
+    { title: '其他收入', dataIndex: 'otherIncome', width: 135, render: currency },
+    { title: '总收入', dataIndex: 'income', width: 135, render: currency },
     { title: '课时成本', dataIndex: 'teacherCost', width: 140, sorter: (a: DailyPerformanceRow, b: DailyPerformanceRow) => a.teacherCost - b.teacherCost, render: (value: number, row: DailyPerformanceRow) => metricCell('teacherCost', row, value) },
     { title: '经营支出', dataIndex: 'operatingExpense', width: 140, sorter: (a: DailyPerformanceRow, b: DailyPerformanceRow) => a.operatingExpense - b.operatingExpense, render: (value: number, row: DailyPerformanceRow) => metricCell('operatingExpense', row, value) },
     { title: '总成本', dataIndex: 'totalCost', width: 140, sorter: (a: DailyPerformanceRow, b: DailyPerformanceRow) => a.totalCost - b.totalCost, render: currency },
@@ -504,41 +514,47 @@ function DailyPerformanceTable(props: {
   )
 }
 
-function summarize(sections: ProfitCampusSection[]) {
+export function summarize(sections: ProfitCampusSection[]) {
   const revenue = sections.reduce((sum, section) => sum + metricAmount(section.daily, 'revenue'), 0)
+  const otherIncome = sections.reduce((sum, section) => sum + metricAmount(section.daily, 'otherIncome'), 0)
+  const income = sections.reduce((sum, section) => sum + profitIncome(section.daily), 0)
   const teacherCost = sections.reduce((sum, section) => sum + metricAmount(section.daily, 'teacherCost'), 0)
   const operatingExpense = sections.reduce((sum, section) => sum + metricAmount(section.daily, 'operatingExpense'), 0)
   const profit = sections.reduce((sum, section) => sum + metricAmount(section.daily, 'profit'), 0)
-  const totalCost = teacherCost + operatingExpense
+  const totalCost = sections.reduce((sum, section) => sum + profitExpense(section.daily), 0)
   return {
     revenue,
+    otherIncome,
+    income,
     teacherCost,
     operatingExpense,
     totalCost,
     profit,
-    margin: ratio(profit, revenue),
-    costRate: ratio(totalCost, revenue),
+    margin: ratio(profit, income),
+    costRate: ratio(totalCost, income),
   }
 }
 
-function aggregateDaily(sections: ProfitCampusSection[]): DailyPerformanceRow[] {
+export function aggregateDaily(sections: ProfitCampusSection[]): DailyPerformanceRow[] {
   const dates = new Map<string, DailyPerformanceRow>()
   sections.forEach((section) => section.items.forEach((item) => {
     if (!item.date) return
-    const row = dates.get(item.date) || { date: item.date, revenue: 0, teacherCost: 0, operatingExpense: 0, totalCost: 0, profit: 0, margin: null }
+    const row = dates.get(item.date) || { date: item.date, revenue: 0, otherIncome: 0, income: 0, teacherCost: 0, operatingExpense: 0, totalCost: 0, profit: 0, margin: null }
     row.revenue += dailyMetricAmount(item, 'revenue')
+    row.otherIncome += dailyMetricAmount(item, 'otherIncome')
+    row.income += dailyIncome(item)
     row.teacherCost += dailyMetricAmount(item, 'teacherCost')
     row.operatingExpense += dailyMetricAmount(item, 'operatingExpense')
     row.profit += dailyMetricAmount(item, 'profit')
-    row.totalCost = row.teacherCost + row.operatingExpense
-    row.margin = ratio(row.profit, row.revenue)
+    row.totalCost += dailyExpense(item)
+    row.margin = ratio(row.profit, row.income)
     dates.set(item.date, row)
   }))
   return [...dates.values()].sort((left, right) => left.date.localeCompare(right.date))
 }
 
 function buildCampusRows(sections: ProfitCampusSection[], previousSections: ProfitCampusSection[]): CampusPerformanceRow[] {
-  const institutionRevenue = sections.reduce((sum, section) => sum + metricAmount(section.daily, 'revenue'), 0)
+  const institutionRevenue = sections.reduce((sum, section) => sum + profitIncome(section.daily), 0)
   const previousByCampus = new Map(previousSections.map((section) => [section.campusId, section]))
   const rows = sections.map((section) => {
     const current = summarize([section])
@@ -547,7 +563,7 @@ function buildCampusRows(sections: ProfitCampusSection[], previousSections: Prof
       id: section.campusId,
       name: section.campusName,
       ...current,
-      revenueShare: ratio(current.revenue, institutionRevenue),
+      revenueShare: ratio(current.income, institutionRevenue),
       profitDelta: changeRate(current.profit, previous.profit),
       rank: 0,
     }

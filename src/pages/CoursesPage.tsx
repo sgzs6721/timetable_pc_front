@@ -1,8 +1,9 @@
 import { Button, Form, Input, InputNumber, Modal, Popconfirm, Select, Space, Switch, Table, message } from 'antd'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { delJson, getJson, postJson, putJson } from '../api/biz'
 import { canManageCampus, canViewLeadCampus, canViewLeads, subscriptionBlocksPath, subscriptionExpiredText } from '../access'
+import { COURSE_PAGE_SIZE, coursePageQuery, lastCoursePage, type CoursePage } from './course-pagination'
 import { NeedCampus, PageHead, clampDecimalInput, genderText, money, tell, useShell } from './kit'
 
 interface Course {
@@ -365,6 +366,17 @@ export function CoursesPage() {
   const shell = useShell()
   const navigate = useNavigate()
   const [rows, setRows] = useState<Course[]>([])
+  const [validationCourses, setValidationCourses] = useState<Course[]>([])
+  const [page, setPage] = useState(1)
+  const [total, setTotal] = useState(0)
+  const [counts, setCounts] = useState({ all: 0, one: 0, other: 0 })
+  const [loading, setLoading] = useState(false)
+  const [loadError, setLoadError] = useState('')
+  const [openingEditor, setOpeningEditor] = useState(false)
+  const [reloadToken, setReloadToken] = useState(0)
+  const requestVersion = useRef(0)
+  const memberRequestVersion = useRef(0)
+  const editorRequestVersion = useRef(0)
   const [coaches, setCoaches] = useState<Coach[]>([])
   const [filter, setFilter] = useState<'all' | 'one' | 'other'>('all')
   const [keyword, setKeyword] = useState('')
@@ -396,10 +408,12 @@ export function CoursesPage() {
   }
 
   async function openMembers(row: Course) {
+    const version = ++memberRequestVersion.current
     const fallback = nameOnlyMembers(row)
     setMembers({ ...row, memberHoursDetails: fallback })
     try {
       const detail = await getJson<Course>(`/student-groups/${row.id}`)
+      if (version !== memberRequestVersion.current) return
       const loaded = detail.memberHoursDetails || []
       const merged = {
         ...detail,
@@ -411,43 +425,84 @@ export function CoursesPage() {
         setMembers({ ...merged, memberHoursDetails: loaded })
         return
       }
-      setMembers({ ...merged, memberHoursDetails: await enrichMembers(merged, shell.campusId || 0) })
+      const details = await enrichMembers(merged, shell.campusId || 0)
+      if (version === memberRequestVersion.current) setMembers({ ...merged, memberHoursDetails: details })
     } catch (error) {
       message.error(tell(error, '加载课程失败'))
     }
   }
 
   async function load() {
-    if (!shell.campusId) return
-    const [courses, teacherList, campus] = await Promise.all([
-      getJson<Course[]>('/student-groups/list', { campusId: shell.campusId, includeInternal: true, selfOnly: !canViewAllCourses }),
-      getJson<Coach[]>(`/campus-teacher/campus/${shell.campusId}`),
-      getJson<{ visibleInList?: boolean | number | string }>(`/campus/${shell.campusId}`).catch(() => null),
-    ])
-    setRows(courses || [])
-    setCoaches((teacherList || []).filter((item) => item.status !== 0 && item.deleted !== true && item.deleted !== 1))
-    const visible = campus?.visibleInList
-    setReadOnly(visible === false || visible === 0 || visible === '0' || visible === 'false')
+    setReloadToken((value) => value + 1)
+  }
+
+  async function openEditor(course: Course | 'new') {
+    if (!canModify() || openingEditor) return
+    const version = ++editorRequestVersion.current
+    setOpeningEditor(true)
+    try {
+      // Only the editor needs the complete set for duplicate teacher/course checks.
+      const all = await getJson<Course[]>('/student-groups/list', { campusId: shell.campusId, includeInternal: true })
+      if (version !== editorRequestVersion.current) return
+      setValidationCourses(all || [])
+      setEditing(course)
+    } catch (error) {
+      if (version === editorRequestVersion.current) message.error(tell(error, '课程校验信息加载失败，请重试'))
+    } finally {
+      if (version === editorRequestVersion.current) setOpeningEditor(false)
+    }
   }
 
   useEffect(() => {
-    load().catch((error) => message.error(tell(error, '课程加载失败')))
-  }, [shell.campusId, canViewAllCourses])
+    setPage(1)
+    setCoachFilter(null)
+    setEditing(null)
+    setMembers(null)
+    setOpeningEditor(false)
+    setCoaches([])
+    setCounts({ all: 0, one: 0, other: 0 })
+    setTotal(0)
+    setReadOnly(true)
+    memberRequestVersion.current += 1
+    editorRequestVersion.current += 1
+    let cancelled = false
+    if (shell.campusId) Promise.all([
+      getJson<Coach[]>(`/campus-teacher/campus/${shell.campusId}`, { onlySubstitute: true }),
+      getJson<{ visibleInList?: boolean | number | string }>(`/campus/${shell.campusId}`),
+    ]).then(([teacherList, campus]) => {
+      if (cancelled) return
+      setCoaches((teacherList || []).filter((item) => item.status !== 0 && item.deleted !== true && item.deleted !== 1))
+      const visible = campus?.visibleInList
+      setReadOnly(visible === false || visible === 0 || visible === '0' || visible === 'false')
+    }).catch((error) => {
+      if (!cancelled) { setReadOnly(true); message.error(tell(error, '校区信息加载失败')) }
+    })
+    return () => { cancelled = true }
+  }, [shell.currentOrgId, shell.campusId])
 
-  const text = keyword.trim().toLowerCase()
-  const visible = rows.filter((item) => {
-    if (coachFilter && !(item.coachIds || []).some((id) => Number(id) === coachFilter)) return false
-    const one = isOneToOneCourse(item)
-    if (filter === 'one' && !one) return false
-    if (filter === 'other' && one) return false
-    if (text) {
-      const nameHit = String(item.name || '').toLowerCase().includes(text)
-      const studentHit = (item.studentNames || []).some((name) => String(name).toLowerCase().includes(text))
-      if (!nameHit && !studentHit) return false
-    }
-    return true
-  }).sort((left, right) => Number(!!left.invalid) - Number(!!right.invalid))
-  const oneCount = rows.filter((item) => isOneToOneCourse(item)).length
+  useEffect(() => {
+    const version = ++requestVersion.current
+    setRows([])
+    setLoadError('')
+    if (!shell.campusId) { setLoading(false); setTotal(0); setCounts({ all: 0, one: 0, other: 0 }); return }
+    setLoading(true)
+    const timer = window.setTimeout(() => {
+      getJson<CoursePage<Course>>('/student-groups/page', coursePageQuery(shell.campusId!, page, keyword, filter, canViewAllCourses ? coachFilter : null))
+        .then((data) => {
+          if (version !== requestVersion.current) return
+          if (page > lastCoursePage(data.total)) { setPage(lastCoursePage(data.total)); return }
+          setRows(data.records || [])
+          setTotal(data.total || 0)
+          setCounts({ all: data.campusCourseCount, one: data.campusOneToOneCourseCount, other: data.campusOtherCourseCount })
+        })
+        .catch((error) => {
+          if (version !== requestVersion.current) return
+          setLoadError(tell(error, '课程加载失败'))
+        })
+        .finally(() => { if (version === requestVersion.current) setLoading(false) })
+    }, keyword ? 250 : 0)
+    return () => { window.clearTimeout(timer); requestVersion.current += 1 }
+  }, [shell.currentOrgId, shell.campusId, canViewAllCourses, page, keyword, filter, coachFilter, reloadToken])
 
   const columns = [
     { title: '课程', dataIndex: 'name' },
@@ -467,7 +522,7 @@ export function CoursesPage() {
       title: '操作',
       render: (_: unknown, row: Course) => canManageCourses && !readOnly && !row.invalid ? (
         <Space>
-          <Button type="link" onClick={() => { if (canModify()) setEditing(row) }}>编辑</Button>
+          <Button type="link" loading={openingEditor} onClick={() => void openEditor(row)}>编辑</Button>
           {row.internal ? null : (
             <Popconfirm title="删除班级" description={`确定删除班级"${row.name}"吗？`} onConfirm={async () => {
               if (!canModify()) return
@@ -493,20 +548,21 @@ export function CoursesPage() {
       <section className="work-card course-list-card">
         <h2>课程列表</h2>
         <div className="course-list-actionbar">
-          {canManageCourses ? <Button className="course-create-button" type="primary" disabled={readOnly} onClick={() => { if (canModify()) setEditing('new') }}>新建课程</Button> : null}
+          {canManageCourses ? <Button className="course-create-button" type="primary" disabled={readOnly} loading={openingEditor} onClick={() => void openEditor('new')}>新建课程</Button> : null}
           <div className="stat-line course-list-stats">
-            <span>课程总数<strong>{rows.length}</strong></span>
-            <span>一对一<strong>{oneCount}</strong></span>
-            <span>其它课程<strong>{rows.length - oneCount}</strong></span>
+            <span>课程总数<strong>{counts.all}</strong></span>
+            <span>一对一<strong>{counts.one}</strong></span>
+            <span>其它课程<strong>{counts.other}</strong></span>
           </div>
           <div className="work-toolbar course-list-filters">
-            {canViewAllCourses ? <Select allowClear placeholder="全部老师" value={coachFilter ?? undefined} onChange={(value) => setCoachFilter(value ?? null)} style={{ width: 160 }} options={coaches.map((item) => ({ value: item.id, label: item.displayName || item.nickname || item.phone }))} /> : null}
-            <Select value={filter} onChange={setFilter} style={{ width: 140 }} options={[{ value: 'all', label: '全部类型' }, { value: 'one', label: '一对一' }, { value: 'other', label: '其它' }]} />
-            <Input allowClear placeholder="搜索学员/课程" value={keyword} onChange={(event) => setKeyword(event.target.value)} style={{ width: 220 }} />
+            {canViewAllCourses ? <Select allowClear placeholder="全部老师" value={coachFilter ?? undefined} onChange={(value) => { setPage(1); setCoachFilter(value ?? null) }} style={{ width: 160 }} options={coaches.map((item) => ({ value: item.id, label: item.displayName || item.nickname || item.phone }))} /> : null}
+            <Select value={filter} onChange={(value) => { setPage(1); setFilter(value) }} style={{ width: 140 }} options={[{ value: 'all', label: '全部类型' }, { value: 'one', label: '一对一' }, { value: 'other', label: '其它' }]} />
+            <Input allowClear placeholder="搜索学员/课程" value={keyword} onChange={(event) => { setPage(1); setKeyword(event.target.value) }} style={{ width: 220 }} />
             <Button onClick={() => load()}>刷新</Button>
           </div>
         </div>
-        <Table rowKey="id" dataSource={visible} columns={columns} pagination={false} locale={{ emptyText: readOnly || !canManageCourses ? '暂无课程' : '暂无班级，可创建用于排课或分组管理' }} />
+        {loadError ? <p role="alert">{loadError} <Button type="link" onClick={() => void load()}>重试</Button></p> : null}
+        <Table loading={loading} rowKey="id" dataSource={rows} columns={columns} pagination={{ current: page, pageSize: COURSE_PAGE_SIZE, total, showSizeChanger: false, onChange: setPage, showTotal: (count) => `共 ${count} 门课程` }} locale={{ emptyText: readOnly || !canManageCourses ? '暂无课程' : '暂无班级，可创建用于排课或分组管理' }} />
       </section>
       <Modal title={editing === 'new' ? '新建课程' : '编辑课程'} open={!!editing} onCancel={() => setEditing(null)} footer={null} destroyOnHidden>
         <Form
@@ -575,11 +631,11 @@ export function CoursesPage() {
                 return
               }
             }
-            if (!current?.internal && rows.some((item) => item.name === name && item.id !== current?.id && (item.coachIds || []).some((id) => coachIds.includes(id)))) {
+            if (!current?.internal && validationCourses.some((item) => item.name === name && item.id !== current?.id && (item.coachIds || []).some((id) => coachIds.includes(id)))) {
               message.warning('该老师已存在同名班级')
               return
             }
-            if (!current?.internal && oneToOne && rows.some((item) => isOneToOneCourse(item) && item.id !== current?.id && (item.coachIds || []).some((id) => coachIds.includes(id)))) {
+            if (!current?.internal && oneToOne && validationCourses.some((item) => isOneToOneCourse(item) && item.id !== current?.id && (item.coachIds || []).some((id) => coachIds.includes(id)))) {
               message.warning('该老师已存在一对一课程')
               return
             }
@@ -601,6 +657,7 @@ export function CoursesPage() {
               else await postJson('/student-groups', payload)
               message.success(current ? '修改成功' : '创建成功')
               setEditing(null)
+              if (!current) setPage(1)
               await load()
             } catch (error) {
               message.error(tell(error, '保存失败'))
@@ -612,11 +669,11 @@ export function CoursesPage() {
           <Form.Item name="name" label="课程名称" rules={[{ required: true, message: '请输入课程名称' }]}><Input maxLength={10} placeholder={editing && editing !== 'new' && editing.oneToOne ? '如：一对一A' : '如：一对二A'} /></Form.Item>
           {editing && editing !== 'new' && editing.internal ? null : <Form.Item name="shortName" label="简称" extra="简称会优先显示在课表内，方便排课时快速识别班级。"><Input maxLength={4} placeholder="如：二A" /></Form.Item>}
           <Form.Item name="unitPrice" label="课程单价" getValueFromEvent={(value) => clampDecimalInput(value, 8)}><InputNumber style={{ width: '100%' }} min={0.01} /></Form.Item>
-          <CourseOpenFields coaches={coaches} courses={rows} editingId={editing && editing !== 'new' ? editing.id : undefined} locked={!!(editing && editing !== 'new' && editing.internal)} />
+          <CourseOpenFields coaches={coaches} courses={validationCourses} editingId={editing && editing !== 'new' ? editing.id : undefined} locked={!!(editing && editing !== 'new' && editing.internal)} />
           <CourseSaveButton current={editing && editing !== 'new' ? editing : null} saving={savingCourse} />
         </Form>
       </Modal>
-      <Modal title="课程学员" open={!!members} onCancel={() => setMembers(null)} footer={null} width={760}>
+      <Modal title="课程学员" open={!!members} onCancel={() => { memberRequestVersion.current += 1; setMembers(null) }} footer={null} width={760}>
         <Table
           rowKey={(row) => String(row.studentId)}
           dataSource={sortCourseMembers(members?.memberHoursDetails || [])}

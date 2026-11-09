@@ -1,0 +1,24 @@
+.tt-service-group {
+  position: absolute;
+  left: 3px;
+  right: 3px;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  padding: 8px;
+  border: 1px solid #b6d8ec;
+  border-radius: 8px;
+  color: #245576;
+  background: #eef7fc;
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+}
+.tt-service-group:hover { background: #e1f0fa; border-color: #70add3; }
+.tt-service-group strong { overflow: hidden; text-overflow: ellipsis; }
+.tt-service-group small { color: #5d7d91; font-size: 11px; }
+.tt-service-group.is-leave { background: #f4f5f7; color: #7b8490; border-style: dashed; }
+.service-roster-account { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; }
+.service-roster-account small { color: var(--muted); }

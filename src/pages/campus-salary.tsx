@@ -106,8 +106,9 @@ export function CampusSalary({ campusId }: { campusId: number | null }) {
   }
   useEffect(() => { load().catch(() => undefined) }, [campusId])
   if (!campusId) return <p>请先选择校区。</p>
-  const configuredCount = teachers.filter((person) => amounts.some((amount) => Number(amount.staffId) === person.id)).length
-  const fixedGrandTotal = teachers.reduce((sum, person) => sum + fixedSalaryTotal(person, items, amounts), 0)
+  const activeTeachers = teachers.filter((person) => Number(person.status) !== 0)
+  const configuredCount = activeTeachers.filter((person) => amounts.some((amount) => Number(amount.staffId) === person.id)).length
+  const fixedGrandTotal = activeTeachers.reduce((sum, person) => sum + fixedSalaryTotal(person, items, amounts), 0)
   const fixedItems = items.filter((item) => String(item.itemType) !== 'unit')
   const payoutDirty = fixedPayoutSnapshot(items) !== payoutSaved
   function updatePayoutItem(id: unknown, patch: Record<string, unknown>) {
@@ -210,8 +211,8 @@ export function CampusSalary({ campusId }: { campusId: number | null }) {
           label: '工资列表',
           children: <section className="work-card salary-list-card">
             <div className="salary-overview-grid">
-              <div><strong>{teachers.length}</strong><span>老师人数</span></div>
-              <div className={configuredCount < teachers.length ? 'is-warning' : 'is-ready'}><strong>{configuredCount}</strong><span>已完成配置</span></div>
+              <div><strong>{activeTeachers.length}</strong><span>在职人数</span></div>
+              <div className={configuredCount < activeTeachers.length ? 'is-warning' : 'is-ready'}><strong>{configuredCount}</strong><span>已完成配置</span></div>
               <div><strong>{money(fixedGrandTotal)}</strong><span>固定工资合计</span></div>
             </div>
             <div className="salary-list-toolbar">
@@ -219,23 +220,23 @@ export function CampusSalary({ campusId }: { campusId: number | null }) {
                 <Button type={salaryView === 'staff' ? 'primary' : 'text'} onClick={() => setSalaryView('staff')}>人员工资</Button>
                 <Button type={salaryView === 'summary' ? 'primary' : 'text'} onClick={() => setSalaryView('summary')}>工资汇总</Button>
               </div>
-              <span>{salaryView === 'summary' ? '合计仅统计固定工资项目，课时单价不计入合计' : '点击金额可为老师配置对应工资项'}</span>
+              <span>{salaryView === 'summary' ? '合计仅统计在职人员固定工资，离职人员保留历史配置' : '点击金额设置在职人员工资；离职人员仅查看历史配置'}</span>
             </div>
-            <Table rowKey="id" dataSource={teachers} pagination={false} locale={{ emptyText: '还没有老师，请先到人员设置添加' }} summary={() => salaryView === 'summary' ? <Table.Summary.Row>
+            <Table rowKey="id" dataSource={teachers.slice().sort((a, b) => Number(Number(a.status) === 0) - Number(Number(b.status) === 0))} pagination={false} locale={{ emptyText: '还没有老师，请先到人员设置添加' }} summary={() => salaryView === 'summary' ? <Table.Summary.Row>
               <Table.Summary.Cell index={0}>合计</Table.Summary.Cell>
               {items.map((item, index) => {
                 const unit = String(item.itemType) === 'unit'
-                const total = teachers.reduce((sum, person) => sum + Number(amounts.find((amount) => Number(amount.staffId) === person.id && String(amount.salaryItemId) === String(item.id))?.amount ?? (unit ? 0 : item.defaultValue) ?? 0), 0)
+                const total = activeTeachers.reduce((sum, person) => sum + Number(amounts.find((amount) => Number(amount.staffId) === person.id && String(amount.salaryItemId) === String(item.id))?.amount ?? (unit ? 0 : item.defaultValue) ?? 0), 0)
                 return <Table.Summary.Cell key={String(item.id)} index={index + 1}>{unit ? '-' : money(total)}</Table.Summary.Cell>
               })}
               <Table.Summary.Cell index={items.length + 1}>{money(fixedGrandTotal)}</Table.Summary.Cell>
             </Table.Summary.Row> : undefined} columns={[
-              { title: '老师', render: (_: unknown, row: Person) => row.displayName || row.nickname },
+              { title: '老师', render: (_: unknown, row: Person) => `${row.displayName || row.nickname || ''}${Number(row.status) === 0 ? '（已离职）' : ''}` },
               ...items.map((item) => ({ title: String(item.itemName), render: (_: unknown, row: Person) => {
                 const found = amounts.find((amount) => Number(amount.staffId) === row.id && String(amount.salaryItemId) === String(item.id))
                 const value = money(found?.amount ?? item.defaultValue)
                 if (salaryView === 'summary') return String(item.itemType) === 'unit' ? (found ? value : '-') : value
-                return <Button type="link" onClick={() => setAmountEdit({ person: row, item, amount: Number(found?.amount ?? item.defaultValue ?? 0) })}>{value}</Button>
+                return <Button type="link" disabled={Number(row.status) === 0} onClick={() => setAmountEdit({ person: row, item, amount: Number(found?.amount ?? item.defaultValue ?? 0) })}>{value}</Button>
               } })),
               ...(salaryView === 'summary' ? [{ title: '固定合计', render: (_: unknown, row: Person) => money(fixedSalaryTotal(row, items, amounts)) }] : []),
             ]} />
@@ -267,7 +268,7 @@ export function CampusSalary({ campusId }: { campusId: number | null }) {
     </Modal>
     <Modal title={amountEdit ? `${amountEdit.person.displayName || amountEdit.person.nickname} · ${String(amountEdit.item.itemName)}` : '工资金额'} open={!!amountEdit} onCancel={() => setAmountEdit(null)} footer={null} destroyOnHidden>
       {amountEdit ? <Form layout="vertical" initialValues={{ amount: amountEdit.amount }} onFinish={async (values: { amount: number }) => {
-        if (savingSalary || salaryAmountSame(values.amount, amountEdit.amount)) return
+        if (Number(amountEdit.person.status) === 0 || savingSalary || salaryAmountSame(values.amount, amountEdit.amount)) return
         const salaries = items.map((entry) => {
           const current = amounts.find((amount) => Number(amount.staffId) === amountEdit.person.id && String(amount.salaryItemId) === String(entry.id))
           return { staffId: amountEdit.person.id, salaryItemId: entry.id, salaryItemName: entry.itemName, amount: String(entry.id) === String(amountEdit.item.id) ? Number(values.amount) : Number(current?.amount ?? entry.defaultValue ?? 0) }

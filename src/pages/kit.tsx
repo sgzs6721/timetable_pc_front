@@ -108,13 +108,15 @@ export function genderText(value: unknown): string {
 }
 
 export function isPendingPayment(student: {
+  transferredOut?: boolean
+  cards?: Card[]
   status?: number
   cardCategory?: string
   remainingHours?: number
   remainingAmount?: number
   totalAmount?: number
 } | null): boolean {
-  if (!student || Number(student.status || 0) === 2) return false
+  if (!student || Number(student.status || 0) === 2 || (student.transferredOut ?? hasOnlyTransferredRights(student.cards || []))) return false
   const category = String(student.cardCategory || '').toUpperCase()
   if (category === 'STORED_VALUE') {
     const total = Math.max(0, Number(student.totalAmount || 0))
@@ -126,6 +128,7 @@ export function isPendingPayment(student: {
 }
 
 export function studentStatusText(student: {
+  transferredOut?: boolean
   status?: number
   cards?: Card[]
   cardCategory?: string
@@ -134,7 +137,7 @@ export function studentStatusText(student: {
   totalAmount?: number
 }): string {
   if (Number(student.status || 0) === 2) return '结业'
-  if (hasOnlyTransferredRights(student.cards || [])) return '已转出'
+  if (student.transferredOut ?? hasOnlyTransferredRights(student.cards || [])) return '已转出'
   if (isPendingPayment(student)) return '待缴费'
   return '在学'
 }
