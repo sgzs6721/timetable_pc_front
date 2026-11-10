@@ -1,4 +1,4 @@
-import { Button, Form, Input, InputNumber, Modal, Popconfirm, Select, Space, message } from 'antd'
+import { Button, Form, Input, InputNumber, Modal, Popconfirm, Select, Space, Switch, message } from 'antd'
 import { useEffect, useMemo, useState } from 'react'
 import { delJson, putJson } from '../api/biz'
 import { BusinessDatePicker } from '../components/BusinessDatePicker'
@@ -10,6 +10,7 @@ import { CheckInCoursePicker } from './student-quick-checkin'
 import { isTransferInRecord } from './student-payments'
 import { CardRecordTabs, boundedDateMax, cardBalanceView, checkInBlockReason, checkInBounds, personName } from './students-domain'
 import { consumeItemReferenceKey, isCampusServiceConsumeItem, resolveConsumeItemReferenceFields } from './consume-item'
+import { checkInCoachSelectionError, checkInCoachSubmitPayload } from './checkin-skip-teacher'
 
 export function CheckInPanel(props: { student: Student; rows: CheckRecord[]; payments: PayRecord[]; groups: Named[]; financialHidden: boolean; coaches: Named[]; focusCardId?: number; onCardChange?: (cardId?: number) => void; onCheckIn: (cardId?: number) => void; onChanged: () => Promise<void>; manage: boolean }) {
   const [cardId, setCardId] = useState<number | undefined>(props.focusCardId)
@@ -405,6 +406,7 @@ export function consumptionDeleteText(row: CheckRecord): string {
 export function CheckEditor(props: { record: CheckRecord; student: Student; card?: Card; payments: PayRecord[]; groups: Named[]; coaches: Named[]; onSaved: () => Promise<void> }) {
   const [open, setOpen] = useState(false)
   const [moreHours, setMoreHours] = useState(Number(props.record.hours || 0) > 2)
+  const [skipTeacherHours, setSkipTeacherHours] = useState(false)
   const [form] = Form.useForm()
   const service = checkInService(props.record)
   const historicalCoach = checkInCoachIdentity(props.record, props.coaches)
@@ -439,6 +441,10 @@ export function CheckEditor(props: { record: CheckRecord; student: Student; card
     coachChoices.push({ id, name: matched ? personName(matched) : (historicalCoachIds.length === 1 ? historicalCoach.name : `老师${id}`) })
   })
   const coachLimit = Math.max(1, coachSelection.maxCount)
+  useEffect(() => {
+    if (!open || service) return
+    setSkipTeacherHours(historicalCoachIds.length === 0)
+  }, [open, service, historicalCoachIds.join(',')])
   const editorSource = service
     ? card
     : (selectedCourse && (category === 'HOURS' || selectedCourse.validStartDate || selectedCourse.validEndDate || selectedCourse.consumeDeadline) ? selectedCourse : card)
@@ -495,12 +501,9 @@ export function CheckEditor(props: { record: CheckRecord; student: Student; card
                 return
               }
               const selectedCoachIds = Array.from(new Set((values.coachIds || []).map(Number).filter((id) => coachChoices.some((item) => item.id === id))))
-              if (!selectedCoachIds.length) {
-                message.warning('请至少选择一位老师')
-                return
-              }
-              if (selectedCoachIds.length > coachLimit) {
-                message.warning(`本次打卡最多可选择 ${coachLimit} 位老师`)
+              const coachError = checkInCoachSelectionError(skipTeacherHours, selectedCoachIds, coachLimit)
+              if (coachError) {
+                message.warning(coachError)
                 return
               }
               const bounds = checkInBounds(category === 'HOURS' || payment.validStartDate || payment.validEndDate || payment.consumeDeadline ? payment : card)
@@ -518,6 +521,11 @@ export function CheckEditor(props: { record: CheckRecord; student: Student; card
             }
             const selectedCoachIds = Array.from(new Set((values.coachIds || []).map(Number).filter((id) => coachChoices.some((item) => item.id === id))))
             const selectedCoaches = selectedCoachIds.map((id) => coachChoices.find((item) => item.id === id)!).filter(Boolean)
+            const coachPayload = checkInCoachSubmitPayload(
+              skipTeacherHours,
+              selectedCoachIds,
+              selectedCoaches.map((item) => item.name),
+            )
             try {
               await putJson(`/consumptions/${props.record.id}`, service ? {
                 studentId: props.student.id,
@@ -535,9 +543,9 @@ export function CheckEditor(props: { record: CheckRecord; student: Student; card
               } : {
                 studentId: props.student.id,
                 studentCardId: props.record.studentCardId,
-                coachName: selectedCoaches.map((item) => item.name).join('、'),
-                coachId: selectedCoachIds[0],
-                coachIds: selectedCoachIds,
+                coachName: coachPayload.coachName || '',
+                coachId: coachPayload.coachId ?? null,
+                coachIds: coachPayload.coachIds,
                 hours,
                 paymentRecordId: payment?.id || props.record.paymentRecordId || undefined,
                 courseType: payment?.courseType || props.record.courseType,
@@ -565,9 +573,15 @@ export function CheckEditor(props: { record: CheckRecord; student: Student; card
                 }} />
               </Form.Item>
               {selectedCourse?.validityText ? <p>{selectedCourse.validityText}</p> : null}
-              <Form.Item name="coachIds" label="老师" extra={`至少选择 1 位，最多 ${coachLimit} 位`} rules={[{ required: true, type: 'array', min: 1, message: '请至少选择一位老师' }]}>
-                <Select mode="multiple" maxCount={coachLimit} maxTagCount="responsive" options={coachChoices.map((item) => ({ value: item.id, label: item.name }))} />
+              <Form.Item label="不记录老师课时">
+                <Switch checked={skipTeacherHours} onChange={setSkipTeacherHours} />
+                <span style={{ marginLeft: 8, color: '#69758a' }}>只销课，不计入老师课时统计</span>
               </Form.Item>
+              {!skipTeacherHours ? (
+                <Form.Item name="coachIds" label="老师" extra={`至少选择 1 位，最多 ${coachLimit} 位`} rules={[{ required: true, type: 'array', min: 1, message: '请至少选择一位老师' }]}>
+                  <Select mode="multiple" maxCount={coachLimit} maxTagCount="responsive" options={coachChoices.map((item) => ({ value: item.id, label: item.name }))} />
+                </Form.Item>
+              ) : null}
             </>
           )}
           <Form.Item name="consumeDate" label="日期" extra={editorBounds.hint || undefined}><BusinessDatePicker minDate={editorBounds.min || undefined} maxDate={editorDateMax} /></Form.Item>

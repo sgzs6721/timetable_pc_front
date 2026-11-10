@@ -10,6 +10,7 @@ import type { Card, Student, Named, PayRecord } from './students-model'
 import { buildCheckInCoachSelection } from './student-card-desk'
 import { activeStudentCards, boundedDateMax, cardCategoryText, cardRemain, checkInBlockReason, checkInBounds, checkInCardEligible, checkInQuotaHint, confirmCheckInDates, dateOutOfBoundsMessage, noEligibleCheckInMessage } from './students-domain'
 import { resolveConsumeItemReferenceFields } from './consume-item'
+import { checkInCoachSelectionError, checkInCoachSubmitPayload } from './checkin-skip-teacher'
 
 const CHECK_IN_HOURS_MIN = 0.5
 const CHECK_IN_HOURS_MAX = 4
@@ -145,6 +146,7 @@ export function QuickCheckIn(props: {
   const [cardId, setCardId] = useState<number | undefined>()
   const [useCourse, setUseCourse] = useState(false)
   const [useService, setUseService] = useState(false)
+  const [skipTeacherHours, setSkipTeacherHours] = useState(false)
   const [dates, setDates] = useState<string[]>([todayIso()])
   const [batchMode, setBatchMode] = useState(false)
   const [usedDates, setUsedDates] = useState<string[]>([])
@@ -155,6 +157,7 @@ export function QuickCheckIn(props: {
     if (!student) return
     let active = true
     setReady(false)
+    setSkipTeacherHours(false)
     setDates([todayIso()])
     setBatchMode(false)
     const paymentRequest = getJson<PayRecord[]>(`/payment-records/student/${student.id}`)
@@ -289,6 +292,7 @@ export function QuickCheckIn(props: {
     if (!card) return
     setUseCourse(hasSelectableCourse)
     setUseService(!hasSelectableCourse && serviceOptions.length > 0)
+    setSkipTeacherHours(false)
     form.setFieldValue('paymentId', selectableCourse?.id)
     form.setFieldValue('hours', 1)
     form.setFieldValue('coachIds', checkInCoachSelection.defaultIds)
@@ -437,16 +441,18 @@ export function QuickCheckIn(props: {
               message.warning(courseWarning)
               return
             }
-            const coachIds = Array.from(new Set((values.coachIds || []).map(Number).filter((id) => checkInCoachOptions.some((item) => item.id === id))))
-            if (!coachIds.length) {
-              message.warning('请至少选择一位授课老师')
+            const selectedCoachIds = Array.from(new Set((values.coachIds || []).map(Number).filter((id) => checkInCoachOptions.some((item) => item.id === id))))
+            const coachError = checkInCoachSelectionError(skipTeacherHours, selectedCoachIds, checkInCoachSelection.maxCount)
+            if (coachError) {
+              message.warning(coachError === '请至少选择一位老师' ? '请至少选择一位授课老师' : coachError)
               return
             }
-            if (coachIds.length > checkInCoachSelection.maxCount) {
-              message.warning(`本次打卡最多可选择 ${checkInCoachSelection.maxCount} 位老师`)
-              return
-            }
-            const selectedCoaches = coachIds.map((id) => checkInCoachOptions.find((item) => item.id === id)!).filter(Boolean)
+            const selectedCoaches = selectedCoachIds.map((id) => checkInCoachOptions.find((item) => item.id === id)!).filter(Boolean)
+            const coachPayload = checkInCoachSubmitPayload(
+              skipTeacherHours,
+              selectedCoachIds,
+              selectedCoaches.map((item) => item.name),
+            )
             const hours = Number(values.hours || 0)
             if (!hours || hours < CHECK_IN_HOURS_MIN) {
               message.warning('请输入正确的课时数')
@@ -465,9 +471,7 @@ export function QuickCheckIn(props: {
               studentCardId: card?.id,
               consumeType: 1,
               remark: String(values.remark || '').trim(),
-              coachId: coachIds[0],
-              coachIds,
-              coachName: selectedCoaches.map((item) => item.name).join('、'),
+              ...coachPayload,
               hours,
               paymentRecordId: payment.id || undefined,
               courseType: payment.courseType,
@@ -588,22 +592,31 @@ export function QuickCheckIn(props: {
                 <Form.Item className="is-full" name="paymentId" label="课程" initialValue={selectableCourse?.id}>
                   <CheckInCoursePicker options={courseOptions} />
                 </Form.Item>
-                {checkInCoachOptions.length ? (
-                  <Form.Item
-                    name="coachIds"
-                    label="授课老师"
-                    initialValue={checkInCoachSelection.defaultIds}
-                    extra={`至少选择 1 位，最多 ${checkInCoachSelection.maxCount} 位`}
-                    rules={[{ required: true, type: 'array', min: 1, message: '请至少选择一位老师' }]}
-                  >
-                    <Select
-                      mode="multiple"
-                      maxCount={checkInCoachSelection.maxCount}
-                      maxTagCount="responsive"
-                      options={checkInCoachOptions.map((item) => ({ value: item.id, label: item.name }))}
-                    />
-                  </Form.Item>
-                ) : <div className="quick-checkin-inline-notice">当前课程暂无可用老师，请先分配老师</div>}
+                <div className="quick-checkin-type-option" style={{ marginBottom: 12 }}>
+                  <div>
+                    <strong>不记录老师课时</strong>
+                    <small>只销课，不计入老师课时统计</small>
+                  </div>
+                  <Switch aria-label="不记录老师课时" checked={skipTeacherHours} onChange={setSkipTeacherHours} />
+                </div>
+                {!skipTeacherHours ? (
+                  checkInCoachOptions.length ? (
+                    <Form.Item
+                      name="coachIds"
+                      label="授课老师"
+                      initialValue={checkInCoachSelection.defaultIds}
+                      extra={`至少选择 1 位，最多 ${checkInCoachSelection.maxCount} 位`}
+                      rules={[{ required: true, type: 'array', min: 1, message: '请至少选择一位老师' }]}
+                    >
+                      <Select
+                        mode="multiple"
+                        maxCount={checkInCoachSelection.maxCount}
+                        maxTagCount="responsive"
+                        options={checkInCoachOptions.map((item) => ({ value: item.id, label: item.name }))}
+                      />
+                    </Form.Item>
+                  ) : <div className="quick-checkin-inline-notice">当前课程暂无可用老师，请先分配老师</div>
+                ) : null}
                 <Form.Item name="hours" label="消耗课时">
                   <CheckInHoursStepper />
                 </Form.Item>

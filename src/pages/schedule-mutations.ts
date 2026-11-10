@@ -1,7 +1,7 @@
 import { delJson, postJson, putJson } from '../api/biz'
 import { todayIso } from './kit'
 import { clockText } from './schedule-board-helpers'
-import type { Schedule, Timetable } from './schedule-model'
+import { normalizeCheckInOnly, type Schedule, type Timetable } from './schedule-model'
 
 export interface ScheduleMutationTarget {
   day: number
@@ -48,6 +48,7 @@ function instanceCell(
     targetId: schedule.targetId,
     coachIds: schedule.coachIds,
     note: schedule.note || '',
+    checkInOnly: normalizeCheckInOnly(schedule.checkInOnly),
     campusId: schedule.campusId || campusId,
     pricingStudentGroupId: schedule.pricingStudentGroupId,
     pricingCourseType: schedule.pricingCourseType,
@@ -87,6 +88,7 @@ export async function removeScheduleItem(schedule: Schedule, timetable: Timetabl
       targetId: schedule.targetId,
       coachIds: schedule.coachIds,
       note: schedule.note || '',
+      checkInOnly: normalizeCheckInOnly(schedule.checkInOnly),
       uiChangeStatus: 3,
       campusId: schedule.campusId || campusId,
       pricingStudentGroupId: schedule.pricingStudentGroupId,
@@ -118,6 +120,7 @@ export async function moveScheduleItem(schedule: Schedule, timetable: Timetable,
       pricingCourseType: schedule.pricingCourseType,
       serviceQuantity: schedule.serviceQuantity,
       note: schedule.note || '',
+      checkInOnly: normalizeCheckInOnly(schedule.checkInOnly),
       campusId: schedule.campusId,
       uiChangeStatus: Number(schedule.uiChangeStatus || 0) === 4 ? 4 : undefined,
     })
@@ -163,6 +166,7 @@ export async function copyScheduleItem(
         targetId: schedule.targetId,
         coachIds: schedule.coachIds,
         note: schedule.note || '',
+        checkInOnly: normalizeCheckInOnly(schedule.checkInOnly),
         campusId: schedule.campusId || campusId,
         pricingStudentGroupId: schedule.pricingStudentGroupId,
         pricingCourseType: schedule.pricingCourseType,

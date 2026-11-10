@@ -276,8 +276,14 @@ function hoursServiceText(row: Record<string, unknown>): string {
   return raw.endsWith('服务') ? raw : `${raw}服务`
 }
 
+function hoursSkipTeacherHours(row: Record<string, unknown>): boolean {
+  if (hoursServiceRecord(row)) return false
+  return !String(row.teacherName || '').trim()
+}
+
 function hoursTeacherText(row: Record<string, unknown>): string {
   if (hoursServiceRecord(row)) return hoursServiceText(row)
+  if (hoursSkipTeacherHours(row)) return '不计老师课时'
   return String(row.teacherName || '').trim() || '未分配老师'
 }
 
@@ -303,8 +309,10 @@ function hoursTypeText(row: Record<string, unknown>): string {
   const labels = Array.isArray(row.cardTypeLabels) && row.cardTypeLabels.length
     ? row.cardTypeLabels.map(String).join('、')
     : String(row.cardTypeLabel || '')
+  const checkInOnly = row.checkInOnly === true || row.checkInOnly === 1 || row.checkInOnly === '1'
+  const suffix = checkInOnly ? (labels ? `${labels} · 仅打卡` : '仅打卡') : labels
   if (row.recordType === 'preset_schedule') return labels ? `体验课 · ${labels}` : '体验课'
-  return labels
+  return suffix
 }
 
 function monthStart(): string {

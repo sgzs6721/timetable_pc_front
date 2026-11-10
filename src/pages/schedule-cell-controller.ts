@@ -3,9 +3,10 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getJson } from '../api/biz'
 import { tell } from './kit'
-import type { CourseMember, Schedule, TargetOption } from './schedule-model'
+import { normalizeCheckInOnly, type CourseMember, type Schedule, type TargetOption } from './schedule-model'
 import { CARD_MARKER, cardIdFromPricing, courseMembersWarning, courseTargetWarning, fallbackCourseMembers, minOpenWarning, pricingChoices, resolveMinOpen, resolveMaxOpen, sortTargetOptions, studentScheduleBlock } from './schedule-targets'
 import { DAY_LABELS, durationLabel, freeUntil, fromMinutes, parseTrialConfig, toMinutes } from './schedule-board-helpers'
+import { filterActionScheduleRecords } from './schedule-action-records'
 import type { CellDialogProps } from './schedule-cell-dialog'
 import { serviceBlockers, serviceStartOptions } from './schedule-service'
 import { isScheduleConflictMessage } from './schedule-policy'
@@ -37,6 +38,7 @@ export function useCellDialogController(props: CellDialogProps) {
   const [trialDuration, setTrialDuration] = useState<'half' | 'hour'>('hour')
   const [halfPosition, setHalfPosition] = useState<'first' | 'second'>('first')
   const [note, setNote] = useState('')
+  const [checkInOnly, setCheckInOnly] = useState(false)
   const [startTime, setStartTime] = useState('09:00')
   const [endTime, setEndTime] = useState('10:00')
   const [coachIds, setCoachIds] = useState<number[]>([])
@@ -59,6 +61,7 @@ export function useCellDialogController(props: CellDialogProps) {
     if (!cell) return
     setQuery(cell.schedule?.displayName || cell.schedule?.courseName || '')
     setNote(cell.schedule?.note || '')
+    setCheckInOnly(normalizeCheckInOnly(cell.schedule?.checkInOnly))
     setStartTime(cell.start)
     setEndTime(cell.end)
     setTrialOn(cell.schedule?.targetType === 'preset')
@@ -250,6 +253,7 @@ export function useCellDialogController(props: CellDialogProps) {
   const scheduleUnchanged = existing && !!cell.schedule
     && query.trim() === String(cell.schedule.displayName || cell.schedule.courseName || '').trim()
     && note === (cell.schedule.note || '')
+    && !!checkInOnly === !!cell.schedule.checkInOnly
     && startTime === cell.start
     && endTime === cell.end
     && target === originalTargetKey
@@ -445,6 +449,7 @@ export function useCellDialogController(props: CellDialogProps) {
       await props.onSave({
         courseName: occupy ? '占用' : name,
         note,
+        checkInOnly: occupy ? false : normalizeCheckInOnly(checkInOnly),
         coachIds: coachChoices.length > 1 ? coachIds : selected?.coachIds,
         startTime,
         endTime,
@@ -538,7 +543,12 @@ export function useCellDialogController(props: CellDialogProps) {
   const trialHourSecondAvailable = freeUntil(trialHourSecond, blockers, cell.schedule?.id, props.dayEnd) - toMinutes(trialHourSecond) >= 60
   const durationMax = Math.min(240, Math.floor(Math.max(room, 0) / step) * step)
   const durationHint = !trialOn && durationMax > step ? `最多${durationLabel(durationMax)}` : !trialOn && room < step ? '下方空间不足' : ''
-  const recordRows = recordsScope === 'week' ? weekRecords : records
+  const recordsCourseName = selected?.displayName || selected?.name || cell?.schedule?.displayName || cell?.schedule?.courseName || query
+  const recordRows = filterActionScheduleRecords(
+    recordsScope === 'week' ? weekRecords : records,
+    props.templateSchedules || [],
+    recordsCourseName,
+  )
   const shownMembers = membersOpen ? members : members.slice(0, 3)
   const shownInstances = instancesOpen ? instances : instances.slice(0, 3)
   const cardMember = members.find((item) => item.studentId === cardStudentId)
@@ -600,6 +610,8 @@ export function useCellDialogController(props: CellDialogProps) {
     halfPosition,
     note,
     setNote,
+    checkInOnly,
+    setCheckInOnly,
     startTime,
     endTime,
     coachIds,

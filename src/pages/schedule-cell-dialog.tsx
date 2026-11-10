@@ -18,11 +18,12 @@ allowTrial: boolean
 batchCount: number
 timetableId?: number
 weekStart: string
+templateSchedules?: Schedule[]
 dayLessons: Schedule[]
 dayStart: string
 dayEnd: string
 onClose: () => void
-onSave: (values: { courseName: string; targetType?: string; targetId?: number; coachIds?: number[]; note?: string; studentCardId?: number; studentId?: number; pricingStudentGroupId?: number; pricingCourseType?: string; serviceQuantity?: number; memberCardBindings?: Array<{ studentId: number; studentCardId: number }>; excludedStudentIds?: number[]; occupy?: boolean; startTime?: string; endTime?: string; campusId?: number }) => Promise<void>
+onSave: (values: { courseName: string; targetType?: string; targetId?: number; coachIds?: number[]; note?: string; checkInOnly?: boolean; studentCardId?: number; studentId?: number; pricingStudentGroupId?: number; pricingCourseType?: string; serviceQuantity?: number; memberCardBindings?: Array<{ studentId: number; studentCardId: number }>; excludedStudentIds?: number[]; occupy?: boolean; startTime?: string; endTime?: string; campusId?: number }) => Promise<void>
 onLeave: () => Promise<void>
 onRestore: () => Promise<void>
 onDelete: () => Promise<void>
@@ -34,7 +35,7 @@ onStudent: (action: 'add' | 'remove' | 'leave' | 'restore', studentId: number) =
 export function CellDialog(input: CellDialogProps) {
   const vm = useCellDialogController(input)
   if (!vm) return null
-  const { props, optionsLoading, optionsError, target, setTarget, query, setQuery, searchOpen, setSearchOpen, pricingKey, setPricingKey, pricingOpen, setPricingOpen, serviceQuantity, setServiceQuantity, members, membersLoaded, excluded, setExcluded, memberCards, membersOpen, setMembersOpen, instancesOpen, setInstancesOpen, cardDraftId, setCardDraftId, trialConfig, trialOn, setTrialOn, trialDuration, setTrialDuration, halfPosition, note, setNote, startTime, endTime, coachIds, setCoachIds, recordsOpen, setRecordsOpen, recordsScope, setRecordsScope, recordsLoading, saving, leaving, setLeaving, deleting, setDeleting, restoring, setRestoring, dialogCampusId, cell, campusChoices, dialogCampusName, selected, choices, instances, sameCourse, occupied, onLeave, batching, existing, pricing, pricingRequiredAmount, pricingQuantityBlocked, saveBlocked, showPricing, duration, room, trialSwitchDisabled, keyword, visibleOptions, coachChoices, canLeave, openWarning, scheduleUnchanged, lessonSlotStart, lessonSecondStart, showLessonHalf, firstHalfAvailable, secondHalfAvailable, trialHourBase, trialHourSecond, trialHourSecondAvailable, durationHint, recordRows, shownMembers, shownInstances, cardMember, serviceStarts, chooseServiceStart, shiftStart, shiftDuration, chooseHalf, chooseTrialHour, chooseLessonHalf, changeDialogCampus, choose, confirmOccupy, save, openRecords, openStudentRecords, toggleStudent, openCardPicker, closeCardPicker, confirmCardPicker } = vm
+  const { props, optionsLoading, optionsError, target, setTarget, query, setQuery, searchOpen, setSearchOpen, pricingKey, setPricingKey, pricingOpen, setPricingOpen, serviceQuantity, setServiceQuantity, members, membersLoaded, excluded, setExcluded, memberCards, membersOpen, setMembersOpen, instancesOpen, setInstancesOpen, cardDraftId, setCardDraftId, trialConfig, trialOn, setTrialOn, trialDuration, setTrialDuration, halfPosition, note, setNote, checkInOnly, setCheckInOnly, startTime, endTime, coachIds, setCoachIds, recordsOpen, setRecordsOpen, recordsScope, setRecordsScope, recordsLoading, saving, leaving, setLeaving, deleting, setDeleting, restoring, setRestoring, dialogCampusId, cell, campusChoices, dialogCampusName, selected, choices, instances, sameCourse, occupied, onLeave, batching, existing, pricing, pricingRequiredAmount, pricingQuantityBlocked, saveBlocked, showPricing, duration, room, trialSwitchDisabled, keyword, visibleOptions, coachChoices, canLeave, openWarning, scheduleUnchanged, lessonSlotStart, lessonSecondStart, showLessonHalf, firstHalfAvailable, secondHalfAvailable, trialHourBase, trialHourSecond, trialHourSecondAvailable, durationHint, recordRows, shownMembers, shownInstances, cardMember, serviceStarts, chooseServiceStart, shiftStart, shiftDuration, chooseHalf, chooseTrialHour, chooseLessonHalf, changeDialogCampus, choose, confirmOccupy, save, openRecords, openStudentRecords, toggleStudent, openCardPicker, closeCardPicker, confirmCardPicker } = vm
 
   return (
     <Modal className="sheet-modal" open centered onCancel={props.onClose} footer={null} destroyOnHidden width={620} closable={false}>
@@ -355,6 +356,17 @@ export function CellDialog(input: CellDialogProps) {
                 <input value={note} maxLength={200} placeholder="排课说明" onChange={(event) => setNote(event.target.value)} />
                 {note ? <button type="button" onClick={() => setNote('')}>×</button> : null}
               </label>
+
+              {!occupied && !trialOn && !props.serviceTimetable ? (
+                <label className="sheet-switch">
+                  <span>自动打卡时，不计老师课时</span>
+                  <Switch
+                    checked={checkInOnly}
+                    disabled={saving || leaving}
+                    onChange={setCheckInOnly}
+                  />
+                </label>
+              ) : null}
             </div>
           )}
 

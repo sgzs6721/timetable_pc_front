@@ -5,7 +5,7 @@ import { delJson, getJson, postJson, putJson } from '../api/biz'
 import type { Campus } from '../api/types'
 import { hasSalesCampusScope } from '../access'
 import { tell, todayIso, useShell } from './kit'
-import type { DayDialog, Schedule, Timetable, TimetableGroup } from './schedule-model'
+import { normalizeCheckInOnly, type DayDialog, type Schedule, type Timetable, type TimetableGroup } from './schedule-model'
 import { DAY_LABELS, clockText, duplicateTimetableName, freeUntil, fromMinutes, latestTemplateSchedules, mondayOf, scheduleCampusLegend, slotsOf, splitBoardHead, timetableCampusIds, toMinutes, weekLimits } from './schedule-board-helpers'
 import { timetableBody, timetableOwner } from './schedule-board-fields'
 import { toDayCourses } from './schedule-day-dialog'
@@ -353,6 +353,7 @@ export function useScheduleController() {
     targetId?: number
     coachIds?: number[]
     note?: string
+    checkInOnly?: boolean
     studentCardId?: number
     studentId?: number
     pricingStudentGroupId?: number
@@ -384,6 +385,7 @@ export function useScheduleController() {
       targetId: values.occupy ? undefined : values.targetId,
       coachIds: values.coachIds,
       note: values.note || '',
+      checkInOnly: values.occupy ? false : normalizeCheckInOnly(values.checkInOnly),
       uiChangeStatus: values.occupy ? 4 : undefined,
       campusId: values.campusId || current.campusId || campusId,
       pricingStudentGroupId: values.occupy ? undefined : values.pricingStudentGroupId,

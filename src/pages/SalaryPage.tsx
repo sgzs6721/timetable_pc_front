@@ -31,8 +31,17 @@ interface Staff {
   trialSalaryTotal?: number
   rewardPenaltyTotal?: number
   payoutStatus?: number
+  paidTime?: string
+  paymentDate?: string
   warningText?: string
-  campusDetails?: Array<{ campusName?: string; itemDetails?: SalaryItem[] }>
+  campusDetails?: Array<{ campusName?: string; paymentDate?: string; paidTime?: string; itemDetails?: SalaryItem[] }>
+}
+
+export function salaryPaymentDateText(row: { paymentDate?: string; paidTime?: string } | null | undefined): string {
+  const paymentDate = String(row?.paymentDate || '').trim().slice(0, 10)
+  if (paymentDate) return paymentDate
+  const paidTime = String(row?.paidTime || '').trim()
+  return paidTime ? paidTime.replace('T', ' ').slice(0, 16) : ''
 }
 
 interface Summary {
@@ -332,7 +341,7 @@ function MonthDetails({ summary, campusId, canManagePayoutStatus, onOpenHours, o
           align: 'center',
           width: 92,
           render: (_: unknown, row: Staff) => row.payoutStatus === 1
-            ? <span className="status-pill salary-status-control is-ok">已发</span>
+            ? <span className="status-pill salary-status-control is-ok" title={salaryPaymentDateText(row) || undefined}>已发{salaryPaymentDateText(row) ? ` · ${salaryPaymentDateText(row)}` : ''}</span>
             : canManagePayoutStatus
               ? <Button className="salary-pay-button salary-status-control" type="primary" size="small" onClick={(event) => { event.stopPropagation(); setPayingStaff(row) }}>发放</Button>
               : <span className="status-pill salary-status-control is-warn">待发</span>,

@@ -54,6 +54,7 @@ export interface Schedule {
   startTime?: string
   endTime?: string
   note?: string
+  checkInOnly?: boolean
   status?: number
   uiChangeStatus?: number
   targetType?: string
@@ -77,6 +78,11 @@ export interface Schedule {
   timetableOwnerType?: string
   pricingCourseTypeLabel?: string
   templateScheduleId?: number
+}
+
+/** Always emit a real boolean so request cleanup cannot drop `checkInOnly: false`. */
+export function normalizeCheckInOnly(value: unknown): boolean {
+  return value === true || value === 1 || value === '1' || value === 'true'
 }
 
 export interface DayCourse {

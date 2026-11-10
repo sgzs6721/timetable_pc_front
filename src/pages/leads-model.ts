@@ -23,7 +23,25 @@ export interface LeadEvent {
 }
 export interface LeadPage<T> { records: T[]; total: number; current: number; pages: number }
 export interface LeadSalesperson { id: number; userId: number | null; name: string }
-export interface LeadCampus { id: number; name: string }
+export interface LeadCampus { id: number; name: string; visibleInList?: boolean | number | string | null }
+
+/** Align with miniapp `isCampusAvailableInList`: offline campuses are excluded from create/filter options. */
+export function isCampusAvailableInList(campus: { visibleInList?: boolean | number | string | null } | null | undefined): boolean {
+  const value = campus?.visibleInList
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase()
+    return normalized !== '0' && normalized !== 'false'
+  }
+  return value !== false && value !== 0
+}
+
+export function filterAvailableLeadCampuses(campuses: LeadCampus[], options?: { keepCampusId?: number | null }): LeadCampus[] {
+  const keepId = Number(options?.keepCampusId || 0)
+  return (campuses || []).filter((campus) => {
+    if (keepId > 0 && Number(campus.id) === keepId) return true
+    return isCampusAvailableInList(campus)
+  })
+}
 export interface LeadSummary { total: number; fresh: number; active: number; won: number; due: number; unassigned: number }
 export const statusInfo = (status: string) => LEAD_STATUSES.find((item) => item.value === status) || LEAD_STATUSES[0]
 export const leadTime = (value?: string | null) => value ? value.replace('T', ' ').slice(0, 16) : '未安排'

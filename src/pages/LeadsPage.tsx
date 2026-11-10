@@ -7,7 +7,7 @@ import { canFilterLeadSalespeople, canViewLeads } from '../nav'
 import { AppIcon, PageHead, PhoneCopyButton, copyPlainText, tell, useShell } from './kit'
 import { LeadDetail } from './leads-detail'
 import { LeadEditor } from './leads-editor'
-import { LEAD_STATUSES, isLeadClosed, isLeadDue, leadTime, statusInfo, type Lead, type LeadCampus, type LeadPage, type LeadSalesperson, type LeadSummary } from './leads-model'
+import { LEAD_STATUSES, filterAvailableLeadCampuses, isLeadClosed, isLeadDue, leadTime, statusInfo, type Lead, type LeadCampus, type LeadPage, type LeadSalesperson, type LeadSummary } from './leads-model'
 
 const PAGE_SIZE = 10
 type Filters = { keyword?: string; status?: string; ownerId?: string; due?: string; campusId?: number }
@@ -32,6 +32,8 @@ function LeadWorkspace({ userId, currentCampusId, canFilterOwners }: { userId?: 
   const [summary, setSummary] = useState<LeadSummary | null>(null)
   const [salespeople, setSalespeople] = useState<LeadSalesperson[]>([])
   const [campuses, setCampuses] = useState<LeadCampus[]>([])
+  const filterCampuses = filterAvailableLeadCampuses(campuses)
+  const createCampuses = filterAvailableLeadCampuses(campuses)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [creating, setCreating] = useState(false)
@@ -71,10 +73,16 @@ function LeadWorkspace({ userId, currentCampusId, canFilterOwners }: { userId?: 
       <span className="lead-stat-icon">{card.icon}</span><span><small>{card.label}</small><strong>{card.value ?? '—'}</strong></span>
     </button>)}</section>
     <section className="lead-list-panel">
-      <div className="lead-list-heading"><h2>客源档案</h2><Space><Button icon={<ReloadOutlined />} loading={loading} onClick={load}>刷新</Button><Button type="primary" icon={<PlusOutlined />} onClick={() => setCreating(true)}>录入客源</Button></Space></div>
+      <div className="lead-list-heading"><h2>客源档案</h2><Space><Button icon={<ReloadOutlined />} loading={loading} onClick={load}>刷新</Button><Button type="primary" icon={<PlusOutlined />} onClick={() => {
+        if (!createCampuses.length) {
+          message.warning('暂无已上线校区，请先上线校区后再录入')
+          return
+        }
+        setCreating(true)
+      }}>录入客源</Button></Space></div>
       <div className="lead-filters">
         <Input.Search aria-label="搜索客源" placeholder="搜索姓名、电话、联系人或微信" value={search} maxLength={100} allowClear onChange={(event) => { setSearch(event.target.value); if (!event.target.value) filter({ ...filters, keyword: '' }) }} onSearch={(keyword) => filter({ ...filters, keyword })} />
-        {campuses.length > 1 && <Select aria-label="所属校区" placeholder="全部校区" allowClear value={filters.campusId} options={campuses.map((item) => ({ value: item.id, label: item.name }))} onChange={(campusId) => filter({ ...filters, campusId: campusId || undefined })} />}
+        {filterCampuses.length > 1 && <Select aria-label="所属校区" placeholder="全部校区" allowClear value={filters.campusId} options={filterCampuses.map((item) => ({ value: item.id, label: item.name }))} onChange={(campusId) => filter({ ...filters, campusId: campusId || undefined })} />}
         <Select aria-label="客户状态" mode="multiple" placeholder="全部状态" allowClear maxTagCount="responsive" value={filters.status ? filters.status.split(',') : []} options={LEAD_STATUSES} onChange={(status: string[]) => filter({ ...filters, status: status.length ? status.join(',') : undefined })} />
         {canFilterOwners ? <Select aria-label="销售负责人" mode="multiple" placeholder="全部销售" allowClear showSearch optionFilterProp="label" maxTagCount="responsive" value={filters.ownerId ? filters.ownerId.split(',').map((id) => Number(id)) : []} options={[{ value: 0, label: '待分配' }, ...salespeople.map((person) => ({ value: person.id, label: person.name }))]} onChange={(ownerIds: number[]) => filter({ ...filters, ownerId: ownerIds.length ? ownerIds.join(',') : undefined })} /> : null}
         {canFilterOwners && mySales.length === 1 && <Button type={filters.ownerId === String(mySales[0].id) ? 'primary' : 'default'} onClick={() => filter({ ...filters, ownerId: String(mySales[0].id) })}>我负责的</Button>}
@@ -83,7 +91,13 @@ function LeadWorkspace({ userId, currentCampusId, canFilterOwners }: { userId?: 
       <Table<Lead> rowKey="id" loading={loading} dataSource={error ? [] : data.records} scroll={{ x: 920 }}
         onRow={(row) => ({ onClick: () => select(row.id), style: { cursor: 'pointer' } })}
         pagination={{ current: page, pageSize: PAGE_SIZE, total: data.total, showSizeChanger: false, showTotal: (total) => `共 ${total} 个客源`, onChange: setPage }}
-        locale={{ emptyText: <Empty description={error ? '加载失败，请重试' : hasFilters ? '没有符合筛选条件的客源' : '录入第一位客户，开始跟进'}>{!error && (hasFilters ? <Button onClick={() => { setSearch(''); filter({}) }}>重置筛选</Button> : <Button type="primary" onClick={() => setCreating(true)}>录入客源</Button>)}</Empty> }} columns={[
+        locale={{ emptyText: <Empty description={error ? '加载失败，请重试' : hasFilters ? '没有符合筛选条件的客源' : '录入第一位客户，开始跟进'}>{!error && (hasFilters ? <Button onClick={() => { setSearch(''); filter({}) }}>重置筛选</Button> : <Button type="primary" onClick={() => {
+          if (!createCampuses.length) {
+            message.warning('暂无已上线校区，请先上线校区后再录入')
+            return
+          }
+          setCreating(true)
+        }}>录入客源</Button>)}</Empty> }} columns={[
           { title: '客户', key: 'name', width: 190, fixed: 'left', render: (_, row) => <div className="lead-customer"><span className={`lead-avatar lead-avatar--${String(row.gender || '').toLowerCase()}`}><AppIcon name={row.gender === 'MALE' ? 'icon-person-male' : row.gender === 'FEMALE' ? 'icon-person-female' : 'icon-person-neutral'} size={22} /></span><div className="lead-customer-text"><span className="lead-customer-name" title={row.name}>{row.name}{row.gender === 'MALE' || row.gender === 'FEMALE' ? <AppIcon className={row.gender === 'MALE' ? 'lead-gender is-male' : 'lead-gender is-female'} name={row.gender === 'MALE' ? 'icon-gender-male' : 'icon-gender-female'} size={13} /> : null}{row.age != null ? <small className="lead-age">{row.age}岁</small> : null}</span>{row.contactName ? <small title={row.contactName}>{row.contactName}</small> : null}</div></div> },
           { title: '联系电话', dataIndex: 'phone', width: 190, render: (phone: string) => phone ? <Space size={4} onClick={(event) => event.stopPropagation()}><a href={`tel:${phone}`}>{phone}</a><span className="lead-copy-dot">·</span><PhoneCopyButton onClick={async () => { if (await copyPlainText(phone)) message.success('已复制'); else message.error('复制失败') }} /></Space> : '—' },
           { title: '客源渠道', dataIndex: 'source', width: 110, render: (source: string) => source || '—' },
@@ -93,7 +107,7 @@ function LeadWorkspace({ userId, currentCampusId, canFilterOwners }: { userId?: 
           { title: '下次跟进', key: 'next', width: 175, render: (_, row) => isLeadClosed(row.status) ? <span className="lead-muted">—</span> : <span className={isLeadDue(row) ? 'lead-due' : 'lead-muted'}>{isLeadDue(row) && <ClockCircleOutlined />} {leadTime(row.nextFollowAt)}</span> },
         ]} />
     </section>
-    {creating && <LeadEditor currentCampusId={currentCampusId} currentUserId={userId} canAssignOwner={canFilterOwners} salespeople={salespeople} campuses={campuses} onClose={() => setCreating(false)} onSaved={(lead) => { setCreating(false); select(lead.id); void load() }} />}
-    {selectedId && <LeadDetail key={selectedId} id={selectedId} currentUserId={userId} canAssignOwner={canFilterOwners} salespeople={salespeople} campuses={campuses} onClose={() => select()} onChanged={load} />}
+    {creating && <LeadEditor currentCampusId={currentCampusId} currentUserId={userId} canAssignOwner={canFilterOwners} salespeople={salespeople} campuses={createCampuses} onClose={() => setCreating(false)} onSaved={(lead) => { setCreating(false); select(lead.id); void load() }} />}
+    {selectedId && <LeadDetail key={selectedId} id={selectedId} currentUserId={userId} canAssignOwner={canFilterOwners} salespeople={salespeople} campuses={filterAvailableLeadCampuses(campuses, { keepCampusId: data.records.find((row) => row.id === selectedId)?.campusId })} onClose={() => select()} onChanged={load} />}
   </div>
 }

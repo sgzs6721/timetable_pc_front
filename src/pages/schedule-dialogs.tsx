@@ -60,6 +60,7 @@ export function ScheduleDialogs({ vm }: { vm: ReturnType<typeof useScheduleContr
         batchCount={batch.length}
         timetableId={current?.id}
         weekStart={weekStart}
+        templateSchedules={templateSchedules}
         dayLessons={cell ? boardSchedules.filter((item) => templateMode ? item.dayOfWeek === cell.day : (item.scheduleDate ? item.scheduleDate === cell.date : item.dayOfWeek === cell.day)) : []}
         dayStart={slots[0]?.start || '09:00'}
         dayEnd={slots[slots.length - 1]?.end || '18:00'}

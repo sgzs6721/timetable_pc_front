@@ -137,3 +137,62 @@ test('已退费卡阻止打卡与转校，允许归档，其他卡有效期不�
   const ledger = [{ id: 1, type: 'refund', amount: 100 }, { id: 2, studentCardId: 2, type: 'new', amount: 100, validEndDate: '2026-12-01' }]
   assert.equal(transfer.periodTransferable({ id: 2, cardCategory: 'PERIOD' }, ledger, false), true, '多卡旧无归属退费不能抵消另张卡的有效批次')
 })
+
+test('排课动作记录过滤掉改时段后的假请假与历史模板行，保留真实请假和有效实例', () => {
+  const { shouldIncludeActionScheduleRecord, findMatchingTemplateScheduleForRecord } = load(page('schedule-action-records.ts'))
+  const activeFixed = { id: 501, dayOfWeek: 3, startTime: '16:30:00', endTime: '17:30:00', courseName: '成禹霖', displayName: '成禹霖', effectiveStartDate: '2026-11-01', uiChangeStatus: 1 }
+  const deletedOld = { id: 500, dayOfWeek: 3, startTime: '17:00:00', endTime: '18:00:00', courseName: '成禹霖', displayName: '成禹霖', effectiveStartDate: '2026-11-01', displayDate: '2026-11-11', uiChangeStatus: 3 }
+  const obsoleteOld = { id: 499, dayOfWeek: 3, startTime: '17:00:00', endTime: '18:00:00', courseName: '成禹霖', displayName: '成禹霖', effectiveStartDate: '2026-05-01', displayDate: '2026-11-11', uiChangeStatus: 1 }
+  const currentInstance = { id: 601, dayOfWeek: 3, scheduleDate: '2026-11-11', startTime: '16:30', endTime: '17:30', courseName: '成禹霖', displayName: '成禹霖', uiChangeStatus: 1 }
+  const realLeave = { ...currentInstance, id: 602, uiChangeStatus: 3 }
+  const orphanLeave = { id: 603, dayOfWeek: 3, scheduleDate: '2026-11-11', startTime: '17:00', endTime: '18:00', courseName: '成禹霖', displayName: '成禹霖', uiChangeStatus: 3 }
+  const templates = [deletedOld, activeFixed]
+  const templatesWithHistory = [obsoleteOld, deletedOld, activeFixed]
+  assert.equal(findMatchingTemplateScheduleForRecord(templates, deletedOld, '成禹霖'), null)
+  assert.equal(shouldIncludeActionScheduleRecord(deletedOld, templates, '成禹霖'), false)
+  assert.equal(shouldIncludeActionScheduleRecord(currentInstance, templates, '成禹霖'), true)
+  assert.ok(findMatchingTemplateScheduleForRecord(templates, realLeave, '成禹霖'))
+  assert.equal(shouldIncludeActionScheduleRecord(realLeave, templates, '成禹霖'), true)
+  assert.equal(shouldIncludeActionScheduleRecord(orphanLeave, templates, '成禹霖'), false)
+  assert.equal(shouldIncludeActionScheduleRecord(obsoleteOld, templatesWithHistory, '成禹霖'), false)
+  assert.equal(shouldIncludeActionScheduleRecord({ ...activeFixed, displayDate: '2026-11-11' }, templatesWithHistory, '成禹霖'), true)
+})
+
+test('课表 checkInOnly 归一化为显式布尔，关闭时不会被当成缺省丢掉', () => {
+  const model = load(page('schedule-model.ts'))
+  assert.equal(model.normalizeCheckInOnly(true), true)
+  assert.equal(model.normalizeCheckInOnly(1), true)
+  assert.equal(model.normalizeCheckInOnly('1'), true)
+  assert.equal(model.normalizeCheckInOnly(false), false)
+  assert.equal(model.normalizeCheckInOnly(undefined), false)
+  assert.equal(model.normalizeCheckInOnly(0), false)
+  assert.deepEqual({ checkInOnly: model.normalizeCheckInOnly(false) }, { checkInOnly: false })
+})
+
+test('打卡不计老师课时时提交空老师，关闭时仍校验人数', () => {
+  const helper = load(page('checkin-skip-teacher.ts'))
+  assert.deepEqual(helper.checkInCoachSubmitPayload(true, [7, 8], ['甲', '乙']), { coachIds: [] })
+  assert.deepEqual(helper.checkInCoachSubmitPayload(false, [7, 8], ['甲', '乙']), { coachId: 7, coachIds: [7, 8], coachName: '甲、乙' })
+  assert.equal(helper.checkInCoachSelectionError(true, [], 2), '')
+  assert.equal(helper.checkInCoachSelectionError(false, [], 2), '请至少选择一位老师')
+  assert.equal(helper.checkInCoachSelectionError(false, [1, 2, 3], 2), '本次打卡最多可选择 2 位老师')
+})
+
+test('客源校区筛选只保留已上线，编辑可保留原下线校区', () => {
+  const leads = load(page('leads-model.ts'))
+  const rows = [
+    { id: 1, name: '上线', visibleInList: true },
+    { id: 2, name: '下线', visibleInList: false },
+    { id: 3, name: '数值下线', visibleInList: 0 },
+  ]
+  assert.deepEqual(leads.filterAvailableLeadCampuses(rows).map((item) => item.id), [1])
+  assert.deepEqual(leads.filterAvailableLeadCampuses(rows, { keepCampusId: 2 }).map((item) => item.id), [1, 2])
+  assert.equal(leads.isCampusAvailableInList({ visibleInList: 'false' }), false)
+})
+
+test('工资已发优先展示 paymentDate，缺省回退 paidTime', () => {
+  const salary = load(page('SalaryPage.tsx'))
+  assert.equal(salary.salaryPaymentDateText({ paymentDate: '2026-11-10', paidTime: '2026-11-11T12:00:00' }), '2026-11-10')
+  assert.equal(salary.salaryPaymentDateText({ paidTime: '2026-11-11T12:00:00' }), '2026-11-11 12:00')
+  assert.equal(salary.salaryPaymentDateText({}), '')
+})
