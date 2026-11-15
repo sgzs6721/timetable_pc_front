@@ -5,6 +5,8 @@ import { delJson, getJson } from '../api/biz'
 import { BusinessDateRangePicker } from '../components/BusinessDatePicker'
 import { EmptyState, NeedCampus, PageHead, money, monthKey, periodChoices, type PeriodOption, shiftPeriod, tell, todayIso, useShell } from './kit'
 import { isCampusServiceConsumeItem } from './consume-item'
+import { SkipTeacherHoursTag } from './checkin-teacher-hours'
+import { normalizeCheckInOnly } from './schedule-model'
 
 interface HoursResult {
   month?: string
@@ -58,7 +60,8 @@ export function HoursPage() {
 
   async function load(nextPage = page, nextKeyword = keyword) {
     if (!shell.currentOrgId) return
-    if (mode === 'custom_range' && startDate && endDate && startDate > endDate) {
+    if (mode === 'custom_range' && (!startDate || !endDate)) return
+    if (mode === 'custom_range' && startDate > endDate) {
       message.warning('开始日期不能晚于结束日期')
       return
     }
@@ -109,7 +112,7 @@ export function HoursPage() {
 
   return (
     <NeedCampus campusId={shell.campusId}>
-      <PageHead title={canManage ? '课时管理' : '我的课时'} extra={data?.rangeLabel || '按校区查看上课记录'} />
+      <PageHead title={canManage ? '课时管理' : '我的课时'} extra={mode === 'custom_range' ? `${startDate} 至 ${endDate}` : data?.rangeLabel || '按校区查看上课记录'} />
       <section className="work-card">
         {campusHours ? (
           <div className="hours-campus-panel">
@@ -167,7 +170,16 @@ export function HoursPage() {
           {mode === 'custom_range' ? (
             <BusinessDateRangePicker
               value={[startDate, endDate]}
-              onChange={([start, end]) => { setStartDate(start); setEndDate(end) }}
+              allowClear={false}
+              onChange={([start, end]) => {
+                if (!start || !end) return
+                if (start > end) {
+                  message.warning('开始日期不能晚于结束日期')
+                  return
+                }
+                setStartDate(start)
+                setEndDate(end)
+              }}
               style={{ width: 286 }}
             />
           ) : null}
@@ -201,7 +213,7 @@ export function HoursPage() {
             { title: '时间', render: (_: unknown, row: Record<string, unknown>) => hoursClockText(row.scheduleTime) },
             { title: '老师', render: (_: unknown, row: Record<string, unknown>) => hoursTeacherText(row) },
             { title: '学员', render: (_: unknown, row: Record<string, unknown>) => hoursStudentText(row) },
-            { title: '课程', render: (_: unknown, row: Record<string, unknown>) => hoursCourseText(row) },
+            { title: '课程', render: (_: unknown, row: Record<string, unknown>) => <span className="hours-course-label">{hoursCourseText(row)}{hoursSkipTeacherHours(row) && !normalizeCheckInOnly(row.checkInOnly) ? <SkipTeacherHoursTag /> : null}</span> },
             { title: '类型', render: (_: unknown, row: Record<string, unknown>) => hoursTypeText(row) },
             { title: '打卡', render: (_: unknown, row: Record<string, unknown>) => row.recordType !== 'consumption' ? '' : Number(row.autoCheckIn) === 1 ? '自动' : '手动' },
             { title: '课时', render: (_: unknown, row: Record<string, unknown>) => hoursText(row.hours) },
@@ -283,7 +295,7 @@ function hoursSkipTeacherHours(row: Record<string, unknown>): boolean {
 
 function hoursTeacherText(row: Record<string, unknown>): string {
   if (hoursServiceRecord(row)) return hoursServiceText(row)
-  if (hoursSkipTeacherHours(row)) return '不计老师课时'
+  if (hoursSkipTeacherHours(row)) return ''
   return String(row.teacherName || '').trim() || '未分配老师'
 }
 
@@ -309,7 +321,7 @@ function hoursTypeText(row: Record<string, unknown>): string {
   const labels = Array.isArray(row.cardTypeLabels) && row.cardTypeLabels.length
     ? row.cardTypeLabels.map(String).join('、')
     : String(row.cardTypeLabel || '')
-  const checkInOnly = row.checkInOnly === true || row.checkInOnly === 1 || row.checkInOnly === '1'
+  const checkInOnly = normalizeCheckInOnly(row.checkInOnly)
   const suffix = checkInOnly ? (labels ? `${labels} · 仅打卡` : '仅打卡') : labels
   if (row.recordType === 'preset_schedule') return labels ? `体验课 · ${labels}` : '体验课'
   return suffix

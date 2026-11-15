@@ -1,3 +1,10 @@
+.hours-course-label {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
 .hours-overview-bar {
   display: flex;
   align-items: center;

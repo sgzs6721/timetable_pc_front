@@ -8,6 +8,8 @@ import { FinancePage } from '../src/pages/FinancePage'
 import { ServiceScheduleLayer } from '../src/pages/schedule-service-layer'
 import { CellDialog, type CellDialogProps } from '../src/pages/schedule-cell-dialog'
 import { ProfitDashboard } from '../src/pages/profit-dashboard'
+import { HoursPage } from '../src/pages/HoursPage'
+import { CheckInPreview } from './checkin-parity-preview'
 import { requests, serviceSchedules } from './parity-fixtures'
 import 'antd/dist/reset.css'
 import '../src/styles/global.css'
@@ -38,8 +40,8 @@ function ServicePreview() {
 function Preview() {
   const [page, setPage] = useState('courses')
   const [log, setLog] = useState('')
-  return <main style={{ maxWidth: 1400, margin: '24px auto', padding: '0 24px 48px' }}><header style={{ marginBottom: 24 }}><h1>前端同步回归 · 模拟数据</h1><Space>{[['courses', '课程管理'], ['service', '服务课表'], ['finance', '收支管理'], ['profit', '经营数据']].map(([key, label]) => <Button key={key} type={page === key ? 'primary' : 'default'} onClick={() => { setPage(key); setLog('') }}>{label}</Button>)}<Button onClick={() => setLog(JSON.stringify(requests.slice(-8), null, 2))}>查看模拟请求</Button></Space></header>
-    {page === 'courses' ? <CoursesPage /> : page === 'service' ? <ServicePreview /> : page === 'finance' ? <FinancePage /> : <ProfitDashboard sections={profit as any} comparisonSections={profit as any} previousSections={[]} selectedCampusId={1} periodLabel="2026年11月" previousPeriodLabel="上月" onCampusSelect={() => {}} onDetail={() => message.info('销课收入明细入口')} />}
+  return <main style={{ maxWidth: 1400, margin: '24px auto', padding: '0 24px 48px' }}><header style={{ marginBottom: 24 }}><h1>前端同步回归 · 模拟数据</h1><Space>{[['courses', '课程管理'], ['service', '服务课表'], ['finance', '收支管理'], ['profit', '经营数据'], ['checkin', '学员打卡'], ['hours', '课时管理']].map(([key, label]) => <Button key={key} type={page === key ? 'primary' : 'default'} onClick={() => { setPage(key); setLog('') }}>{label}</Button>)}<Button onClick={() => setLog(JSON.stringify(requests.slice(-8), null, 2))}>查看模拟请求</Button></Space></header>
+    {page === 'checkin' ? <CheckInPreview /> : page === 'hours' ? <HoursPage /> : page === 'courses' ? <CoursesPage /> : page === 'service' ? <ServicePreview /> : page === 'finance' ? <FinancePage /> : <ProfitDashboard sections={profit as any} comparisonSections={profit as any} previousSections={[]} selectedCampusId={1} periodLabel="2026年11月" previousPeriodLabel="上月" onCampusSelect={() => {}} onDetail={() => message.info('销课收入明细入口')} />}
     {log ? <pre style={{ whiteSpace: 'pre-wrap', background: '#fff', padding: 24 }} aria-label="模拟请求记录">{log}</pre> : null}
   </main>
 }

@@ -11,6 +11,7 @@ import { buildCheckInCoachSelection } from './student-card-desk'
 import { activeStudentCards, boundedDateMax, cardCategoryText, cardRemain, checkInBlockReason, checkInBounds, checkInCardEligible, checkInQuotaHint, confirmCheckInDates, dateOutOfBoundsMessage, noEligibleCheckInMessage } from './students-domain'
 import { resolveConsumeItemReferenceFields } from './consume-item'
 import { checkInCoachSelectionError, checkInCoachSubmitPayload } from './checkin-skip-teacher'
+import { CheckInTeacherHoursSwitch } from './checkin-teacher-hours'
 
 const CHECK_IN_HOURS_MIN = 0.5
 const CHECK_IN_HOURS_MAX = 4
@@ -592,13 +593,7 @@ export function QuickCheckIn(props: {
                 <Form.Item className="is-full" name="paymentId" label="课程" initialValue={selectableCourse?.id}>
                   <CheckInCoursePicker options={courseOptions} />
                 </Form.Item>
-                <div className="quick-checkin-type-option" style={{ marginBottom: 12 }}>
-                  <div>
-                    <strong>不记录老师课时</strong>
-                    <small>只销课，不计入老师课时统计</small>
-                  </div>
-                  <Switch aria-label="不记录老师课时" checked={skipTeacherHours} onChange={setSkipTeacherHours} />
-                </div>
+                <CheckInTeacherHoursSwitch checked={skipTeacherHours} onChange={setSkipTeacherHours} />
                 {!skipTeacherHours ? (
                   checkInCoachOptions.length ? (
                     <Form.Item

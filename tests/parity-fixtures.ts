@@ -1,3 +1,5 @@
+import type { Student, PayRecord, CheckRecord, Named } from '../src/pages/students-model'
+
 export const requests: Array<{ method: string; path: string; data: unknown }> = []
 const courses = Array.from({ length: 45 }, (_, i) => ({ id: i + 1, name: `课程${String(i + 1).padStart(2, '0')}`, shortName: `课${i + 1}`, oneToOne: i < 5, unitPrice: 120, coachIds: [1], coachNamesText: '陈老师', studentCount: 0 }))
 export const targets = [
@@ -17,6 +19,15 @@ const overview = { income: 12500, paidExpense: 3000, pendingExpense: 2000, expec
 export async function getJson(path: string, query: Record<string, unknown> = {}): Promise<any> {
   requests.push({ method: 'GET', path, data: query })
   await new Promise((resolve) => setTimeout(resolve, query.keyword === '课程01' ? 800 : 50))
+  if (path === '/students/11') return checkInStudent
+  if (path === '/payment-records/student/11') return checkInPayments
+  if (path === '/consumptions/student/11') return checkInRecords
+  if (path === '/students/campus-summary') return { studentCount: 1, activeStudentCount: 1, totalHours: 20, consumedHours: 2 }
+  if (path === '/salary/class-hours') return {
+    rangeLabel: '2026年11月', summaryHours: 2, summaryAmount: 240, summaryTeacherCount: 1,
+    courseOptions: ['一对一课程'], teacherOptions: ['历史老师'], total: checkInRecords.length,
+    records: checkInRecords.map((row) => ({ ...row, recordType: 'consumption', recordId: row.id, date: row.consumeDate, teacherName: row.coachName || '', studentDisplayName: '陈小明' })),
+  }
   if (path === '/student-groups/page') {
     const rows = courses.filter((row) => (!query.keyword || row.name.includes(String(query.keyword))) && (!query.type || (query.type === 'oneToOne' ? row.oneToOne : !row.oneToOne)))
     const offset = Number(query.offset || 0)
@@ -38,8 +49,23 @@ export async function getJson(path: string, query: Record<string, unknown> = {})
 export async function putJson(path: string, data: any) {
   requests.push({ method: 'PUT', path, data })
   if (path.startsWith('/finance/categories/')) categories = categories.map((row) => row.id === Number(path.split('/').pop()) ? { ...row, ...data } : row)
+  if (path.startsWith('/consumptions/')) {
+    const index = checkInRecords.findIndex((row) => row.id === Number(path.split('/').pop()))
+    if (index >= 0) checkInRecords[index] = { ...checkInRecords[index], ...data }
+  }
   return data
 }
 export async function postJson(path: string, data: unknown) { requests.push({ method: 'POST', path, data }); return data }
 export async function delJson(path: string, data?: unknown) { requests.push({ method: 'DELETE', path, data }); return null }
 export async function downloadFile() { throw new Error('模拟预览不提供下载') }
+export const checkInStudent: Student = {
+  id: 11, name: '陈小明', remainingHours: 18, cardCategory: 'HOURS',
+  cards: [{ id: 111, status: 1, cardName: '一对一课时卡', cardCategory: 'HOURS', courseCategory: true, studentGroupId: 1, totalHours: 20, remainingHours: 18 }],
+}
+export const checkInCoaches: Named[] = [{ id: 66, name: '历史老师', status: 0 }, { id: 77, name: '当前课程老师', status: 1 }]
+export const checkInGroups: Named[] = [{ id: 1, name: '一对一课程', coachIds: [77] }]
+export const checkInPayments: PayRecord[] = [{ id: 501, studentCardId: 111, paymentDate: '2026-11-01', courseType: '1', courseTypeLabel: '一对一课程', hours: 20, remainingHours: 18 }]
+export const checkInRecords: CheckRecord[] = [
+  { id: 901, studentCardId: 111, paymentRecordId: 501, consumeDate: '2026-11-08', createTime: '2026-11-08 15:09:00', hours: 1, amount: 120, courseType: '1', courseName: '一对一课程', coachIds: [], remark: '不计老师课时的打卡' },
+  { id: 902, studentCardId: 111, paymentRecordId: 501, consumeDate: '2026-11-07', createTime: '2026-11-07 14:00:00', hours: 1, amount: 120, courseType: '1', courseName: '一对一课程', coachId: 66, coachIds: [66], coachName: '历史老师' },
+]

@@ -1,4 +1,4 @@
-import { Button, Form, Input, InputNumber, Modal, Popconfirm, Select, Space, Switch, message } from 'antd'
+import { Button, Form, Input, InputNumber, Modal, Popconfirm, Select, Space, message } from 'antd'
 import { useEffect, useMemo, useState } from 'react'
 import { delJson, putJson } from '../api/biz'
 import { BusinessDatePicker } from '../components/BusinessDatePicker'
@@ -11,6 +11,7 @@ import { isTransferInRecord } from './student-payments'
 import { CardRecordTabs, boundedDateMax, cardBalanceView, checkInBlockReason, checkInBounds, personName } from './students-domain'
 import { consumeItemReferenceKey, isCampusServiceConsumeItem, resolveConsumeItemReferenceFields } from './consume-item'
 import { checkInCoachSelectionError, checkInCoachSubmitPayload } from './checkin-skip-teacher'
+import { CheckInTeacherHoursSwitch, SkipTeacherHoursTag } from './checkin-teacher-hours'
 
 export function CheckInPanel(props: { student: Student; rows: CheckRecord[]; payments: PayRecord[]; groups: Named[]; financialHidden: boolean; coaches: Named[]; focusCardId?: number; onCardChange?: (cardId?: number) => void; onCheckIn: (cardId?: number) => void; onChanged: () => Promise<void>; manage: boolean }) {
   const [cardId, setCardId] = useState<number | undefined>(props.focusCardId)
@@ -30,7 +31,7 @@ export function CheckInPanel(props: { student: Student; rows: CheckRecord[]; pay
 export function CheckInCard(props: { student: Student; card?: Card; rows: CheckRecord[]; payments: PayRecord[]; groups: Named[]; financialHidden: boolean; coaches: Named[]; onChanged: () => Promise<void>; manage: boolean; onCheckIn?: () => void }) {
   const [selected, setSelected] = useState<string[]>([])
   const summary = checkInSummary(props.rows, props.card, props.student, props.financialHidden, props.coaches)
-  const rowKey = props.rows.map((row) => row.id).join(',')
+  const rowKey = props.rows.map((row) => `${row.id}:${checkInChipKey(row, summary.special, props.coaches)}`).join('|')
   const visible = selected.length ? props.rows.filter((row) => selected.includes(checkInChipKey(row, summary.special, props.coaches))) : props.rows
   useEffect(() => {
     const keys = new Set(summary.chips.map((item) => item.key))
@@ -83,12 +84,14 @@ export function CheckInCard(props: { student: Student; card?: Card; rows: CheckR
               </article>
               )
               const coach = checkInCoachIdentity(item.record, props.coaches)
-              const showCoach = !checkInService(item.record) && coach.name !== '未分配老师'
+              const skipTeacherHours = checkInSkipsTeacherHours(item.record, props.coaches)
+              const showCoach = !checkInService(item.record) && !skipTeacherHours && coach.name !== '未分配老师'
               return (
               <article key={item.record.id}>
                 <header>
                   <strong>{checkInService(item.record) ? (item.record.courseTypeLabel || item.record.courseName || '服务消费') : (item.record.courseName || item.record.courseTypeLabel || '课程')}</strong>
                   {showCoach ? <span className={coach.inactive ? 'is-inactive' : undefined}>{coach.name}</span> : null}
+                  {skipTeacherHours ? <SkipTeacherHoursTag /> : null}
                   {item.sequence ? <em>#{item.sequence}</em> : null}
                   {props.manage ? (
                   <Space>
@@ -251,8 +254,10 @@ export function checkInService(row: CheckRecord): boolean {
 }
 
 export function checkInCoachIdentity(row: CheckRecord, coaches: Named[]): { key: string; name: string; inactive: boolean; gender: '' | 'male' | 'female' } {
-  const rawId = Number(row.coachId || 0)
-  const rawName = String(row.coachName || '').trim()
+  const explicitIds = Array.from(new Set((row.coachIds || []).map(Number).filter((id) => id > 0)))
+  const rawId = Number(row.coachId || explicitIds[0] || 0)
+  const rawName = String(row.coachName || '').trim().replace(/^未分配老师$/, '')
+  const multiCoach = explicitIds.length > 1
   const legacyMultiCoachName = /[、,，]/.test(rawName)
   const byId = rawId > 0
     ? coaches.find((item) => item.id === rawId || Number(item.userId || 0) === rawId)
@@ -261,31 +266,40 @@ export function checkInCoachIdentity(row: CheckRecord, coaches: Named[]): { key:
     ? coaches.find((item) => [item.displayName, item.nickname, item.name, item.phone].some((value) => String(value || '').trim() === rawName))
     : undefined
   const matched = byId || byName
-  const name = legacyMultiCoachName
-    ? rawName
-    : matched
-    ? personName(matched)
-    : (rawName || (rawId > 0 ? `老师${rawId}` : '未分配老师'))
+  const name = multiCoach
+    ? rawName || explicitIds.map((id) => {
+      const coach = coaches.find((item) => item.id === id || Number(item.userId || 0) === id)
+      return coach ? personName(coach) : `老师${id}`
+    }).join('、')
+    : matched ? personName(matched)
+    : ((!legacyMultiCoachName ? rawName : '') || (rawId > 0 ? `老师${rawId}` : '未分配老师'))
   const id = Number(matched?.id || rawId || 0)
   const genderText = String(matched?.gender || '').trim().toLowerCase()
   const gender = genderText === '2' || genderText === 'female' || genderText === 'f' || genderText === '女'
     ? 'female'
     : (genderText === '1' || genderText === 'male' || genderText === 'm' || genderText === '男' ? 'male' : '')
   return {
-    key: id > 0 ? `coach:${id}` : `coach-name:${name}`,
+    key: multiCoach ? `coaches:${explicitIds.join(',')}` : id > 0 ? `coach:${id}` : name === '未分配老师' ? '' : `coach-name:${name}`,
     name,
     inactive: Number(matched?.status) === 0,
     gender,
   }
 }
 
-function recordCoachIds(row: CheckRecord, coaches: Named[]): number[] {
+export function recordCoachIds(row: CheckRecord, coaches: Named[]): number[] {
   const explicit = (row.coachIds || []).map(Number).filter((id) => id > 0)
   if (explicit.length) return Array.from(new Set(explicit))
+  const primary = Number(row.coachId || 0)
+  if (primary > 0) return [primary]
+  // 旧快照可能拼接了全部候选老师，不能将它们恢复成实际授课老师。
+  if (/[、,，]/.test(String(row.coachName || ''))) return []
   const names = String(row.coachName || '').split(/[、,，]/).map((name) => name.trim()).filter(Boolean)
   const matched = names.map((name) => coaches.find((item) => personName(item) === name)?.id).filter((id): id is number => Number(id || 0) > 0)
-  const primary = Number(row.coachId || 0)
-  return Array.from(new Set([...(primary > 0 ? [primary] : []), ...matched]))
+  return Array.from(new Set(matched))
+}
+
+export function checkInSkipsTeacherHours(row: CheckRecord, coaches: Named[] = []): boolean {
+  return !checkInService(row) && !checkInCoachIdentity(row, coaches).key
 }
 
 export function checkInChipKey(row: CheckRecord, special: boolean, coaches: Named[] = []): string {
@@ -294,7 +308,7 @@ export function checkInChipKey(row: CheckRecord, special: boolean, coaches: Name
     if (checkInService(row)) return `service:${reference || row.courseName || row.courseTypeLabel || 'service'}`
     return `course:${reference || row.courseTypeLabel || row.courseName || 'course'}`
   }
-  return checkInCoachIdentity(row, coaches).key
+  return checkInSkipsTeacherHours(row, coaches) ? 'coach-name:不计老师课时' : checkInCoachIdentity(row, coaches).key
 }
 
 export function checkInSummary(rows: CheckRecord[], card: Card | undefined, student: Student, hidden: boolean, coaches: Named[] = []) {
@@ -346,7 +360,7 @@ export function checkInSummary(rows: CheckRecord[], card: Card | undefined, stud
     const coach = special ? null : checkInCoachIdentity(row, coaches)
     const name = special
       ? (service ? (row.courseTypeLabel || row.courseName || '服务') : (row.courseName || row.courseTypeLabel || row.courseType || '课程'))
-      : (coach?.name || '未分配老师')
+      : (checkInSkipsTeacherHours(row, coaches) ? '不计老师课时' : coach?.name || '未分配老师')
     const current = chips.get(key) || { key, name, hours: 0, service, inactive: false, gender: '' as '' | 'male' | 'female' }
     current.hours += Number(row.hours || 0)
     if (coach?.inactive) current.inactive = true
@@ -441,10 +455,6 @@ export function CheckEditor(props: { record: CheckRecord; student: Student; card
     coachChoices.push({ id, name: matched ? personName(matched) : (historicalCoachIds.length === 1 ? historicalCoach.name : `老师${id}`) })
   })
   const coachLimit = Math.max(1, coachSelection.maxCount)
-  useEffect(() => {
-    if (!open || service) return
-    setSkipTeacherHours(historicalCoachIds.length === 0)
-  }, [open, service, historicalCoachIds.join(',')])
   const editorSource = service
     ? card
     : (selectedCourse && (category === 'HOURS' || selectedCourse.validStartDate || selectedCourse.validEndDate || selectedCourse.consumeDeadline) ? selectedCourse : card)
@@ -459,20 +469,26 @@ export function CheckEditor(props: { record: CheckRecord; student: Student; card
     const current = form.getFieldValue('paymentId')
     if (current == null || !courseOptions.some((item) => item.id === current)) form.setFieldValue('paymentId', paymentId)
   }, [open, service, paymentId, courseOptions, form])
+  const initialValues = {
+    consumeDate: String(props.record.consumeDate || '').slice(0, 10),
+    hours: props.record.hours || 1,
+    remark: props.record.remark || '',
+    coachIds: historicalCoachIds,
+    paymentId,
+  }
   return (
     <>
-      <Button type="link" onClick={() => setOpen(true)}>编辑</Button>
+      <Button type="link" onClick={() => {
+        form.resetFields()
+        form.setFieldsValue(initialValues)
+        setSkipTeacherHours(!service && historicalCoachIds.length === 0)
+        setOpen(true)
+      }}>编辑</Button>
       <Modal title="编辑打卡" open={open} onCancel={() => setOpen(false)} footer={null} destroyOnHidden>
         <Form
           form={form}
           layout="vertical"
-          initialValues={{
-            consumeDate: String(props.record.consumeDate || '').slice(0, 10),
-            hours: props.record.hours || 1,
-            remark: props.record.remark || '',
-            coachIds: historicalCoachIds,
-            paymentId,
-          }}
+          initialValues={initialValues}
           onFinish={async (values: { consumeDate?: string; hours?: number; remark?: string; coachIds?: number[]; paymentId?: number }) => {
             if (!values.consumeDate) {
               message.warning('请选择日期')
@@ -573,10 +589,7 @@ export function CheckEditor(props: { record: CheckRecord; student: Student; card
                 }} />
               </Form.Item>
               {selectedCourse?.validityText ? <p>{selectedCourse.validityText}</p> : null}
-              <Form.Item label="不记录老师课时">
-                <Switch checked={skipTeacherHours} onChange={setSkipTeacherHours} />
-                <span style={{ marginLeft: 8, color: '#69758a' }}>只销课，不计入老师课时统计</span>
-              </Form.Item>
+              <CheckInTeacherHoursSwitch checked={skipTeacherHours} onChange={setSkipTeacherHours} />
               {!skipTeacherHours ? (
                 <Form.Item name="coachIds" label="老师" extra={`至少选择 1 位，最多 ${coachLimit} 位`} rules={[{ required: true, type: 'array', min: 1, message: '请至少选择一位老师' }]}>
                   <Select mode="multiple" maxCount={coachLimit} maxTagCount="responsive" options={coachChoices.map((item) => ({ value: item.id, label: item.name }))} />
