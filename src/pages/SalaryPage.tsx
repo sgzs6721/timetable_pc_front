@@ -263,13 +263,14 @@ export function SalaryPage() {
                 label: <MonthRecordHeader summary={summary} />,
                 children: <MonthDetails
                   summary={summary}
+                  ownSalaryOnly={Boolean(ownSalaryOnly)}
                   canManagePayoutStatus={Boolean(history.canManagePayoutStatus)}
                   campusId={shell.campusId}
                   onOpenHours={openHours}
                   onSaved={() => refreshMonth(String(summary.month))}
                 />,
               }))}
-            /> : <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={hasMonthFilter ? '所选月份暂无工资记录' : '暂无工资记录'} />}
+            /> : hasMonthFilter ? <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="所选月份暂无工资记录" /> : <SalaryEmpty ownSalaryOnly={Boolean(ownSalaryOnly)} />}
           </> : <div className="salary-loading-space" />}
         </Spin>
       </section>
@@ -309,16 +310,25 @@ function MonthRecordHeader({ summary }: { summary: Summary }) {
   </div>
 }
 
-function MonthDetails({ summary, campusId, canManagePayoutStatus, onOpenHours, onSaved }: {
+function SalaryEmpty({ ownSalaryOnly, monthly = false }: { ownSalaryOnly: boolean; monthly?: boolean }) {
+  const title = ownSalaryOnly ? '暂无您的工资记录' : '暂无可核算人员'
+  return <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={<>
+    <strong>{monthly ? '本周期' : ''}{title}</strong>
+    <div>{ownSalaryOnly ? '这里只显示您本人的工资记录，其他老师的工资不会显示在这里。' : '请在校区工资设置中为老师填写至少一项工资金额，未填写的项目不参与核算。'}</div>
+  </>} />
+}
+
+function MonthDetails({ summary, campusId, ownSalaryOnly, canManagePayoutStatus, onOpenHours, onSaved }: {
   summary: Summary
   campusId?: number | null
+  ownSalaryOnly: boolean
   canManagePayoutStatus: boolean
   onOpenHours: (row: Staff, summary: Summary) => void
   onSaved: () => Promise<void>
 }) {
   const people = summary.staffSummaries || []
   const [payingStaff, setPayingStaff] = useState<Staff | null>(null)
-  if (!people.length) return <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="本月暂无可核算人员" />
+  if (!people.length) return <SalaryEmpty ownSalaryOnly={ownSalaryOnly} monthly />
   return <>
     <Table
       className="salary-staff-table"

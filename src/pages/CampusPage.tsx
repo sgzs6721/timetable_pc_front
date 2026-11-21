@@ -87,7 +87,7 @@ export function CampusPage() {
             { key: 'teachers', label: '老师列表', children: <Teachers campusId={campusId} canImportCampusStaff={canImportCampusStaff} onCampusChanged={shell.reload} /> },
             { key: 'positions', label: '职位设置', children: <Positions campusId={campusId} /> },
           ]} /> },
-          { key: 'salary', label: '工资设置', children: salaryAllowed ? <CampusSalary campusId={campusId} /> : <p>当前不能设置员工工资</p> },
+          { key: 'salary', label: '工资设置', children: salaryAllowed ? <CampusSalary key={campusId} campusId={campusId} /> : <p>当前不能设置员工工资</p> },
           { key: 'academic', label: '教务设置', children: <AcademicSettings campusId={campusId} section="academic" /> },
           { key: 'affairs', label: '校务设置', children: <Tabs className="campus-sub-tabs" activeKey={affairsTab} onChange={setAffairsTab} items={[
             { key: 'rules', label: '规章制度', children: <CampusAffairs campusId={campusId} section="rules" /> },

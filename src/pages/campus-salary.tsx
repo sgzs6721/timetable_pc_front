@@ -1,15 +1,10 @@
 import { Button, Form, Input, InputNumber, Modal, Segmented, Select, Space, Table, Tabs, message } from 'antd'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { delJson, getJson, postJson, putJson } from '../api/biz'
 import { clampDecimalInput, money, tell } from './kit'
 import type { Person } from './campus-model'
 
-function fixedSalaryTotal(person: Person, items: Array<Record<string, unknown>>, amounts: Array<Record<string, unknown>>): number {
-  return items.filter((item) => String(item.itemType) !== 'unit').reduce((sum, item) => {
-    const found = amounts.find((amount) => Number(amount.staffId) === person.id && String(amount.salaryItemId) === String(item.id))
-    return sum + Number(found?.amount ?? item.defaultValue ?? 0)
-  }, 0)
-}
+import { salaryEditPayload, salaryRoster } from './campus-salary-model'
 
 function payoutDaysError(values: { itemType?: unknown; fixedPayoutMode?: unknown; fixedPayoutHighDays?: unknown; fixedPayoutLowDays?: unknown }): string {
   if ((values.itemType || 'fixed') === 'unit' || values.fixedPayoutMode !== 'prorate') return ''
@@ -58,7 +53,7 @@ function salaryAmountSame(left: unknown, right: unknown) {
   return normalize(left) === normalize(right)
 }
 
-function SalaryAmountSaveButton(props: { original: number; saving: boolean }) {
+function SalaryAmountSaveButton(props: { original?: number; saving: boolean }) {
   const amount = Form.useWatch('amount')
   return <Button type="primary" htmlType="submit" disabled={salaryAmountSame(amount, props.original) || props.saving}>{props.saving ? '保存中...' : '保存工资'}</Button>
 }
@@ -85,30 +80,38 @@ function CycleSaveButton(props: { cycle: Record<string, unknown>; saving: boolea
 export function CampusSalary({ campusId }: { campusId: number | null }) {
   const [items, setItems] = useState<Array<Record<string, unknown>>>([])
   const [teachers, setTeachers] = useState<Person[]>([])
-  const [amounts, setAmounts] = useState<Array<Record<string, unknown>>>([])
+  const [amounts, setAmounts] = useState<Array<Record<string, unknown>> | null>(null)
+  const [rosterError, setRosterError] = useState('')
   const [cycle, setCycle] = useState<Record<string, unknown>>({})
   const [payoutSaved, setPayoutSaved] = useState('[]')
   const [savingCycle, setSavingCycle] = useState(false)
   const [savingSalary, setSavingSalary] = useState(false)
   const [addingItem, setAddingItem] = useState(false)
   const [itemEdit, setItemEdit] = useState<Record<string, unknown> | null>(null)
-  const [amountEdit, setAmountEdit] = useState<{ person: Person; item: Record<string, unknown>; amount: number } | null>(null)
+  const [amountEdit, setAmountEdit] = useState<{ person: Person; item: Record<string, unknown>; amount?: number } | null>(null)
   const [salarySection, setSalarySection] = useState<'items' | 'cycle' | 'list'>('items')
   const [salaryView, setSalaryView] = useState<'staff' | 'summary'>('staff')
   async function load() {
     if (!campusId) return
-    const loadedItems = await getJson<Array<Record<string, unknown>>>('/salary-item/list', { campusId }).catch(() => [])
-    setItems(loadedItems)
-    setPayoutSaved(fixedPayoutSnapshot(loadedItems))
-    setTeachers(await getJson<Person[]>(`/campus-teacher/campus/${campusId}`).catch(() => []))
-    setAmounts(await getJson<Array<Record<string, unknown>>>(`/campus-staff-salary/${campusId}`).catch(() => []))
+    setAmounts(null)
+    setRosterError('')
+    try {
+      const [loadedItems, loadedTeachers, loadedAmounts] = await Promise.all([
+        getJson<Array<Record<string, unknown>>>('/salary-item/list', { campusId }),
+        getJson<Person[]>(`/campus-teacher/campus/${campusId}`),
+        getJson<Array<Record<string, unknown>>>(`/campus-staff-salary/${campusId}`),
+      ])
+      setItems(loadedItems)
+      setPayoutSaved(fixedPayoutSnapshot(loadedItems))
+      setTeachers(loadedTeachers)
+      setAmounts(loadedAmounts)
+    } catch (error) { setRosterError(tell(error, '工资设置加载失败')) }
     setCycle(await getJson<Record<string, unknown>>(`/campus-staff/${campusId}/settings`).catch(() => ({})))
   }
   useEffect(() => { load().catch(() => undefined) }, [campusId])
+  const { rows, columnTotals, configuredCount, fixedGrandTotal } = useMemo(() => salaryRoster(teachers, items, amounts ?? []), [teachers, items, amounts])
   if (!campusId) return <p>请先选择校区。</p>
-  const activeTeachers = teachers.filter((person) => Number(person.status) !== 0)
-  const configuredCount = activeTeachers.filter((person) => amounts.some((amount) => Number(amount.staffId) === person.id)).length
-  const fixedGrandTotal = activeTeachers.reduce((sum, person) => sum + fixedSalaryTotal(person, items, amounts), 0)
+  if (!amounts) return <section className="work-card">{rosterError ? <Space>{rosterError}<Button onClick={load}>重新加载</Button></Space> : '正在加载工资设置…'}</section>
   const fixedItems = items.filter((item) => String(item.itemType) !== 'unit')
   const payoutDirty = fixedPayoutSnapshot(items) !== payoutSaved
   function updatePayoutItem(id: unknown, patch: Record<string, unknown>) {
@@ -211,8 +214,8 @@ export function CampusSalary({ campusId }: { campusId: number | null }) {
           label: '工资列表',
           children: <section className="work-card salary-list-card">
             <div className="salary-overview-grid">
-              <div><strong>{activeTeachers.length}</strong><span>在职人数</span></div>
-              <div className={configuredCount < activeTeachers.length ? 'is-warning' : 'is-ready'}><strong>{configuredCount}</strong><span>已完成配置</span></div>
+              <div><strong>{rows.length}</strong><span>在职人数</span></div>
+              <div className={configuredCount < rows.length ? 'is-warning' : 'is-ready'}><strong>{configuredCount}</strong><span>已配置人数</span></div>
               <div><strong>{money(fixedGrandTotal)}</strong><span>固定工资合计</span></div>
             </div>
             <div className="salary-list-toolbar">
@@ -220,25 +223,24 @@ export function CampusSalary({ campusId }: { campusId: number | null }) {
                 <Button type={salaryView === 'staff' ? 'primary' : 'text'} onClick={() => setSalaryView('staff')}>人员工资</Button>
                 <Button type={salaryView === 'summary' ? 'primary' : 'text'} onClick={() => setSalaryView('summary')}>工资汇总</Button>
               </div>
-              <span>{salaryView === 'summary' ? '合计仅统计在职人员固定工资，离职人员保留历史配置' : '点击金额设置在职人员工资；离职人员仅查看历史配置'}</span>
+              <span>{salaryView === 'summary' ? '合计仅统计在职人员已填写的固定工资' : '点击设置金额；至少填写一项即为已配置，未填项不参与核算'}</span>
             </div>
-            <Table rowKey="id" dataSource={teachers.slice().sort((a, b) => Number(Number(a.status) === 0) - Number(Number(b.status) === 0))} pagination={false} locale={{ emptyText: '还没有老师，请先到人员设置添加' }} summary={() => salaryView === 'summary' ? <Table.Summary.Row>
+            <Table rowKey={(row) => row.person.id} dataSource={rows} pagination={false} locale={{ emptyText: '暂无在职人员，请先检查校区人员设置' }} summary={() => salaryView === 'summary' ? <Table.Summary.Row>
               <Table.Summary.Cell index={0}>合计</Table.Summary.Cell>
               {items.map((item, index) => {
                 const unit = String(item.itemType) === 'unit'
-                const total = activeTeachers.reduce((sum, person) => sum + Number(amounts.find((amount) => Number(amount.staffId) === person.id && String(amount.salaryItemId) === String(item.id))?.amount ?? (unit ? 0 : item.defaultValue) ?? 0), 0)
+                const total = columnTotals.get(String(item.id)) ?? 0
                 return <Table.Summary.Cell key={String(item.id)} index={index + 1}>{unit ? '-' : money(total)}</Table.Summary.Cell>
               })}
               <Table.Summary.Cell index={items.length + 1}>{money(fixedGrandTotal)}</Table.Summary.Cell>
             </Table.Summary.Row> : undefined} columns={[
-              { title: '老师', render: (_: unknown, row: Person) => `${row.displayName || row.nickname || ''}${Number(row.status) === 0 ? '（已离职）' : ''}` },
-              ...items.map((item) => ({ title: String(item.itemName), render: (_: unknown, row: Person) => {
-                const found = amounts.find((amount) => Number(amount.staffId) === row.id && String(amount.salaryItemId) === String(item.id))
-                const value = money(found?.amount ?? item.defaultValue)
-                if (salaryView === 'summary') return String(item.itemType) === 'unit' ? (found ? value : '-') : value
-                return <Button type="link" disabled={Number(row.status) === 0} onClick={() => setAmountEdit({ person: row, item, amount: Number(found?.amount ?? item.defaultValue ?? 0) })}>{value}</Button>
+              { title: '老师', render: (_, row) => <Space>{row.person.displayName || row.person.nickname}<span className={row.settings.size ? 'status-pill is-ok' : 'status-pill is-warn'}>{row.settings.size ? '已配置' : '待配置'}</span></Space> },
+              ...items.map((item) => ({ title: String(item.itemName), render: (_: unknown, row: typeof rows[number]) => {
+                const amount = row.settings.get(String(item.id))
+                if (salaryView === 'summary') return amount == null ? '—' : money(amount)
+                return <Button type="link" onClick={() => setAmountEdit({ person: row.person, item, amount })}>{amount == null ? '设置' : money(amount)}</Button>
               } })),
-              ...(salaryView === 'summary' ? [{ title: '固定合计', render: (_: unknown, row: Person) => money(fixedSalaryTotal(row, items, amounts)) }] : []),
+              ...(salaryView === 'summary' ? [{ title: '固定合计', render: (_: unknown, row: typeof rows[number]) => row.settings.size ? money(row.fixedTotal) : '—' }] : []),
             ]} />
           </section>,
         },
@@ -267,18 +269,16 @@ export function CampusSalary({ campusId }: { campusId: number | null }) {
       </Form>
     </Modal>
     <Modal title={amountEdit ? `${amountEdit.person.displayName || amountEdit.person.nickname} · ${String(amountEdit.item.itemName)}` : '工资金额'} open={!!amountEdit} onCancel={() => setAmountEdit(null)} footer={null} destroyOnHidden>
-      {amountEdit ? <Form layout="vertical" initialValues={{ amount: amountEdit.amount }} onFinish={async (values: { amount: number }) => {
-        if (Number(amountEdit.person.status) === 0 || savingSalary || salaryAmountSame(values.amount, amountEdit.amount)) return
-        const salaries = items.map((entry) => {
-          const current = amounts.find((amount) => Number(amount.staffId) === amountEdit.person.id && String(amount.salaryItemId) === String(entry.id))
-          return { staffId: amountEdit.person.id, salaryItemId: entry.id, salaryItemName: entry.itemName, amount: String(entry.id) === String(amountEdit.item.id) ? Number(values.amount) : Number(current?.amount ?? entry.defaultValue ?? 0) }
-        })
+      {amountEdit ? <Form layout="vertical" initialValues={{ amount: amountEdit.amount }} onFinish={async (values: { amount?: number | null }) => {
+        const row = rows.find((candidate) => candidate.person.id === amountEdit.person.id)
+        if (!row || savingSalary || salaryAmountSame(values.amount, amountEdit.amount)) return
+        const payload = salaryEditPayload(row.person.id, items, row.settings, amountEdit.item.id, values.amount)
         setSavingSalary(true)
-        try { await postJson(`/campus-staff-salary/${campusId}`, { staffIds: [amountEdit.person.id], salaries }); message.success('工资保存成功'); setAmountEdit(null); await load() }
+        try { await postJson(`/campus-staff-salary/${campusId}`, payload); message.success('工资保存成功'); setAmountEdit(null); await load() }
         catch (error) { message.error(tell(error, '保存失败')) }
         finally { setSavingSalary(false) }
       }}>
-        <Form.Item name="amount" label="金额" rules={[{ required: true }]} getValueFromEvent={(value) => clampDecimalInput(value)}><InputNumber style={{ width: '100%' }} min={0} /></Form.Item>
+        <Form.Item name="amount" label="金额" extra="留空表示不参与核算；填写 0 表示已配置为零元。" getValueFromEvent={(value) => clampDecimalInput(value)}><InputNumber style={{ width: '100%' }} min={0} /></Form.Item>
         <SalaryAmountSaveButton original={amountEdit.amount} saving={savingSalary} />
       </Form> : null}
     </Modal>
